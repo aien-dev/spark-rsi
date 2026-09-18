@@ -2,3 +2,4 @@
 Cargo.lock
 **/*.rs.bk
 *.log
+mojo/*_bin
