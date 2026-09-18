@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use spark_rsi::balance::BalanceKernel;
+use spark_rsi::config::SovereignConfig;
 use spark_rsi::daemon::RsiEngine;
 use spark_rsi::models::RsiConfig;
 use spark_rsi::observe::observe_codebase;
@@ -21,6 +22,21 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Initialize operator profile and model engine configuration
+    Init {
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        email: Option<String>,
+        #[arg(long)]
+        mode: Option<String>,
+        #[arg(long)]
+        api_url: Option<String>,
+        #[arg(long)]
+        model_id: Option<String>,
+    },
+    /// Display current sovereign operator profile and engine configuration
+    Profile,
     /// Observe codebase telemetry, git state, crumbs, and soul tension
     Observe {
         #[arg(default_value = ".")]
@@ -76,7 +92,7 @@ enum Commands {
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
     },
-    /// Display the AIEN sovereign programming philosophy manifesto
+    /// Display the sovereign programming philosophy manifesto
     Philosophy,
 }
 
@@ -90,6 +106,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Init { name, email, mode, api_url, model_id } => {
+            let mut cfg = SovereignConfig::load();
+            if let Some(n) = name {
+                cfg.operator.name = n;
+            }
+            if let Some(e) = email {
+                cfg.operator.email = e;
+            }
+            if let Some(m) = mode {
+                cfg.engine.mode = m;
+            }
+            if let Some(u) = api_url {
+                cfg.engine.api_base_url = u;
+            }
+            if let Some(mid) = model_id {
+                cfg.engine.model_id = mid;
+            }
+
+            cfg.save().map_err(|e| format!("Failed to save config: {}", e))?;
+            println!("⚡ Sovereign operator profile initialized successfully.");
+            println!("Configuration saved to: {:?}", SovereignConfig::config_path());
+            println!("Author signature: {}", cfg.author_string());
+            println!("Engine mode: {} ({})", cfg.engine.mode, if cfg.engine.mode == "max" { "Deploy over Modular MAX (Rust/Mojo)" } else { &cfg.engine.api_base_url });
+        }
+        Commands::Profile => {
+            let cfg = SovereignConfig::load();
+            println!("{}", toml::to_string_pretty(&cfg)?);
+        }
         Commands::Observe { path } => {
             let snap = observe_codebase(Path::new(&path))
                 .map_err(|e| format!("Failed to observe codebase: {}", e))?;
@@ -147,7 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let content = std::fs::read_to_string(philosophy_file)?;
                 println!("{}", content);
             } else {
-                println!("# AIEN Sovereign Programming Philosophy\n\nSee docs/PHILOSOPHY.md for full manifesto.");
+                println!("# Sovereign Programming Philosophy\n\nSee docs/PHILOSOPHY.md for full manifesto.");
             }
         }
     }

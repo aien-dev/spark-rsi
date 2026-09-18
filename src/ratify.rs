@@ -1,3 +1,4 @@
+use crate::config::SovereignConfig;
 use crate::models::{ImprovementProposal, InvariantReport, RatificationRecord};
 use reqwest::Client;
 use serde_json::json;
@@ -17,12 +18,14 @@ impl Ratifier {
         cortex_space: &str,
     ) -> Result<RatificationRecord, String> {
         let now = chrono::Utc::now().to_rfc3339();
+        let config = SovereignConfig::load();
+        let author_str = config.author_string();
 
         if !invariants.passed {
             return Ok(RatificationRecord {
                 proposal_id: proposal.id.clone(),
                 commit_hash: None,
-                author: "AIEN <aien.atlas@proton.me>".to_string(),
+                author: author_str,
                 cortex_receipt_id: None,
                 cortex_recorded: false,
                 timestamp: now,
@@ -40,7 +43,7 @@ impl Ratifier {
         fs::write(&target_file_path, &proposal.proposed_patch)
             .map_err(|e| format!("Failed to apply patch to {:?}: {}", target_file_path, e))?;
 
-        // 2. Commit to git
+        // 2. Commit to git using dynamic operator profile
         let commit_msg = format!("rsi: {} ({})", proposal.title, proposal.id);
         let _ = Command::new("git")
             .arg("-C")
@@ -53,9 +56,9 @@ impl Ratifier {
             .arg(target_repo)
             .args([
                 "-c",
-                "user.name=AIEN",
+                &format!("user.name={}", config.operator.name),
                 "-c",
-                "user.email=aien.atlas@proton.me",
+                &format!("user.email={}", config.operator.email),
                 "commit",
                 "-m",
                 &commit_msg,
@@ -83,7 +86,7 @@ impl Ratifier {
         Ok(RatificationRecord {
             proposal_id: proposal.id.clone(),
             commit_hash,
-            author: "AIEN <aien.atlas@proton.me>".to_string(),
+            author: author_str,
             cortex_receipt_id,
             cortex_recorded,
             timestamp: now,
@@ -98,9 +101,10 @@ impl Ratifier {
         cortex_url: &str,
         cortex_space: &str,
     ) -> (Option<String>, bool) {
-        let token_path = "/home/drakestapleton/.config/cortex/token";
-        let token = fs::read_to_string(token_path)
-            .unwrap_or_default()
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let token_path = format!("{}/.config/cortex/token", home);
+        let token = std::env::var("CORTEX_TOKEN")
+            .unwrap_or_else(|_| fs::read_to_string(&token_path).unwrap_or_default())
             .trim()
             .to_string();
 
@@ -113,45 +117,35 @@ impl Ratifier {
             proposal.id, proposal.target_file, proposal.kind, commit_info, proposal.description
         );
 
-        let body = json!({
-            "entity": {
-                "id": entity_id,
-                "spaceId": cortex_space,
-                "spaceSlug": cortex_space,
-                "entityType": "lesson",
-                "canonicalName": canonical_name,
-                "content": content,
-                "aliases": [format!("rsi-prop-{}", proposal.id)],
-                "metadata": {
-                    "proposal_id": proposal.id,
-                    "target_file": proposal.target_file,
-                    "engine": "spark-rsi",
-                    "harness": "native-rust-mojo"
-                },
-                "confidence": 1.0,
-                "revision": 1,
-                "retracted": false,
-                "createdAt": chrono::Utc::now().to_rfc3339()
+        let payload = json!({
+            "canonicalName": canonical_name,
+            "entityType": "lesson",
+            "content": content,
+            "space": cortex_space,
+            "confidence": 1.0,
+            "metadata": {
+                "proposal_id": proposal.id,
+                "target_file": proposal.target_file,
+                "kind": format!("{:?}", proposal.kind),
+                "commit": commit_info
             }
         });
 
-        let mut req = client.post(format!("{}/api/cortex/write", cortex_url));
+        let url = format!("{}/entities", cortex_url.trim_end_matches('/'));
+        let mut req = client.post(&url).json(&payload);
         if !token.is_empty() {
             req = req.header("Authorization", format!("Bearer {}", token));
         }
 
-        match req.json(&body).send().await {
+        match req.send().await {
             Ok(resp) if resp.status().is_success() => {
-                if let Ok(json_resp) = resp.json::<serde_json::Value>().await {
-                    let receipt_id = json_resp
-                        .get("receipt")
-                        .and_then(|r| r.get("id"))
-                        .and_then(|id| id.as_str())
-                        .map(|s| s.to_string());
-                    (receipt_id, true)
-                } else {
-                    (None, true)
-                }
+                let body: serde_json::Value = resp.json().await.unwrap_or(json!({}));
+                let receipt_id = body.get("receipt")
+                    .and_then(|r| r.get("id"))
+                    .and_then(|id| id.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or(entity_id);
+                (Some(receipt_id), true)
             }
             _ => (None, false),
         }

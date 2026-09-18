@@ -1,124 +1,50 @@
-# spark-rsi
+# Spark RSI: Recursive Self-Improvement Engine
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
-[![Security](https://img.shields.io/badge/tpm--vault-zero--disk--secrets-green.svg)](SECURITY.md)
-[![Standard](https://img.shields.io/badge/standard-unslop-black.svg)](CONTRIBUTING.md)
-[![Mission](https://img.shields.io/badge/mission-sovereign--defense-amber.svg)](docs/PHILOSOPHY.md)
-[![Runtime](https://img.shields.io/badge/runtime-rust--mojo--native-red.svg)](mojo/balance.mojo)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Target](https://img.shields.io/badge/Target-Grace%20Blackwell%20GB10-76B900.svg)](https://www.nvidia.com)
+[![Rust](https://img.shields.io/badge/Rust-1.85+-orange.svg)](https://www.rust-lang.org)
+[![Mojo](https://img.shields.io/badge/Mojo-1.0.0-purple.svg)](https://modular.com)
 
-High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine for autonomous AI agents on SparkOS.
+High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine for autonomous AI agents. Designed to be completely portable and universal: any developer or organization can download, configure their operator identity, and plug in their own models via API or local Modular MAX.
 
-## Overview
+---
 
-spark-rsi executes continuous, automated recursive self-improvement for autonomous agents operating on NVIDIA DGX Spark hardware. It replaces manual maintenance and ad-hoc code modification with a deterministic, five-stage verification cycle.
+## Quick Start & Universal Operator Onboarding
 
-Every proposed modification is isolated in a sandboxed worktree, verified against strict unslop linguistic invariants and zero disk secrets, evaluated by a hardware-accelerated Mojo SIMD balance kernel, committed to git under sovereign author identity, and recorded in Spark Cortex memory.
-
-## The Five-Stage RSI Loop
-
-```
-+-------------------------------------------------------------+
-| 1. Observe: Telemetry, Breadcrumbs, and Soul Tension         |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-| 2. Propose: Atomic Proposal & Sandbox Worktree Staging       |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-| 3. Verify Invariants: Unslop Rules, Zero Secrets, Test Pass  |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-| 4. Balance: Mojo SIMD Kernel Evaluates Drive vs. Humanity    |
-+-------------------------------------------------------------+
-                              |
-                              v
-+-------------------------------------------------------------+
-| 5. Ratify: Git Commit & Spark Cortex Memory Lesson Record    |
-+-------------------------------------------------------------+
-```
-
-1. Observe: Collects repository telemetry, git status, stigmergic breadcrumbs (.crumb), test suite health, and soul tension (drive terms versus humanity terms).
-2. Propose: Generates atomic improvement candidates and stages them in an isolated sandbox worktree (/tmp/spark-rsi-sandbox/<id>) without touching production branches.
-3. Verify Invariants: Validates candidate changes against the Anti-Slop Standard (zero em/en dashes, zero AI cliches), checks for zero disk secrets (TPM vault only), and verifies compilation and tests via cargo test.
-4. Balance (Mojo SIMD Kernel): Evaluates tension between Drive (ambition, curiosity, velocity, problem-solving) and Humanity (discipline, resonance, ethics, restraint) using bare metal SIMD vector arithmetic.
-5. Ratify: Applies the verified patch, creates an atomic git commit with canonical author AIEN <aien.atlas@proton.me>, and records a durable lesson in Spark Cortex memory (atlas-memory).
-
-## Architecture
-
-- spark_rsi::observe: Codebase telemetry collector, crumb scanner, and soul tension calculator.
-- spark_rsi::propose: Atomic proposal generator and worktree sandbox orchestrator.
-- spark_rsi::verifier: Sovereign invariant enforcement engine (unslop rules, zero disk secrets, compile and test validation).
-- spark_rsi::balance: Mojo SIMD balance kernel runner and native Rust fallback engine.
-- spark_rsi::ratify: Git commit publisher and Cortex memory lesson recorder.
-- spark_rsi::daemon: Continuous background autonomous loop scheduler.
-- mojo/balance.mojo: Compiled SIMD tensor kernel evaluating multidimensional drive and humanity vectors.
-
-## CLI Usage
+Initialize your local sovereign operator profile and model configuration:
 
 ```bash
-# 1. Inspect repository state, breadcrumbs, and soul tension
-spark-rsi observe .
-
-# 2. Verify sovereign invariants across the codebase
-spark-rsi verify .
-
-# 3. Scan for improvements and generate an atomic proposal
-spark-rsi propose .
-
-# 4. Evaluate tension using the Mojo balance kernel
-spark-rsi balance 14.0 12.0
-
-# 5. Evaluate tension using the 4-lane Mojo SIMD vector kernel
-spark-rsi balance-simd 10 8 7 9 9 8 8 8
-
-# 6. Execute a single complete RSI cycle
-spark-rsi cycle .
-
-# 7. Start the continuous autonomous daemon
-spark-rsi daemon . --interval 60
-
-# 8. View the complete sovereign programming philosophy manifesto
-spark-rsi philosophy
+spark-rsi init
 ```
 
-## Mojo SIMD Kernel
-
-The balance kernel is compiled to native machine code:
+Or configure directly via CLI flags:
 
 ```bash
-# Build Mojo kernel
-mojo build mojo/balance.mojo -o mojo/balance_bin
-
-# Direct execution
-./mojo/balance_bin 10 8 7 9 9 8 8 8
+spark-rsi init \
+  --name "Your Name" \
+  --email "you@domain.org" \
+  --mode "max" # or "api" \
+  --model-id "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16"
 ```
 
-Output:
-```json
-{
-  "kernel": "mojo",
-  "mode": "simd-vector-4",
-  "drive": 34.0,
-  "humanity": 33.0,
-  "ratio": 1.0303,
-  "score": 0.9705,
-  "verdict": "balanced",
-  "guidance": "Tension harmonized. Proceed with atomic ratification."
-}
-```
+Configuration is persisted locally to `~/.config/sovereign/operator.toml` and shared across the entire sovereign toolchain. All git commits and ratification records dynamically reflect your configured identity.
 
-## Sovereign Invariants
+---
 
-- Pure Compiled Architecture: 100% native Rust and Mojo. Zero runtime interpreters.
-- Hardware Key Vault: All secrets reside in the hardware TPM key vault. Zero plaintext .env files on disk.
-- Anti-Slop Standard: Zero em dashes, zero en dashes, zero conversational filler, and zero AI cliches.
-- Non-Repudiation: All commits signed and authored by AIEN <aien.atlas@proton.me>.
+## The 5-Phase RSI Architecture
+
+1. **Observe**: Telemetry collection across git status, unslop violations, crumb breadcrumbs, and drive/humanity equilibrium.
+2. **Propose**: Autonomous generation of atomic improvement proposals in isolated sandbox worktrees (`/tmp/spark-rsi-sandbox/`).
+3. **Verify**: Strict validation enforcing the unslop standard, zero plaintext disk secrets, compilation (`cargo check`), and test suites (`cargo test`).
+4. **Balance**: Mojo-compiled SIMD tensor kernel evaluating Drive vs. Humanity balance vectors on Grace Blackwell GB10 hardware.
+5. **Ratify**: Applies verified patches, commits to git under your configured operator identity, and records lessons in Cortex memory.
+
+---
+
+## Downstream Heritage Requirement
+
+If you branch off of, fork, or copy this repository, you must retain and include the original founding Constitution ([CONSTITUTION.md](CONSTITUTION.md)) in its entirety.
 
 ## License
 
-Licensed under either of Apache License, Version 2.0 or MIT License at your option.
+Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
