@@ -1,4 +1,5 @@
 pub mod balance;
+pub mod config;
 pub mod daemon;
 pub mod models;
 pub mod observe;
@@ -7,6 +8,7 @@ pub mod ratify;
 pub mod verifier;
 
 pub use balance::BalanceKernel;
+pub use config::{EngineConfig, OperatorProfile, SovereignConfig};
 pub use daemon::RsiEngine;
 pub use models::*;
 pub use observe::observe_codebase;
