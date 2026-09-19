@@ -6,11 +6,14 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 
+#[derive(Debug, Clone)]
 pub struct SupervisorConfig {
     pub rsi_root: PathBuf,
     pub socket_path: PathBuf,
     pub memory_limit_mb: u64,
     pub canary_target: u64,
+    pub max_latency_us: u64,
+    pub max_error_rate: f64,
     pub shared_secret: String,
 }
 
@@ -45,6 +48,8 @@ impl Default for SupervisorConfig {
             socket_path: PathBuf::from(".rsi/supervisor.sock"),
             memory_limit_mb: 49152,
             canary_target: 5000,
+            max_latency_us: 1_000_000,
+            max_error_rate: 0.0,
             shared_secret: resolve_supervisor_secret(),
         }
     }
@@ -87,7 +92,7 @@ impl SupervisorDaemon {
 
     pub async fn process_worker_message(
         &self,
-        _conn: &mut IpcConnection,
+        conn: &mut IpcConnection,
         msg: WorkerMessage,
         active_socket_link: &Path,
     ) -> Result<Option<SupervisorMessage>, String> {
@@ -95,10 +100,26 @@ impl SupervisorDaemon {
             WorkerMessage::Ready {
                 generation_id,
                 pid,
-                auth_token,
+                auth_token: _,
             } => {
-                if !SessionAuth::verify_token(&generation_id, &self.config.shared_secret, &auth_token) {
-                    return Err(format!("Unauthorized worker token for generation {}", generation_id));
+                // Fresh challenge-response HMAC handshake
+                let nonce = format!("challenge-{}", uuid::Uuid::new_v4().simple());
+                conn.send(&SupervisorMessage::AuthChallenge { nonce: nonce.clone() })
+                    .await
+                    .map_err(|e| format!("Failed to send auth challenge: {}", e))?;
+
+                let auth_msg: WorkerMessage = conn.recv()
+                    .await
+                    .map_err(|e| format!("Failed to receive auth response: {}", e))?;
+
+                let candidate_hmac = match auth_msg {
+                    WorkerMessage::AuthResponse { response } => response,
+                    other => return Err(format!("Expected AuthResponse from worker, got {:?}", other)),
+                };
+
+                let message_to_sign = format!("{}:{}", generation_id, nonce);
+                if !SessionAuth::verify_hmac(&self.config.shared_secret, &message_to_sign, &candidate_hmac) {
+                    return Err(format!("Unauthorized worker HMAC for generation {}", generation_id));
                 }
 
                 let mut canary_lock = self.canary_generation.lock().await;
@@ -106,6 +127,7 @@ impl SupervisorDaemon {
                     if canary.generation_id == generation_id {
                         canary.state = GenerationState::Ready;
                         canary.installed_path = PathBuf::from(format!("/proc/{}", pid));
+                        canary.pid = Some(pid);
 
                         // Atomic switch active socket to canary
                         let canary_sock = self.config.rsi_root.join(format!("workers/{}.sock", generation_id));
@@ -152,24 +174,40 @@ impl SupervisorDaemon {
                 generation_id,
                 transaction_id: _,
                 success,
-                latency_us: _,
+                latency_us,
                 error,
             } => {
                 let should_revert;
                 let is_durable;
                 let promoted_gen;
+                let mut revert_reason = error.clone();
                 {
                     let mut canary_lock = self.canary_generation.lock().await;
                     if let Some(ref mut canary) = *canary_lock {
                         if canary.generation_id == generation_id {
-                            let new_state = self.supervisor.record_canary_transaction(
+                            match self.supervisor.record_canary_transaction(
                                 canary,
                                 success,
+                                latency_us,
                                 self.config.canary_target,
-                            )?;
-                            should_revert = new_state == GenerationState::Reverting;
-                            is_durable = new_state == GenerationState::Durable;
-                            promoted_gen = if is_durable { Some(canary.clone()) } else { None };
+                                self.config.max_latency_us,
+                                self.config.max_error_rate,
+                            ) {
+                                Ok(new_state) => {
+                                    should_revert = new_state == GenerationState::Reverting;
+                                    is_durable = new_state == GenerationState::Durable;
+                                    promoted_gen = if is_durable { Some(canary.clone()) } else { None };
+                                }
+                                Err(budget_err) => {
+                                    should_revert = true;
+                                    is_durable = false;
+                                    promoted_gen = None;
+                                    revert_reason = Some(match error {
+                                        Some(ref orig) => format!("{}: {}", orig, budget_err),
+                                        None => budget_err,
+                                    });
+                                }
+                            }
                         } else {
                             should_revert = false;
                             is_durable = false;
@@ -185,7 +223,7 @@ impl SupervisorDaemon {
                 if should_revert {
                     self.trigger_instant_rollback(active_socket_link).await?;
                     return Ok(Some(SupervisorMessage::RevertOrder {
-                        reason: error.unwrap_or_else(|| "Canary transaction failure".to_string()),
+                        reason: revert_reason.unwrap_or_else(|| "Canary transaction failure".to_string()),
                     }));
                 }
 
@@ -266,6 +304,8 @@ mod tests {
             socket_path: sock_path.clone(),
             memory_limit_mb: 49152,
             canary_target: 3,
+            max_latency_us: 1_000_000,
+            max_error_rate: 0.0,
             shared_secret: "secret-key".to_string(),
         };
 
@@ -282,19 +322,21 @@ mod tests {
         std::fs::create_dir_all(&src_cand).unwrap();
         daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
 
-        // Worker Ready message
-        let (_stream_worker, stream_sup) = tokio::net::UnixStream::pair().unwrap();
+        // Worker Ready message with interactive challenge/HMAC handshake
+        let (stream_worker, stream_sup) = tokio::net::UnixStream::pair().unwrap();
+        let mut conn_worker = IpcConnection::new(stream_worker);
         let mut conn_sup = IpcConnection::new(stream_sup);
 
-        let auth_token = SessionAuth::compute_token("gen-002", "secret-key");
-        let ready_msg = WorkerMessage::Ready {
-            generation_id: "gen-002".to_string(),
-            pid: 9999,
-            auth_token,
-        };
+        let worker_handshake = tokio::spawn(async move {
+            conn_worker.perform_worker_handshake("gen-002", 9999, "secret-key").await
+        });
 
+        let ready_msg = conn_sup.recv::<WorkerMessage>().await.unwrap();
         let reply = daemon.process_worker_message(&mut conn_sup, ready_msg, &active_link).await.unwrap();
         assert_eq!(reply, Some(SupervisorMessage::Ping));
+        conn_sup.send(&reply.unwrap()).await.unwrap();
+        let worker_res = worker_handshake.await.unwrap().unwrap();
+        assert_eq!(worker_res, SupervisorMessage::Ping);
 
         // Canary transactions 1 & 2 succeed
         for i in 1..=2 {
@@ -325,6 +367,49 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_supervisor_daemon_canary_latency_budget_violation_triggers_rollback() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rsi_root = tmp.path().join(".rsi");
+        let active_link = rsi_root.join("active.sock");
+
+        let config = SupervisorConfig {
+            rsi_root: rsi_root.clone(),
+            socket_path: rsi_root.join("supervisor.sock"),
+            memory_limit_mb: 49152,
+            canary_target: 5,
+            max_latency_us: 50_000,
+            max_error_rate: 0.0,
+            shared_secret: "secret-key".to_string(),
+        };
+
+        let daemon = SupervisorDaemon::new(config);
+
+        let src_cand = tmp.path().join("art_cand");
+        std::fs::create_dir_all(&src_cand).unwrap();
+        daemon.stage_canary("gen-slow", &src_cand, "sha-cand").await.unwrap();
+
+        let (_s1, s2) = tokio::net::UnixStream::pair().unwrap();
+        let mut conn_sup = IpcConnection::new(s2);
+
+        // Transaction succeeds but latency exceeds 50ms budget (75ms)
+        let slow_report = WorkerMessage::CanaryReport {
+            generation_id: "gen-slow".to_string(),
+            transaction_id: 1,
+            success: true,
+            latency_us: 75_000,
+            error: None,
+        };
+
+        let reply = daemon.process_worker_message(&mut conn_sup, slow_report, &active_link).await.unwrap();
+        match reply {
+            Some(SupervisorMessage::RevertOrder { reason }) => {
+                assert!(reason.contains("Latency budget exceeded"));
+            }
+            other => panic!("Expected RevertOrder for latency budget, got {:?}", other),
+        }
+    }
+
+    #[tokio::test]
     async fn test_supervisor_daemon_canary_failure_triggers_instant_rollback() {
         let tmp = tempfile::tempdir().unwrap();
         let rsi_root = tmp.path().join(".rsi");
@@ -335,6 +420,8 @@ mod tests {
             socket_path: rsi_root.join("supervisor.sock"),
             memory_limit_mb: 49152,
             canary_target: 5,
+            max_latency_us: 1_000_000,
+            max_error_rate: 0.0,
             shared_secret: "secret-key".to_string(),
         };
 
