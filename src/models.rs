@@ -105,6 +105,8 @@ pub struct RsiConfig {
     pub max_url: String,
     #[serde(default = "default_max_model")]
     pub max_model: String,
+    #[serde(default = "default_canary_target")]
+    pub canary_target: u64,
 }
 
 fn default_max_url() -> String {
@@ -117,6 +119,10 @@ fn default_max_model() -> String {
 
 fn default_rsi_root() -> String {
     ".rsi".to_string()
+}
+
+fn default_canary_target() -> u64 {
+    5000
 }
 
 impl Default for RsiConfig {
@@ -134,6 +140,7 @@ impl Default for RsiConfig {
             require_latency_improvement: false,
             max_url: default_max_url(),
             max_model: default_max_model(),
+            canary_target: 5000,
         }
     }
 }

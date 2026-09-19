@@ -14,6 +14,7 @@ impl Ratifier {
         proposal: &ImprovementProposal,
         invariants: &InvariantReport,
         target_repo: &Path,
+        ledger_block_hash: Option<&str>,
         cortex_url: &str,
         cortex_space: &str,
     ) -> Result<RatificationRecord, String> {
@@ -81,7 +82,7 @@ impl Ratifier {
 
         // 3. Record lesson in Cortex memory
         let (cortex_receipt_id, cortex_recorded) =
-            Self::record_cortex_lesson(proposal, commit_hash.as_deref(), cortex_url, cortex_space).await;
+            Self::record_cortex_lesson(proposal, commit_hash.as_deref(), ledger_block_hash, cortex_url, cortex_space).await;
 
         Ok(RatificationRecord {
             proposal_id: proposal.id.clone(),
@@ -95,13 +96,14 @@ impl Ratifier {
         })
     }
 
-    async fn record_cortex_lesson(
+    pub async fn record_cortex_lesson(
         proposal: &ImprovementProposal,
         commit_hash: Option<&str>,
+        ledger_block_hash: Option<&str>,
         cortex_url: &str,
         cortex_space: &str,
     ) -> (Option<String>, bool) {
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/drakestapleton".to_string());
         let token_path = format!("{}/.config/cortex/token", home);
         let token = std::env::var("CORTEX_TOKEN")
             .unwrap_or_else(|_| fs::read_to_string(&token_path).unwrap_or_default())
@@ -112,26 +114,29 @@ impl Ratifier {
         let entity_id = format!("lesson-rsi-{}", Uuid::new_v4().simple());
         let canonical_name = format!("RSI Lesson: {}", proposal.title);
         let commit_info = commit_hash.unwrap_or("uncommitted");
+        let ledger_info = ledger_block_hash.unwrap_or("unrecorded");
         let content = format!(
-            "Proposal ID: {}. Target File: {}. Kind: {:?}. Commit: {}. Description: {}",
-            proposal.id, proposal.target_file, proposal.kind, commit_info, proposal.description
+            "Proposal ID: {}. Target File: {}. Kind: {:?}. Commit: {}. Ledger Hash: {}. Description: {}",
+            proposal.id, proposal.target_file, proposal.kind, commit_info, ledger_info, proposal.description
         );
 
         let payload = json!({
-            "canonicalName": canonical_name,
-            "entityType": "lesson",
-            "content": content,
-            "space": cortex_space,
-            "confidence": 1.0,
-            "metadata": {
-                "proposal_id": proposal.id,
-                "target_file": proposal.target_file,
-                "kind": format!("{:?}", proposal.kind),
-                "commit": commit_info
+            "kind": "entity",
+            "value": {
+                "canonicalName": canonical_name,
+                "content": content,
+                "confidence": 1.0,
+                "metadata": {
+                    "proposal_id": proposal.id,
+                    "target_file": proposal.target_file,
+                    "kind": format!("{:?}", proposal.kind),
+                    "commit": commit_info,
+                    "ledger_block_hash": ledger_info
+                }
             }
         });
 
-        let url = format!("{}/entities", cortex_url.trim_end_matches('/'));
+        let url = format!("{}/api/cortex/write?space={}", cortex_url.trim_end_matches('/'), cortex_space);
         let mut req = client.post(&url).json(&payload);
         if !token.is_empty() {
             req = req.header("Authorization", format!("Bearer {}", token));

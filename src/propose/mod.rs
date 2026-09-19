@@ -106,6 +106,14 @@ impl ProposalGenerator {
             }
             return rest.trim().to_string();
         }
+        if trimmed.starts_with("Here")
+            || trimmed.starts_with("I ")
+            || trimmed.starts_with("Sure")
+            || trimmed.starts_with("Let")
+            || trimmed.contains("thinking process:")
+        {
+            return String::new();
+        }
         trimmed.to_string()
     }
 

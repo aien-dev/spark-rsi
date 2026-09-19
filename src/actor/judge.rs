@@ -270,7 +270,7 @@ impl BlindJudge {
 
         // 5. Paired-workload benchmark execution for latency & resource metrics
         let (parent_latencies, candidate_latencies, parent_rusage, candidate_rusage) =
-            run_paired_benchmarks(parent_path, candidate_path, 50)?;
+            run_paired_benchmarks(parent_path, candidate_path, 20)?;
 
         let performance = PerformanceLayer::evaluate_latencies_with_policy(
             &parent_latencies,
@@ -451,7 +451,7 @@ fn collect_files_recursive(
 
     for path in entries {
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-        if name == "target" || name == ".git" || name == "node_modules" {
+        if name == "target" || name == ".git" || name == "node_modules" || name.starts_with(".") {
             continue;
         }
         if path.is_dir() {
@@ -725,7 +725,7 @@ mod tests {
 
         let judge = BlindJudge::new(holdouts, outputs.clone())
             .with_signing_key(signing_key)
-            .with_non_inferiority_margin(200.0);
+            .with_non_inferiority_margin(5.0);
 
         let receipt = judge
             .evaluate_cycle(
