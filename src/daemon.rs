@@ -1,3 +1,4 @@
+use sha2::Digest;
 use crate::actor::judge::BlindJudge;
 use crate::balance::BalanceKernel;
 use crate::evaluator::EvaluationReceipt;
@@ -138,7 +139,38 @@ impl RsiEngine {
 
         let sandbox_base = Path::new(&config.sandbox_root);
 
-        for mut candidate in candidates {
+                for mut candidate in candidates {
+            // Tier Governance: Check candidate tier and boundaries
+            let tier = crate::meta::TierGovernance::classify_proposal(&candidate);
+            if tier == crate::meta::CandidateTier::Tier2Engine {
+                if let Err(e) = crate::meta::TierGovernance::validate_tier2_candidate_boundaries(&candidate.target_file) {
+                    let _ = ledger.append_block(BlockType::Evaluation, format!("Tier 2 Invariant Rejected: {}", e), vec![]);
+                    continue;
+                }
+                if let Some(ref op_key_hex) = config.operator_key_hex {
+                    let key_bytes = match hex::decode(op_key_hex) {
+                        Ok(b) => b,
+                        Err(_) => {
+                            let _ = ledger.append_block(BlockType::Evaluation, "Invalid operator_key_hex".to_string(), vec![]);
+                            continue;
+                        }
+                    };
+                    let op_key = match p256::ecdsa::VerifyingKey::from_sec1_bytes(&key_bytes) {
+                        Ok(k) => k,
+                        Err(_) => {
+                            let _ = ledger.append_block(BlockType::Evaluation, "Invalid operator verifying key".to_string(), vec![]);
+                            continue;
+                        }
+                    };
+                    let digest = sha2::Sha256::digest(candidate.proposed_patch.as_bytes());
+                    let sig = candidate.operator_signature.as_deref().unwrap_or_default();
+                    if crate::meta::TierGovernance::verify_operator_authorization(&digest, sig, &op_key).is_err() {
+                        let _ = ledger.append_block(BlockType::Evaluation, "Operator signature unauthorized".to_string(), vec![]);
+                        continue;
+                    }
+                }
+            }
+
             let sandbox_dir = match ProposalGenerator::stage_in_sandbox(&mut candidate, repo_path, sandbox_base) {
                 Ok(dir) => dir,
                 Err(e) => {
@@ -201,7 +233,8 @@ impl RsiEngine {
             // 10. Objective Evaluation via BlindJudge with holdouts and cryptographic signing key
             let output_dir = Path::new(&config.sandbox_root).join("eval_outputs");
             let mut judge = BlindJudge::new(holdouts_path.clone(), output_dir)
-                .with_signing_key(signing_key.clone());
+                .with_signing_key(signing_key.clone())
+                .with_non_inferiority_margin(5.0);
             judge.require_latency_improvement = config.require_latency_improvement;
 
             let receipt = match judge.evaluate_cycle(&cycle_id, &candidate.id, "parent", &sandbox_dir, repo_path) {

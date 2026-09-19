@@ -30,6 +30,7 @@ pub enum ProposalKind {
     Optimization,
     UnslopSanitization,
     InvariantFix,
+    MetaEngineImprovement,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +43,8 @@ pub struct ImprovementProposal {
     pub kind: ProposalKind,
     pub created_at: String,
     pub sandbox_path: Option<String>,
+    #[serde(default)]
+    pub operator_signature: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +110,8 @@ pub struct RsiConfig {
     pub max_model: String,
     #[serde(default = "default_canary_target")]
     pub canary_target: u64,
+    #[serde(default)]
+    pub operator_key_hex: Option<String>,
 }
 
 fn default_max_url() -> String {
@@ -141,6 +146,7 @@ impl Default for RsiConfig {
             max_url: default_max_url(),
             max_model: default_max_model(),
             canary_target: 5000,
+            operator_key_hex: None,
         }
     }
 }

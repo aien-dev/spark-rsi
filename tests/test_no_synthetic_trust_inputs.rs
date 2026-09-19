@@ -140,7 +140,8 @@ fn test_end_to_end_unmocked_lifecycle_admission_and_supervisor_rollback() {
     let verifying_key = VerifyingKey::from(&signing_key);
 
     let judge = BlindJudge::new(holdouts, outputs.clone())
-        .with_signing_key(signing_key);
+        .with_signing_key(signing_key)
+        .with_non_inferiority_margin(5.0);
 
     // 1. Evaluate candidate
     let receipt = judge
