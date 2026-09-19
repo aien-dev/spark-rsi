@@ -11,6 +11,8 @@ pub use stats::{
     TailNonInferiorityResult,
 };
 
+use p256::ecdsa::signature::{Signer, Verifier};
+use p256::ecdsa::{Signature, SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -59,6 +61,7 @@ impl EvaluationReceipt {
         for lr in layers {
             hasher.update(lr.layer_name.as_bytes());
             hasher.update(if lr.passed { b"1" } else { b"0" });
+            hasher.update(lr.score.to_le_bytes());
             hasher.update(lr.summary.as_bytes());
         }
 
@@ -69,15 +72,14 @@ impl EvaluationReceipt {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
-        fs::write(path, json).map_err(|e| e.to_string())?;
+        let content = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        fs::write(path, content).map_err(|e| e.to_string())?;
         Ok(())
     }
 
     pub fn load_from_file(path: &Path) -> Result<Self, String> {
         let content = fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let receipt: Self = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-        Ok(receipt)
+        serde_json::from_str(&content).map_err(|e| e.to_string())
     }
 
     pub fn verify_digest(&self) -> bool {
@@ -89,6 +91,36 @@ impl EvaluationReceipt {
             &self.layer_results,
         );
         self.receipt_digest == expected
+    }
+
+    pub fn sign(&mut self, signing_key: &SigningKey) {
+        let digest_bytes = hex::decode(&self.receipt_digest)
+            .unwrap_or_else(|_| self.receipt_digest.as_bytes().to_vec());
+        let signature: Signature = signing_key.sign(&digest_bytes);
+        self.signature = Some(format!("tpm2-p256:{}", hex::encode(signature.to_bytes())));
+    }
+
+    pub fn verify_signature(&self, verifying_key: &VerifyingKey) -> bool {
+        if !self.verify_digest() {
+            return false;
+        }
+        let Some(sig_str) = &self.signature else {
+            return false;
+        };
+        let raw_hex = if let Some(stripped) = sig_str.strip_prefix("tpm2-p256:") {
+            stripped
+        } else {
+            sig_str
+        };
+        let Ok(sig_bytes) = hex::decode(raw_hex) else {
+            return false;
+        };
+        let Ok(signature) = Signature::from_slice(&sig_bytes) else {
+            return false;
+        };
+        let digest_bytes = hex::decode(&self.receipt_digest)
+            .unwrap_or_else(|_| self.receipt_digest.as_bytes().to_vec());
+        verifying_key.verify(&digest_bytes, &signature).is_ok()
     }
 }
 
@@ -217,7 +249,7 @@ mod tests {
             &LongitudinalReplayLayer::builtin_regression_corpus(),
         );
 
-        let receipt = ObjectiveEvaluator::evaluate_candidate(
+        let mut receipt = ObjectiveEvaluator::evaluate_candidate(
             "cycle-001",
             "cand-001",
             "parent-000",
@@ -234,6 +266,26 @@ mod tests {
         assert!(receipt.admitted);
         assert!(receipt.verify_digest());
         assert_eq!(receipt.layer_results.len(), 6);
+
+        // Test real ECDSA P-256 signing and verification
+        let signing_key = SigningKey::from_bytes(&[42u8; 32].into()).unwrap();
+        let verifying_key = VerifyingKey::from(&signing_key);
+
+        receipt.sign(&signing_key);
+        assert!(receipt.signature.is_some());
+        assert!(receipt.verify_signature(&verifying_key));
+
+        // Tampered receipt fails signature verification
+        let mut tampered = receipt.clone();
+        tampered.candidate_id = "attacker-modified-cand".to_string();
+        tampered.receipt_digest = EvaluationReceipt::compute_digest(
+            &tampered.cycle_id,
+            &tampered.candidate_id,
+            &tampered.parent_id,
+            tampered.admitted,
+            &tampered.layer_results,
+        );
+        assert!(!tampered.verify_signature(&verifying_key));
     }
 
     #[test]
