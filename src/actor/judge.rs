@@ -39,6 +39,9 @@ pub struct JudgeCli {
     #[arg(long, default_value = ".rsi/eval_outputs")]
     pub output_dir: String,
 
+    #[arg(long, default_value_t = 1.0)]
+    pub non_inferiority_margin_pct: f64,
+
     #[arg(long)]
     pub signing_key_hex: Option<String>,
 
@@ -159,6 +162,7 @@ pub struct BlindJudge {
     pub output_dir: PathBuf,
     pub signing_key: Option<SigningKey>,
     pub require_latency_improvement: bool,
+    pub non_inferiority_margin_pct: f64,
 }
 
 impl BlindJudge {
@@ -168,7 +172,13 @@ impl BlindJudge {
             output_dir,
             signing_key: None,
             require_latency_improvement: false,
+            non_inferiority_margin_pct: 1.0,
         }
+    }
+
+    pub fn with_non_inferiority_margin(mut self, margin: f64) -> Self {
+        self.non_inferiority_margin_pct = margin;
+        self
     }
 
     pub fn with_signing_key(mut self, key: SigningKey) -> Self {
@@ -260,13 +270,14 @@ impl BlindJudge {
 
         // 5. Paired-workload benchmark execution for latency & resource metrics
         let (parent_latencies, candidate_latencies, parent_rusage, candidate_rusage) =
-            run_paired_benchmarks(parent_path, candidate_path, 30)?;
+            run_paired_benchmarks(parent_path, candidate_path, 50)?;
 
         let performance = PerformanceLayer::evaluate_latencies_with_policy(
             &parent_latencies,
             &candidate_latencies,
             true,
             self.require_latency_improvement,
+            self.non_inferiority_margin_pct,
             5000,
             Some(42),
         )?;
@@ -478,43 +489,82 @@ pub fn run_paired_benchmarks(
     let parent_runner = CandidateJailRunner::new(&parent_bin);
     let candidate_runner = CandidateJailRunner::new(&candidate_bin);
 
-    // Capture child rusage baseline before parent workload
-    let parent_rusage_before = RusageMetrics::capture_children()
-        .map_err(|e| format!("Failed to capture parent child rusage baseline: {}", e))?;
-    let mut parent_latencies = Vec::with_capacity(iterations);
-    for i in 0..iterations {
-        let input_arg = format!("benchmark-case-{}", i);
-        let timer = LatencyTimer::start();
-        let (success, _stdout, stderr) = parent_runner
-            .execute(&["holdout", &input_arg])
-            .map_err(|e| format!("Jail execution failed for parent on iteration {}: {}", i, e))?;
-        if !success {
-            return Err(format!("Parent execution exited with error on iteration {}: {}", i, stderr));
-        }
-        parent_latencies.push(timer.elapsed_us());
+    // Execute warm-up runs outside the measurement window to prime page caches and namespaces
+    for w in 0..2 {
+        let warm_arg = format!("warmup-case-{}", w);
+        let _ = parent_runner.execute(&["holdout", &warm_arg]);
+        let _ = candidate_runner.execute(&["holdout", &warm_arg]);
     }
-    let parent_rusage_after = RusageMetrics::capture_children()
-        .map_err(|e| format!("Failed to capture parent child rusage final: {}", e))?;
-    let parent_rusage = parent_rusage_after.diff(&parent_rusage_before);
 
-    // Capture child rusage baseline before candidate workload
-    let candidate_rusage_before = RusageMetrics::capture_children()
-        .map_err(|e| format!("Failed to capture candidate child rusage baseline: {}", e))?;
+    let mut parent_latencies = Vec::with_capacity(iterations);
     let mut candidate_latencies = Vec::with_capacity(iterations);
+    let mut parent_rusage = RusageMetrics::default();
+    let mut candidate_rusage = RusageMetrics::default();
+
     for i in 0..iterations {
         let input_arg = format!("benchmark-case-{}", i);
-        let timer = LatencyTimer::start();
-        let (success, _stdout, stderr) = candidate_runner
-            .execute(&["holdout", &input_arg])
-            .map_err(|e| format!("Jail execution failed for candidate on iteration {}: {}", i, e))?;
-        if !success {
-            return Err(format!("Candidate execution exited with error on iteration {}: {}", i, stderr));
+
+        // Interleave execution with A/B/B/A alternating order to eliminate order and thermal bias
+        if i % 2 == 0 {
+            // Parent then Candidate
+            let p_before = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture parent baseline: {}", e))?;
+            let timer = LatencyTimer::start();
+            let (p_ok, _, p_err) = parent_runner
+                .execute(&["holdout", &input_arg])
+                .map_err(|e| format!("Jail execution failed for parent on iteration {}: {}", i, e))?;
+            if !p_ok {
+                return Err(format!("Parent execution exited with error on iteration {}: {}", i, p_err));
+            }
+            parent_latencies.push(timer.elapsed_us());
+            let p_after = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture parent child rusage: {}", e))?;
+            parent_rusage.accumulate(&p_after.diff(&p_before));
+
+            let c_before = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture candidate baseline: {}", e))?;
+            let timer = LatencyTimer::start();
+            let (c_ok, _, c_err) = candidate_runner
+                .execute(&["holdout", &input_arg])
+                .map_err(|e| format!("Jail execution failed for candidate on iteration {}: {}", i, e))?;
+            if !c_ok {
+                return Err(format!("Candidate execution exited with error on iteration {}: {}", i, c_err));
+            }
+            candidate_latencies.push(timer.elapsed_us());
+            let c_after = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture candidate child rusage: {}", e))?;
+            candidate_rusage.accumulate(&c_after.diff(&c_before));
+        } else {
+            // Candidate then Parent
+            let c_before = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture candidate baseline: {}", e))?;
+            let timer = LatencyTimer::start();
+            let (c_ok, _, c_err) = candidate_runner
+                .execute(&["holdout", &input_arg])
+                .map_err(|e| format!("Jail execution failed for candidate on iteration {}: {}", i, e))?;
+            if !c_ok {
+                return Err(format!("Candidate execution exited with error on iteration {}: {}", i, c_err));
+            }
+            candidate_latencies.push(timer.elapsed_us());
+            let c_after = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture candidate child rusage: {}", e))?;
+            candidate_rusage.accumulate(&c_after.diff(&c_before));
+
+            let p_before = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture parent baseline: {}", e))?;
+            let timer = LatencyTimer::start();
+            let (p_ok, _, p_err) = parent_runner
+                .execute(&["holdout", &input_arg])
+                .map_err(|e| format!("Jail execution failed for parent on iteration {}: {}", i, e))?;
+            if !p_ok {
+                return Err(format!("Parent execution exited with error on iteration {}: {}", i, p_err));
+            }
+            parent_latencies.push(timer.elapsed_us());
+            let p_after = RusageMetrics::capture_children()
+                .map_err(|e| format!("Failed to capture parent child rusage: {}", e))?;
+            parent_rusage.accumulate(&p_after.diff(&p_before));
         }
-        candidate_latencies.push(timer.elapsed_us());
     }
-    let candidate_rusage_after = RusageMetrics::capture_children()
-        .map_err(|e| format!("Failed to capture candidate child rusage final: {}", e))?;
-    let candidate_rusage = candidate_rusage_after.diff(&candidate_rusage_before);
 
     Ok((parent_latencies, candidate_latencies, parent_rusage, candidate_rusage))
 }
@@ -524,7 +574,8 @@ pub fn run_judge_cli(cli: JudgeCli) -> Result<EvaluationReceipt, Box<dyn std::er
         PathBuf::from(&cli.holdouts_dir),
         PathBuf::from(&cli.output_dir),
     )
-    .with_require_latency_improvement(cli.require_latency_improvement);
+    .with_require_latency_improvement(cli.require_latency_improvement)
+    .with_non_inferiority_margin(cli.non_inferiority_margin_pct);
 
     let key_opt = if let Some(ref hex_str) = cli.signing_key_hex {
         let bytes = hex::decode(hex_str.trim())?;
@@ -673,7 +724,8 @@ mod tests {
         let verifying_key = VerifyingKey::from(&signing_key);
 
         let judge = BlindJudge::new(holdouts, outputs.clone())
-            .with_signing_key(signing_key);
+            .with_signing_key(signing_key)
+            .with_non_inferiority_margin(5.0);
 
         let receipt = judge
             .evaluate_cycle(
