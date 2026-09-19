@@ -21,7 +21,7 @@ impl RsiEngine {
         let cycle_id = format!("cycle-{}", Uuid::new_v4().simple());
         let repo_path = Path::new(&config.target_repo);
 
-        // 1. Observe codebase telemetry
+        // 1. Observe codebase metrics
         let telemetry = observe_codebase(repo_path)?;
 
         // 2. Propose improvement

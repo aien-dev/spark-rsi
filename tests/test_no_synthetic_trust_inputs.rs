@@ -101,7 +101,7 @@ fn test_paired_benchmarks_capture_real_child_process_metrics_without_markers() {
         assert!(*lat > 50.0, "Latency must be real elapsed microseconds: {}", lat);
     }
 
-    // Crucial check: .rsi_speedup (0.10) must NOT artificially scale candidate latency by 10x
+    // Core invariant: .rsi_speedup (0.10) must NOT artificially scale candidate latency by 10x
     let p_mean: f64 = p_lats.iter().sum::<f64>() / 30.0;
     let c_mean: f64 = c_lats.iter().sum::<f64>() / 30.0;
     let ratio = c_mean / p_mean;
