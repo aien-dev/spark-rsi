@@ -277,6 +277,7 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         holdouts_dir: None,
         signing_key_hex: None,
         require_latency_improvement: false,
+        ..Default::default()
     };
 
     let result = RsiEngine::run_cycle(&config).await.expect("run_cycle failed");

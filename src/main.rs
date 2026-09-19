@@ -149,6 +149,10 @@ enum Commands {
         kernel: String,
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
+        #[arg(long, default_value = "http://127.0.0.1:18006/v1")]
+        max_url: String,
+        #[arg(long, default_value = "atlas-lightning-omni")]
+        max_model: String,
     },
     /// Run the continuous recursive self-improvement daemon loop
     Daemon {
@@ -160,6 +164,10 @@ enum Commands {
         kernel: String,
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
+        #[arg(long, default_value = "http://127.0.0.1:18006/v1")]
+        max_url: String,
+        #[arg(long, default_value = "atlas-lightning-omni")]
+        max_model: String,
     },
     /// Manage the append-only cryptographic improvement ledger
     Ledger {
@@ -268,7 +276,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let res = spark_rsi::evaluate_holdout_case(&input);
             println!("{}", res);
         }
-        Commands::Cycle { path, kernel, cortex_url } => {
+        Commands::Cycle { path, kernel, cortex_url, max_url, max_model } => {
             let config = RsiConfig {
                 target_repo: path,
                 cortex_url,
@@ -280,11 +288,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 holdouts_dir: None,
                 signing_key_hex: None,
                 require_latency_improvement: false,
+                max_url,
+                max_model,
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
         }
-        Commands::Daemon { path, interval, kernel, cortex_url } => {
+        Commands::Daemon { path, interval, kernel, cortex_url, max_url, max_model } => {
             let config = RsiConfig {
                 target_repo: path,
                 cortex_url,
@@ -296,6 +306,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 holdouts_dir: None,
                 signing_key_hex: None,
                 require_latency_improvement: false,
+                max_url,
+                max_model,
             };
             RsiEngine::run_daemon(config).await?;
         }

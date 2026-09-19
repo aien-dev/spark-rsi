@@ -1,3 +1,11 @@
+pub mod cortex;
+pub mod diagnose;
+pub mod max_client;
+
+pub use cortex::CortexExperienceClient;
+pub use diagnose::{DefectCategory, DiagnosticContext};
+pub use max_client::{ChatMessage, MaxClient};
+
 use crate::models::{ImprovementProposal, ProposalKind};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -79,6 +87,73 @@ impl ProposalGenerator {
         }
         None
     }
+
+    /// Extracts clean replacement file content from markdown code fences
+    pub fn extract_code_block(raw: &str) -> String {
+        let trimmed = raw.trim();
+        if let Some(start) = trimmed.find("```") {
+            let after_fence = &trimmed[start + 3..];
+            let code_start = if let Some(newline) = after_fence.find('\n') {
+                newline + 1
+            } else {
+                0
+            };
+            let rest = &after_fence[code_start..];
+            if let Some(end) = rest.rfind("```") {
+                return rest[..end].trim().to_string();
+            }
+            return rest.trim().to_string();
+        }
+        trimmed.to_string()
+    }
+
+    /// Generates a proposal by prompting MAX with a diagnostic context
+    pub async fn propose_from_diagnosis(
+        max_client: &MaxClient,
+        diag: &DiagnosticContext,
+    ) -> Result<ImprovementProposal, String> {
+        let (sys, user) = diag.build_prompts();
+        let messages = vec![
+            ChatMessage {
+                role: "system".to_string(),
+                content: sys,
+            },
+            ChatMessage {
+                role: "user".to_string(),
+                content: user,
+            },
+        ];
+
+        let raw_completion = max_client
+            .complete(&messages, 4096, 0.2)
+            .await
+            .map_err(|e| format!("MAX diagnosis proposal generation failed: {}", e))?;
+
+        let cleaned_patch = Self::extract_code_block(&raw_completion);
+        if cleaned_patch.is_empty() {
+            return Err("MAX generated an empty patch".to_string());
+        }
+
+        // Validate unslop invariant on generated patch
+        if cleaned_patch.contains('\u{2014}') || cleaned_patch.contains('\u{2013}') {
+            let sanitized = cleaned_patch.replace('\u{2014}', ", ").replace('\u{2013}', "-");
+            return Ok(Self::create_proposal(
+                &format!("resolve {:?} in {}", diag.primary_defect, diag.target_file),
+                &format!("Automated MAX repair with unslop sanitization for cycle {}", diag.cycle_id),
+                &diag.target_file,
+                &sanitized,
+                ProposalKind::InvariantFix,
+            ));
+        }
+
+        Ok(Self::create_proposal(
+            &format!("resolve {:?} in {}", diag.primary_defect, diag.target_file),
+            &format!("Automated MAX repair for cycle {}", diag.cycle_id),
+            &diag.target_file,
+            &cleaned_patch,
+            ProposalKind::InvariantFix,
+        ))
+    }
 }
 
 fn copy_dir_recursive(src: &Path, dst: &Path, depth: usize) -> Result<(), String> {
@@ -123,5 +198,15 @@ mod tests {
         );
         assert!(prop.id.starts_with("prop-"));
         assert_eq!(prop.kind, ProposalKind::Refactor);
+    }
+
+    #[test]
+    fn test_extract_code_block() {
+        let raw = "```rust\npub fn hello() -> &'static str {\n    \"world\"\n}\n```";
+        let extracted = ProposalGenerator::extract_code_block(raw);
+        assert_eq!(extracted, "pub fn hello() -> &'static str {\n    \"world\"\n}");
+
+        let raw_plain = "pub fn simple() {}";
+        assert_eq!(ProposalGenerator::extract_code_block(raw_plain), "pub fn simple() {}");
     }
 }

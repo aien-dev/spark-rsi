@@ -4,7 +4,7 @@ use crate::evaluator::EvaluationReceipt;
 use crate::ledger::{ImprovementLedger, LedgerBlock};
 use crate::models::{RsiConfig, RsiCycleResult};
 use crate::observe::observe_codebase;
-use crate::propose::ProposalGenerator;
+use crate::propose::{CortexExperienceClient, DefectCategory, DiagnosticContext, MaxClient, ProposalGenerator};
 use crate::ratify::Ratifier;
 use crate::supervisor::{GenerationInfo, HostSupervisor};
 use crate::verifier::InvariantVerifier;
@@ -31,6 +31,72 @@ impl RsiEngine {
 
         // 2. Propose improvement
         let mut maybe_proposal = ProposalGenerator::scan_and_propose_unslop(repo_path);
+
+        // If no heuristic unslop proposal, attempt autonomous diagnosis and repair via MAX
+        if maybe_proposal.is_none() {
+            let max_client = MaxClient::new(&config.max_url, &config.max_model);
+            if max_client.is_available().await {
+                // Check for prior failed receipts in eval_outputs
+                let eval_dir = rsi_root.join("eval_outputs");
+                let mut prior_failure = None;
+                if eval_dir.exists() {
+                    if let Ok(entries) = std::fs::read_dir(&eval_dir) {
+                        for entry in entries.flatten() {
+                            let p = entry.path();
+                            if p.is_file() && p.extension().and_then(|s| s.to_str()) == Some("json") {
+                                if let Ok(receipt) = EvaluationReceipt::load_from_file(&p) {
+                                    if !receipt.admitted {
+                                        prior_failure = Some(receipt);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if let Some(ref receipt) = prior_failure {
+                    let cortex = CortexExperienceClient::new(&config.cortex_url)
+                        .with_space(&config.cortex_space);
+                    let lessons = cortex.recall_lessons("holdout assertion defect", 3).await;
+                    let target_file = "src/lib.rs";
+                    let full_path = repo_path.join(target_file);
+                    let content = std::fs::read_to_string(&full_path).unwrap_or_default();
+
+                    let diag = DiagnosticContext::from_receipt(
+                        &cycle_id,
+                        receipt,
+                        target_file,
+                        &content,
+                        lessons,
+                    );
+
+                    if let Ok(prop) = ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await {
+                        maybe_proposal = Some(prop);
+                    }
+                } else if telemetry.soul_tension.drive_score > 0.8 {
+                    let cortex = CortexExperienceClient::new(&config.cortex_url)
+                        .with_space(&config.cortex_space);
+                    let lessons = cortex.recall_lessons("soul tension drive balance", 2).await;
+                    let target_file = "README.md";
+                    let full_path = repo_path.join(target_file);
+                    let content = std::fs::read_to_string(&full_path).unwrap_or_default();
+
+                    let diag = DiagnosticContext::from_violations(
+                        &cycle_id,
+                        target_file,
+                        &content,
+                        DefectCategory::SoulTensionDominance,
+                        vec![format!("Drive dominance detected: score={:.2} > 0.80", telemetry.soul_tension.drive_score)],
+                        lessons,
+                    );
+
+                    if let Ok(prop) = ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await {
+                        maybe_proposal = Some(prop);
+                    }
+                }
+            }
+        }
 
         let mut maybe_invariants = None;
         let maybe_balance;

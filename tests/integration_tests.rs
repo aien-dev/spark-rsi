@@ -120,6 +120,7 @@ async fn test_rsi_cycle_execution() {
         holdouts_dir: None,
         signing_key_hex: None,
         require_latency_improvement: false,
+        ..Default::default()
     };
 
     let result = spark_rsi::daemon::RsiEngine::run_cycle(&config)
