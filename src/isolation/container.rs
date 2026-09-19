@@ -139,7 +139,11 @@ impl BuildJail {
 
     pub fn build_bwrap_args(&self, command: &[&str]) -> Vec<String> {
         let mut args = vec![
-            "--unshare-all".to_string(),
+            "--unshare-user".to_string(),
+            "--unshare-ipc".to_string(),
+            "--unshare-pid".to_string(),
+            "--unshare-net".to_string(),
+            "--unshare-uts".to_string(),
             "--die-with-parent".to_string(),
             "--ro-bind".to_string(),
             "/usr".to_string(),
@@ -262,6 +266,107 @@ impl GpuEvaluationJail {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct CandidateJailRunner {
+    pub candidate_bin: PathBuf,
+    pub working_dir: Option<PathBuf>,
+    pub limits: SandboxLimits,
+}
+
+impl CandidateJailRunner {
+    pub fn new(candidate_bin: &Path) -> Self {
+        Self {
+            candidate_bin: candidate_bin.to_path_buf(),
+            working_dir: None,
+            limits: SandboxLimits::new(49152, 800, 256, 30),
+        }
+    }
+
+    pub fn with_working_dir(mut self, dir: &Path) -> Self {
+        self.working_dir = Some(dir.to_path_buf());
+        self
+    }
+
+    pub fn with_timeout_seconds(mut self, timeout_seconds: u64) -> Self {
+        self.limits.timeout_seconds = timeout_seconds;
+        self
+    }
+
+    pub fn build_bwrap_args(&self, command_args: &[&str]) -> Vec<String> {
+        let mut args = vec![
+            "--unshare-user".to_string(),
+            "--unshare-ipc".to_string(),
+            "--unshare-pid".to_string(),
+            "--unshare-net".to_string(),
+            "--unshare-uts".to_string(),
+            "--die-with-parent".to_string(),
+            "--ro-bind".to_string(),
+            "/usr".to_string(),
+            "/usr".to_string(),
+            "--ro-bind".to_string(),
+            "/lib".to_string(),
+            "/lib".to_string(),
+            "--proc".to_string(),
+            "/proc".to_string(),
+            "--dev".to_string(),
+            "/dev".to_string(),
+            "--tmpfs".to_string(),
+            "/tmp".to_string(),
+        ];
+
+        if Path::new("/lib64").exists() {
+            args.push("--ro-bind".to_string());
+            args.push("/lib64".to_string());
+            args.push("/lib64".to_string());
+        }
+        if Path::new("/bin").exists() {
+            args.push("--ro-bind".to_string());
+            args.push("/bin".to_string());
+            args.push("/bin".to_string());
+        }
+
+        let bin_dir = self
+            .candidate_bin
+            .parent()
+            .unwrap_or_else(|| Path::new("/"));
+        args.push("--ro-bind".to_string());
+        args.push(bin_dir.display().to_string());
+        args.push("/app".to_string());
+
+        let bin_name = self
+            .candidate_bin
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("candidate");
+        let in_jail_bin = format!("/app/{}", bin_name);
+
+        if let Some(ref work) = self.working_dir {
+            args.push("--bind".to_string());
+            args.push(work.display().to_string());
+            args.push("/workspace".to_string());
+            args.push("--chdir".to_string());
+            args.push("/workspace".to_string());
+        } else {
+            args.push("--chdir".to_string());
+            args.push("/tmp".to_string());
+        }
+
+        args.push(in_jail_bin);
+        for arg in command_args {
+            args.push(arg.to_string());
+        }
+
+        args
+    }
+
+    pub fn execute(&self, command_args: &[&str]) -> Result<(bool, String, String), String> {
+        let args = self.build_bwrap_args(command_args);
+        let mut cmd = Command::new("bwrap");
+        cmd.args(&args);
+        execute_with_timeout(cmd, self.limits.timeout_seconds)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -295,7 +400,7 @@ mod tests {
         );
         let args = jail.build_bwrap_args(&["cargo", "build"]);
 
-        assert!(args.contains(&"--unshare-all".to_string()));
+        assert!(args.contains(&"--unshare-net".to_string()));
         assert!(args.contains(&"--die-with-parent".to_string()));
         assert!(args.contains(&"/output".to_string()));
         assert!(args.contains(&"cargo".to_string()));

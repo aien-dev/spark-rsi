@@ -1,13 +1,13 @@
 use clap::Parser;
 use p256::ecdsa::SigningKey;
 use serde::{Deserialize, Serialize};
-use sha2::Digest;
 use spark_rsi::evaluator::layers::{
     CorrectnessLayer, DefectTestResult, LongitudinalReplayLayer, PerformanceLayer,
     ResourceEfficiencyLayer, SecurityLayer, StyleLayer,
 };
 use spark_rsi::evaluator::metrics::{LatencyTimer, RusageMetrics, StatmMetrics};
 use spark_rsi::evaluator::{EvaluationReceipt, ObjectiveEvaluator};
+use spark_rsi::isolation::CandidateJailRunner;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -38,6 +38,15 @@ pub struct JudgeCli {
 
     #[arg(long, default_value = ".rsi/eval_outputs")]
     pub output_dir: String,
+
+    #[arg(long)]
+    pub signing_key_hex: Option<String>,
+
+    #[arg(long)]
+    pub signing_key_file: Option<String>,
+
+    #[arg(long)]
+    pub require_latency_improvement: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -102,30 +111,37 @@ impl HoldoutSuite {
         ]
     }
 
-    pub fn load_from_dir(dir: &Path) -> Vec<Self> {
+    pub fn load_from_dir(dir: &Path) -> Result<Vec<Self>, String> {
         if !dir.exists() {
-            return Self::builtin_suites();
+            return Err(format!(
+                "Holdouts directory does not exist: {:?}. Production evaluation fails closed.",
+                dir
+            ));
         }
 
         let mut suites = Vec::new();
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        if let Ok(suite) = serde_json::from_str::<HoldoutSuite>(&content) {
-                            suites.push(suite);
-                        }
+        let entries = fs::read_dir(dir)
+            .map_err(|e| format!("Failed to read holdouts directory {:?}: {}", dir, e))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(suite) = serde_json::from_str::<HoldoutSuite>(&content) {
+                        suites.push(suite);
                     }
                 }
             }
         }
 
         if suites.is_empty() {
-            Self::builtin_suites()
-        } else {
-            suites
+            return Err(format!(
+                "No valid holdout suites found in {:?}. Production evaluation fails closed.",
+                dir
+            ));
         }
+
+        Ok(suites)
     }
 
     pub fn save_to_dir(&self, dir: &Path) -> Result<(), String> {
@@ -142,6 +158,7 @@ pub struct BlindJudge {
     pub holdouts_dir: PathBuf,
     pub output_dir: PathBuf,
     pub signing_key: Option<SigningKey>,
+    pub require_latency_improvement: bool,
 }
 
 impl BlindJudge {
@@ -150,11 +167,17 @@ impl BlindJudge {
             holdouts_dir,
             output_dir,
             signing_key: None,
+            require_latency_improvement: false,
         }
     }
 
     pub fn with_signing_key(mut self, key: SigningKey) -> Self {
         self.signing_key = Some(key);
+        self
+    }
+
+    pub fn with_require_latency_improvement(mut self, req: bool) -> Self {
+        self.require_latency_improvement = req;
         self
     }
 
@@ -166,27 +189,31 @@ impl BlindJudge {
         candidate_path: &Path,
         parent_path: &Path,
     ) -> Result<EvaluationReceipt, String> {
-        let suites = HoldoutSuite::load_from_dir(&self.holdouts_dir);
-        let mut total_holdouts = 0;
+        // 1. Production evaluation fails closed if holdouts directory is missing or empty
+        let suites = HoldoutSuite::load_from_dir(&self.holdouts_dir)?;
+
+        let mut total_holdouts: usize = 0;
         let mut passed_holdouts = 0;
         let mut holdout_violations = Vec::new();
 
-        let candidate_bin = find_executable(candidate_path);
+        // 2. Candidate binary must exist; production evaluation fails closed if not built
+        let candidate_bin = find_executable(candidate_path).ok_or_else(|| {
+            format!(
+                "Candidate executable not found at {:?}. Candidates must be compiled before evaluation.",
+                candidate_path
+            )
+        })?;
 
-        // 1. Execute actual holdout cases against candidate
+        // 3. Execute actual holdout cases strictly through Bubblewrap jail
+        let jail_runner = CandidateJailRunner::new(&candidate_bin);
+
         for suite in &suites {
             for case in &suite.cases {
                 total_holdouts += 1;
-                let actual_output = if let Some(ref bin) = candidate_bin {
-                    let out = Command::new(bin)
-                        .args(["holdout", &case.input])
-                        .output();
-                    match out {
-                        Ok(o) => String::from_utf8_lossy(&o.stdout).trim().to_string(),
-                        Err(e) => format!("EXEC_ERR:{}", e),
-                    }
-                } else {
-                    spark_rsi::evaluate_holdout_case(&case.input)
+                let actual_output = match jail_runner.execute(&["holdout", &case.input]) {
+                    Ok((true, stdout, _)) => stdout.trim().to_string(),
+                    Ok((false, _, stderr)) => format!("EXEC_FAIL:{}", stderr.trim()),
+                    Err(e) => format!("JAIL_ERR:{}", e),
                 };
 
                 if actual_output == case.expected_output {
@@ -200,7 +227,7 @@ impl BlindJudge {
             }
         }
 
-        // 2. Extract real diff and changed files between parent and candidate
+        // 4. Extract real diff and changed files between parent and candidate
         let (modified_files, patch_diff, style_text) =
             compute_candidate_diff(parent_path, candidate_path)?;
 
@@ -210,7 +237,7 @@ impl BlindJudge {
             CorrectnessLayer::evaluate_synthetic(
                 true,
                 passed_holdouts,
-                total_holdouts - passed_holdouts,
+                total_holdouts.saturating_sub(passed_holdouts),
                 8,
                 0,
                 true,
@@ -231,14 +258,15 @@ impl BlindJudge {
             },
         );
 
-        // 3. Paired-workload benchmark execution for latency & resource metrics
+        // 5. Paired-workload benchmark execution for latency & resource metrics
         let (parent_latencies, candidate_latencies, parent_rusage, candidate_rusage) =
             run_paired_benchmarks(parent_path, candidate_path, 30)?;
 
-        let performance = PerformanceLayer::evaluate_latencies(
+        let performance = PerformanceLayer::evaluate_latencies_with_policy(
             &parent_latencies,
             &candidate_latencies,
             true,
+            self.require_latency_improvement,
             5000,
             Some(42),
         )?;
@@ -276,12 +304,11 @@ impl BlindJudge {
             longitudinal_replay,
         );
 
-        // 4. Compute and sign receipt with real cryptographic ECDSA P-256 signature
-        let signing_key = self.signing_key.clone().unwrap_or_else(|| {
-            let seed = [77u8; 32];
-            SigningKey::from_bytes(&seed.into()).expect("Valid ECDSA signing key")
-        });
-        receipt.sign(&signing_key);
+        // 6. Sign receipt with authorized cryptographic key; fail closed if missing
+        let signing_key = self.signing_key.as_ref().ok_or_else(|| {
+            "No authorized cryptographic signing key provided to BlindJudge. Production evaluation fails closed.".to_string()
+        })?;
+        receipt.sign(signing_key);
 
         let out_path = self.output_dir.join(format!("{}.json", cycle_id));
         receipt.save_to_file(&out_path)?;
@@ -290,20 +317,20 @@ impl BlindJudge {
     }
 }
 
-fn find_executable(base: &Path) -> Option<PathBuf> {
+pub fn find_executable(base: &Path) -> Option<PathBuf> {
     if base.is_file() {
         return Some(base.to_path_buf());
     }
-    let cand1 = base.join("target/release/spark-rsi");
-    if cand1.exists() {
+    let cand1 = base.join("spark-rsi");
+    if cand1.is_file() {
         return Some(cand1);
     }
-    let cand2 = base.join("spark-rsi");
-    if cand2.exists() {
+    let cand2 = base.join("target/release/spark-rsi");
+    if cand2.is_file() {
         return Some(cand2);
     }
-    let cand3 = base.join("bin/spark-rsi");
-    if cand3.exists() {
+    let cand3 = base.join("target/debug/spark-rsi");
+    if cand3.is_file() {
         return Some(cand3);
     }
     None
@@ -318,7 +345,6 @@ pub fn compute_candidate_diff(
     let mut style_text = String::new();
 
     if parent_path == candidate_path {
-        // Inspect git status / diff if candidate is a git working tree
         if candidate_path.join(".git").exists() || Path::new(".git").exists() {
             let diff_out = Command::new("git")
                 .arg("-C")
@@ -355,9 +381,11 @@ pub fn compute_candidate_diff(
         if !abs_parent.exists() {
             modified_files.push(rel_path.clone());
             let cand_content = fs::read_to_string(abs_cand).unwrap_or_default();
-            patch_diff.push_str(&format!("+++ {}\n", rel_path));
+            patch_diff.push_str(&format!("+++ {}
+", rel_path));
             for line in cand_content.lines() {
-                patch_diff.push_str(&format!("+ {}\n", line));
+                patch_diff.push_str(&format!("+ {}
+", line));
             }
             style_text.push_str(&cand_content);
             style_text.push('\n');
@@ -368,10 +396,13 @@ pub fn compute_candidate_diff(
                 modified_files.push(rel_path.clone());
                 let cand_content = String::from_utf8_lossy(&cand_bytes);
                 let parent_content = String::from_utf8_lossy(&parent_bytes);
-                patch_diff.push_str(&format!("--- a/{}\n+++ b/{}\n", rel_path, rel_path));
+                patch_diff.push_str(&format!("--- a/{}
++++ b/{}
+", rel_path, rel_path));
                 for line in cand_content.lines() {
                     if !parent_content.contains(line) {
-                        patch_diff.push_str(&format!("+ {}\n", line));
+                        patch_diff.push_str(&format!("+ {}
+", line));
                     }
                 }
                 style_text.push_str(&cand_content);
@@ -380,13 +411,13 @@ pub fn compute_candidate_diff(
         }
     }
 
-    // Check for deleted files
     let mut parent_files = Vec::new();
     collect_files_recursive(parent_path, parent_path, &mut parent_files)?;
     for (rel_path, _) in parent_files {
         if !candidate_path.join(&rel_path).exists() {
             modified_files.push(rel_path.clone());
-            patch_diff.push_str(&format!("--- a/{}\n", rel_path));
+            patch_diff.push_str(&format!("--- a/{}
+", rel_path));
         }
     }
 
@@ -431,74 +462,87 @@ pub fn run_paired_benchmarks(
     candidate_path: &Path,
     iterations: usize,
 ) -> Result<(Vec<f64>, Vec<f64>, RusageMetrics, RusageMetrics), String> {
+    let parent_bin = find_executable(parent_path).ok_or_else(|| {
+        format!(
+            "Parent executable binary not found in {:?}. Paired benchmarks require compiled binaries.",
+            parent_path
+        )
+    })?;
+    let candidate_bin = find_executable(candidate_path).ok_or_else(|| {
+        format!(
+            "Candidate executable binary not found in {:?}. Paired benchmarks require compiled binaries.",
+            candidate_path
+        )
+    })?;
+
+    let parent_runner = CandidateJailRunner::new(&parent_bin);
+    let candidate_runner = CandidateJailRunner::new(&candidate_bin);
+
+    // Capture child rusage baseline before parent workload
+    let parent_rusage_before = RusageMetrics::capture_children()
+        .map_err(|e| format!("Failed to capture parent child rusage baseline: {}", e))?;
     let mut parent_latencies = Vec::with_capacity(iterations);
-    let mut candidate_latencies = Vec::with_capacity(iterations);
-
-    // Check for speedup marker for candidate
-    let speedup_factor = if let Ok(s) = fs::read_to_string(candidate_path.join(".rsi_speedup")) {
-        s.trim().parse::<f64>().unwrap_or(0.80)
-    } else {
-        0.80 // Baseline candidate improvement assumption when not regressed
-    };
-
-    let parent_bin = find_executable(parent_path);
-    let candidate_bin = find_executable(candidate_path);
-
     for i in 0..iterations {
         let input_arg = format!("benchmark-case-{}", i);
-
-        // Run parent workload
-        let t_p = LatencyTimer::start();
-        if let Some(ref bin) = parent_bin {
-            let _ = Command::new(bin).args(["holdout", &input_arg]).output();
-        } else {
-            let mut hasher = sha2::Sha256::new();
-            for _ in 0..300 {
-                hasher.update(input_arg.as_bytes());
-            }
-            let _ = hasher.finalize();
+        let timer = LatencyTimer::start();
+        let (success, _stdout, stderr) = parent_runner
+            .execute(&["holdout", &input_arg])
+            .map_err(|e| format!("Jail execution failed for parent on iteration {}: {}", i, e))?;
+        if !success {
+            return Err(format!("Parent execution exited with error on iteration {}: {}", i, stderr));
         }
-        let p_lat = (t_p.elapsed_us().max(10.0)) + (i as f64) * 0.5;
-        parent_latencies.push(p_lat);
-
-        // Run candidate workload
-        let t_c = LatencyTimer::start();
-        if let Some(ref bin) = candidate_bin {
-            let _ = Command::new(bin).args(["holdout", &input_arg]).output();
-        } else {
-            let mut hasher = sha2::Sha256::new();
-            for _ in 0..300 {
-                hasher.update(input_arg.as_bytes());
-            }
-            let _ = hasher.finalize();
-        }
-        let c_lat = ((t_c.elapsed_us().max(10.0)) * speedup_factor) + (i as f64) * 0.4;
-        candidate_latencies.push(c_lat);
+        parent_latencies.push(timer.elapsed_us());
     }
+    let parent_rusage_after = RusageMetrics::capture_children()
+        .map_err(|e| format!("Failed to capture parent child rusage final: {}", e))?;
+    let parent_rusage = parent_rusage_after.diff(&parent_rusage_before);
 
-    let parent_rusage = RusageMetrics {
-        user_time_us: 10_000,
-        system_time_us: 5_000,
-        max_rss_kb: 50_000,
-        voluntary_context_switches: 100,
-        involuntary_context_switches: 20,
-    };
-    let candidate_rusage = RusageMetrics {
-        user_time_us: (10_000.0 * speedup_factor) as u64,
-        system_time_us: (5_000.0 * speedup_factor) as u64,
-        max_rss_kb: 50_300, // 0.6% growth <= 2.0%
-        voluntary_context_switches: 80,
-        involuntary_context_switches: 15,
-    };
+    // Capture child rusage baseline before candidate workload
+    let candidate_rusage_before = RusageMetrics::capture_children()
+        .map_err(|e| format!("Failed to capture candidate child rusage baseline: {}", e))?;
+    let mut candidate_latencies = Vec::with_capacity(iterations);
+    for i in 0..iterations {
+        let input_arg = format!("benchmark-case-{}", i);
+        let timer = LatencyTimer::start();
+        let (success, _stdout, stderr) = candidate_runner
+            .execute(&["holdout", &input_arg])
+            .map_err(|e| format!("Jail execution failed for candidate on iteration {}: {}", i, e))?;
+        if !success {
+            return Err(format!("Candidate execution exited with error on iteration {}: {}", i, stderr));
+        }
+        candidate_latencies.push(timer.elapsed_us());
+    }
+    let candidate_rusage_after = RusageMetrics::capture_children()
+        .map_err(|e| format!("Failed to capture candidate child rusage final: {}", e))?;
+    let candidate_rusage = candidate_rusage_after.diff(&candidate_rusage_before);
 
     Ok((parent_latencies, candidate_latencies, parent_rusage, candidate_rusage))
 }
 
 pub fn run_judge_cli(cli: JudgeCli) -> Result<EvaluationReceipt, Box<dyn std::error::Error>> {
-    let judge = BlindJudge::new(
+    let mut judge = BlindJudge::new(
         PathBuf::from(&cli.holdouts_dir),
         PathBuf::from(&cli.output_dir),
-    );
+    )
+    .with_require_latency_improvement(cli.require_latency_improvement);
+
+    let key_opt = if let Some(ref hex_str) = cli.signing_key_hex {
+        let bytes = hex::decode(hex_str.trim())?;
+        Some(SigningKey::from_slice(&bytes)?)
+    } else if let Some(ref file_path) = cli.signing_key_file {
+        let content = fs::read_to_string(file_path)?;
+        let bytes = hex::decode(content.trim())?;
+        Some(SigningKey::from_slice(&bytes)?)
+    } else if let Ok(hex_str) = std::env::var("RSI_JUDGE_SIGNING_KEY") {
+        let bytes = hex::decode(hex_str.trim())?;
+        Some(SigningKey::from_slice(&bytes)?)
+    } else {
+        None
+    };
+
+    if let Some(key) = key_opt {
+        judge = judge.with_signing_key(key);
+    }
 
     let receipt = judge.evaluate_cycle(
         &cli.cycle_id,
@@ -529,6 +573,28 @@ mod tests {
     use super::*;
     use p256::ecdsa::VerifyingKey;
 
+    fn find_test_executable() -> PathBuf {
+        if let Ok(cargo_bin) = std::env::var("CARGO_BIN_EXE_spark-rsi") {
+            let p = PathBuf::from(cargo_bin);
+            if p.is_file() {
+                return p;
+            }
+        }
+        let cand1 = Path::new("target/release/spark-rsi");
+        if cand1.is_file() {
+            return cand1.to_path_buf();
+        }
+        let cand2 = Path::new("target/debug/spark-rsi");
+        if cand2.is_file() {
+            return cand2.to_path_buf();
+        }
+        let cand3 = Path::new("/home/drakestapleton/workspace/spark-rsi/target/release/spark-rsi");
+        if cand3.is_file() {
+            return cand3.to_path_buf();
+        }
+        panic!("Test executable not found");
+    }
+
     #[test]
     fn test_holdout_suite_builtin_and_save_load() {
         let tmp = tempfile::tempdir().unwrap();
@@ -536,9 +602,53 @@ mod tests {
         assert_eq!(suites.len(), 2);
 
         suites[0].save_to_dir(tmp.path()).unwrap();
-        let loaded = HoldoutSuite::load_from_dir(tmp.path());
+        let loaded = HoldoutSuite::load_from_dir(tmp.path()).unwrap();
         assert_eq!(loaded.len(), 1);
         assert_eq!(loaded[0].suite_id, "HOLD-INV-001");
+    }
+
+    #[test]
+    fn test_holdout_suite_load_missing_fails_closed() {
+        let tmp = tempfile::tempdir().unwrap();
+        let non_existent = tmp.path().join("non_existent");
+        assert!(HoldoutSuite::load_from_dir(&non_existent).is_err());
+
+        let empty = tmp.path().join("empty");
+        fs::create_dir_all(&empty).unwrap();
+        assert!(HoldoutSuite::load_from_dir(&empty).is_err());
+    }
+
+    #[test]
+    fn test_blind_judge_fails_closed_without_signing_key() {
+        let tmp = tempfile::tempdir().unwrap();
+        let holdouts = tmp.path().join("holdouts");
+        let outputs = tmp.path().join("eval_outputs");
+        let candidate = tmp.path().join("candidate");
+        fs::create_dir_all(&candidate).unwrap();
+        let parent = tmp.path().join("parent");
+        fs::create_dir_all(&parent).unwrap();
+
+        for s in HoldoutSuite::builtin_suites() {
+            s.save_to_dir(&holdouts).unwrap();
+        }
+
+        // Copy spark-rsi executable so find_executable finds it
+        if let Some(exe) = find_executable(Path::new(".")) {
+            let _ = fs::copy(&exe, candidate.join("spark-rsi"));
+            let _ = fs::copy(&exe, parent.join("spark-rsi"));
+        }
+
+        let judge = BlindJudge::new(holdouts, outputs);
+        let res = judge.evaluate_cycle(
+            "cycle-no-key",
+            "cand-01",
+            "parent-00",
+            &candidate,
+            &parent,
+        );
+
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("signing key"));
     }
 
     #[test]
@@ -550,6 +660,14 @@ mod tests {
         fs::create_dir_all(&candidate).unwrap();
         let parent = tmp.path().join("parent");
         fs::create_dir_all(&parent).unwrap();
+
+        for s in HoldoutSuite::builtin_suites() {
+            s.save_to_dir(&holdouts).unwrap();
+        }
+
+        let exe = find_test_executable();
+        fs::copy(&exe, candidate.join("spark-rsi")).unwrap();
+        fs::copy(&exe, parent.join("spark-rsi")).unwrap();
 
         let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
         let verifying_key = VerifyingKey::from(&signing_key);
@@ -607,7 +725,12 @@ mod tests {
         };
         failing_suite.save_to_dir(&holdouts).unwrap();
 
-        let judge = BlindJudge::new(holdouts, outputs);
+        let exe = find_test_executable();
+        fs::copy(&exe, candidate.join("spark-rsi")).unwrap();
+        fs::copy(&exe, parent.join("spark-rsi")).unwrap();
+
+        let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
+        let judge = BlindJudge::new(holdouts, outputs).with_signing_key(signing_key);
         let receipt = judge
             .evaluate_cycle(
                 "cycle-fail-01",
