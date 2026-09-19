@@ -685,7 +685,7 @@ mod tests {
             )
             .unwrap();
 
-        assert!(receipt.admitted);
+        assert!(receipt.admitted, "Failed layers: {:?}", receipt.layer_results);
         assert!(receipt.passed_all_hard_invariants);
         assert!(receipt.passed_statistical_gates);
         assert!(receipt.verify_digest());
