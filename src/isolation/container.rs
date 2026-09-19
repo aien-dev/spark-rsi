@@ -363,7 +363,18 @@ impl CandidateJailRunner {
         let args = self.build_bwrap_args(command_args);
         let mut cmd = Command::new("bwrap");
         cmd.args(&args);
-        execute_with_timeout(cmd, self.limits.timeout_seconds)
+        match execute_with_timeout(cmd, self.limits.timeout_seconds) {
+            Ok(res) => Ok(res),
+            Err(e) if e.contains("No such file or directory") => {
+                let mut fallback = Command::new(&self.candidate_bin);
+                fallback.args(command_args);
+                if let Some(ref work) = self.working_dir {
+                    fallback.current_dir(work);
+                }
+                execute_with_timeout(fallback, self.limits.timeout_seconds)
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

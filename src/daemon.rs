@@ -1,6 +1,7 @@
 use crate::actor::judge::BlindJudge;
 use crate::balance::BalanceKernel;
 use crate::evaluator::EvaluationReceipt;
+use crate::ledger::{ImprovementLedger, LedgerBlock};
 use crate::models::{RsiConfig, RsiCycleResult};
 use crate::observe::observe_codebase;
 use crate::propose::ProposalGenerator;
@@ -20,6 +21,10 @@ impl RsiEngine {
         let start = Instant::now();
         let cycle_id = format!("cycle-{}", Uuid::new_v4().simple());
         let repo_path = Path::new(&config.target_repo);
+        let rsi_root = repo_path.join(&config.rsi_root);
+
+        // Open Improvement Ledger for immutable experimental provenance
+        let ledger = ImprovementLedger::open(&rsi_root).ok();
 
         // 1. Observe codebase metrics
         let telemetry = observe_codebase(repo_path)?;
@@ -31,6 +36,7 @@ impl RsiEngine {
         let maybe_balance;
         let mut maybe_receipt: Option<EvaluationReceipt> = None;
         let mut maybe_generation: Option<GenerationInfo> = None;
+        let mut maybe_ledger_block: Option<LedgerBlock> = None;
         let mut maybe_ratification = None;
         let mut success = true;
 
@@ -60,7 +66,7 @@ impl RsiEngine {
                     .holdouts_dir
                     .as_ref()
                     .map(PathBuf::from)
-                    .unwrap_or_else(|| repo_path.join(".rsi").join("holdouts"));
+                    .unwrap_or_else(|| rsi_root.join("holdouts"));
 
                 let mut judge_admitted = true;
                 if holdouts_path.exists() {
@@ -87,6 +93,12 @@ impl RsiEngine {
                     match judge.evaluate_cycle(&cycle_id, &proposal.id, "parent", &sandbox_dir, repo_path) {
                         Ok(receipt) => {
                             judge_admitted = receipt.admitted;
+                            if let Some(ref l) = ledger {
+                                let raw_json = serde_json::to_vec(&receipt).unwrap_or_default();
+                                if let Ok(blk) = l.append_evaluation(&receipt, Some(&raw_json)) {
+                                    maybe_ledger_block = Some(blk);
+                                }
+                            }
                             maybe_receipt = Some(receipt);
                         }
                         Err(e) => {
@@ -100,7 +112,6 @@ impl RsiEngine {
                     success = false;
                 } else {
                     // 6. Candidate Promotion via HostSupervisor rather than in-place mutation
-                    let rsi_root = repo_path.join(&config.rsi_root);
                     let supervisor = HostSupervisor::new(&rsi_root, 49_152);
                     let manifest_digest = maybe_receipt
                         .as_ref()
@@ -123,6 +134,14 @@ impl RsiEngine {
 
                     // Record canary transaction
                     supervisor.record_canary_transaction(&mut gen_info, true, 1)?;
+
+                    // Record promotion in Improvement Ledger
+                    if let Some(ref l) = ledger {
+                        if let Ok(blk) = l.append_promotion(&gen_info, &manifest_digest) {
+                            maybe_ledger_block = Some(blk);
+                        }
+                    }
+
                     maybe_generation = Some(gen_info);
 
                     // 7. Ratify proposal and record to git & Cortex memory
@@ -147,6 +166,19 @@ impl RsiEngine {
             maybe_balance = Some(balance_verdict);
         }
 
+        // Checkpoint ledger Merkle root if active
+        if let Some(ref l) = ledger {
+            let mut signing_key = None;
+            if let Some(ref key_hex) = config.signing_key_hex {
+                if let Ok(key_bytes) = hex::decode(key_hex) {
+                    if let Ok(sk) = p256::ecdsa::SigningKey::from_slice(&key_bytes) {
+                        signing_key = Some(sk);
+                    }
+                }
+            }
+            let _ = l.checkpoint(signing_key.as_ref());
+        }
+
         let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
 
         Ok(RsiCycleResult {
@@ -157,6 +189,7 @@ impl RsiEngine {
             balance: maybe_balance,
             receipt: maybe_receipt,
             generation: maybe_generation,
+            ledger_block: maybe_ledger_block,
             ratification: maybe_ratification,
             success,
             elapsed_ms,

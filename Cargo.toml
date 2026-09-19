@@ -33,6 +33,7 @@ hex = "0.4"
 uuid = { version = "1.8", features = ["v4"] }
 libc = "0.2"
 p256 = { version = "0.14.0", features = ["ecdsa"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 [dev-dependencies]
 tempfile = "3.17"

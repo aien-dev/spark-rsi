@@ -133,6 +133,7 @@ pub struct RsiCycleResult {
     pub balance: Option<BalanceVerdict>,
     pub receipt: Option<crate::evaluator::EvaluationReceipt>,
     pub generation: Option<crate::supervisor::GenerationInfo>,
+    pub ledger_block: Option<crate::ledger::LedgerBlock>,
     pub ratification: Option<RatificationRecord>,
     pub success: bool,
     pub elapsed_ms: f64,

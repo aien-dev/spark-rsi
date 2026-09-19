@@ -22,6 +22,44 @@ struct Cli {
 }
 
 #[derive(Subcommand, Debug)]
+enum LedgerCommands {
+    /// Print recent ledger blocks
+    Log {
+        #[arg(default_value = ".rsi")]
+        rsi_root: String,
+        #[arg(short, long, default_value = "20")]
+        limit: usize,
+    },
+    /// Verify ledger integrity, SHA-256 hash chaining, Merkle roots, and blob digests
+    Verify {
+        #[arg(default_value = ".rsi")]
+        rsi_root: String,
+        #[arg(long)]
+        verifying_key_hex: Option<String>,
+    },
+    /// Compute Merkle root checkpoint and optionally sign with P-256 ECDSA key
+    Checkpoint {
+        #[arg(default_value = ".rsi")]
+        rsi_root: String,
+        #[arg(long)]
+        signing_key_hex: Option<String>,
+    },
+    /// Record append-only PromotionEvidence block proving downstream compounding
+    Evidence {
+        #[arg(default_value = ".rsi")]
+        rsi_root: String,
+        #[arg(long)]
+        candidate_hash: String,
+        #[arg(long)]
+        downstream_cycle: String,
+        #[arg(long)]
+        downstream_hash: String,
+        #[arg(long)]
+        proof: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
 enum Commands {
     /// Initialize operator profile and model engine configuration
     Init {
@@ -120,6 +158,11 @@ enum Commands {
         kernel: String,
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
+    },
+    /// Manage the append-only cryptographic improvement ledger
+    Ledger {
+        #[command(subcommand)]
+        action: LedgerCommands,
     },
     /// Display the sovereign programming philosophy manifesto
     Philosophy,
@@ -252,6 +295,63 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             RsiEngine::run_daemon(config).await?;
         }
+        Commands::Ledger { action } => match action {
+            LedgerCommands::Log { rsi_root, limit } => {
+                let ledger = spark_rsi::ledger::ImprovementLedger::open(Path::new(&rsi_root))?;
+                let blocks = ledger.all_blocks()?;
+                let start_idx = blocks.len().saturating_sub(limit);
+                println!("=== Improvement Ledger Log ({} blocks total) ===", blocks.len());
+                for b in &blocks[start_idx..] {
+                    println!("[#{:04}] {:<18} | Hash: {}.. | Prev: {}.. | Blobs: {}",
+                        b.sequence, b.block_type.to_string(),
+                        &b.block_hash[..12], &b.prev_block_hash[..12], b.blob_hashes.len());
+                }
+            }
+            LedgerCommands::Verify { rsi_root, verifying_key_hex } => {
+                let ledger = spark_rsi::ledger::ImprovementLedger::open(Path::new(&rsi_root))?;
+                let mut vk = None;
+                if let Some(ref hex_str) = verifying_key_hex {
+                    let bytes = hex::decode(hex_str)?;
+                    let key = p256::ecdsa::VerifyingKey::from_sec1_bytes(&bytes)?;
+                    vk = Some(key);
+                }
+                match ledger.verify_chain_integrity(vk.as_ref()) {
+                    Ok(report) => {
+                        println!("⚡ Ledger Verification: PASS");
+                        println!("{}", serde_json::to_string_pretty(&report)?);
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Ledger Verification FAILED: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+            LedgerCommands::Checkpoint { rsi_root, signing_key_hex } => {
+                let ledger = spark_rsi::ledger::ImprovementLedger::open(Path::new(&rsi_root))?;
+                let mut sk = None;
+                if let Some(ref hex_str) = signing_key_hex {
+                    let bytes = hex::decode(hex_str)?;
+                    let key = p256::ecdsa::SigningKey::from_slice(&bytes)?;
+                    sk = Some(key);
+                }
+                let cp = ledger.checkpoint(sk.as_ref())?;
+                println!("⚡ Merkle Checkpoint Created");
+                println!("{}", serde_json::to_string_pretty(&cp)?);
+            }
+            LedgerCommands::Evidence { rsi_root, candidate_hash, downstream_cycle, downstream_hash, proof } => {
+                let ledger = spark_rsi::ledger::ImprovementLedger::open(Path::new(&rsi_root))?;
+                let payload = spark_rsi::ledger::PromotionEvidencePayload {
+                    meta_candidate_block_hash: candidate_hash,
+                    downstream_cycle_id: downstream_cycle,
+                    downstream_ledger_block_hash: downstream_hash,
+                    capability_improvement_proof: proof,
+                    final_classification: "TRUE_RSI".to_string(),
+                };
+                let blk = ledger.append_promotion_evidence(&payload)?;
+                println!("⚡ PromotionEvidence Block Appended: #{}", blk.sequence);
+                println!("{}", serde_json::to_string_pretty(&blk)?);
+            }
+        },
         Commands::Philosophy => {
             let philosophy_file = Path::new("docs/PHILOSOPHY.md");
             if philosophy_file.exists() {
