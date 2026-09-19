@@ -89,6 +89,12 @@ enum Commands {
         holdouts_dir: String,
         #[arg(long, default_value = ".rsi/eval_outputs")]
         output_dir: String,
+        #[arg(long)]
+        signing_key_hex: Option<String>,
+        #[arg(long)]
+        signing_key_file: Option<String>,
+        #[arg(long)]
+        require_latency_improvement: bool,
     },
     /// Execute a holdout test case against internal logic
     Holdout {
@@ -193,6 +199,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             parent_path,
             holdouts_dir,
             output_dir,
+            signing_key_hex,
+            signing_key_file,
+            require_latency_improvement,
         } => {
             let judge_cli = spark_rsi::actor::JudgeCli {
                 cycle_id,
@@ -202,6 +211,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 parent_path,
                 holdouts_dir,
                 output_dir,
+                signing_key_hex,
+                signing_key_file,
+                require_latency_improvement,
             };
             spark_rsi::actor::judge::run_judge_cli(judge_cli)?;
         }
@@ -217,6 +229,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 mojo_kernel_path: kernel,
                 loop_interval_secs: 60,
                 sandbox_root: "/tmp/spark-rsi-sandbox".to_string(),
+                rsi_root: ".rsi".to_string(),
+                holdouts_dir: None,
+                signing_key_hex: None,
+                require_latency_improvement: false,
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -229,6 +245,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 mojo_kernel_path: kernel,
                 loop_interval_secs: interval,
                 sandbox_root: "/tmp/spark-rsi-sandbox".to_string(),
+                rsi_root: ".rsi".to_string(),
+                holdouts_dir: None,
+                signing_key_hex: None,
+                require_latency_improvement: false,
             };
             RsiEngine::run_daemon(config).await?;
         }

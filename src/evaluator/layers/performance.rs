@@ -53,6 +53,24 @@ impl PerformanceLayer {
         resamples: usize,
         seed: Option<u64>,
     ) -> Result<PerformanceEvaluation, String> {
+        Self::evaluate_latencies_with_policy(
+            parent_latencies_us,
+            candidate_latencies_us,
+            target_is_latency_reduction,
+            true,
+            resamples,
+            seed,
+        )
+    }
+
+    pub fn evaluate_latencies_with_policy(
+        parent_latencies_us: &[f64],
+        candidate_latencies_us: &[f64],
+        target_is_latency_reduction: bool,
+        require_significant_improvement: bool,
+        resamples: usize,
+        seed: Option<u64>,
+    ) -> Result<PerformanceEvaluation, String> {
         let mut violations = Vec::new();
 
         let boot = StatisticalEngine::bootstrap_paired_comparison(
@@ -108,7 +126,11 @@ impl PerformanceLayer {
         }
 
         let non_target_metrics_safe = p95_res.passes_non_inferiority && p99_res.passes_non_inferiority;
-        let passed = target_metric_improved && non_target_metrics_safe;
+        let passed = if require_significant_improvement {
+            target_metric_improved && non_target_metrics_safe
+        } else {
+            non_target_metrics_safe
+        };
 
         Ok(PerformanceEvaluation {
             bootstrap_estimate: boot,

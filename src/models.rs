@@ -93,6 +93,18 @@ pub struct RsiConfig {
     pub mojo_kernel_path: String,
     pub loop_interval_secs: u64,
     pub sandbox_root: String,
+    #[serde(default = "default_rsi_root")]
+    pub rsi_root: String,
+    #[serde(default)]
+    pub holdouts_dir: Option<String>,
+    #[serde(default)]
+    pub signing_key_hex: Option<String>,
+    #[serde(default)]
+    pub require_latency_improvement: bool,
+}
+
+fn default_rsi_root() -> String {
+    ".rsi".to_string()
 }
 
 impl Default for RsiConfig {
@@ -104,6 +116,10 @@ impl Default for RsiConfig {
             mojo_kernel_path: "mojo/balance_bin".to_string(),
             loop_interval_secs: 60,
             sandbox_root: "/tmp/spark-rsi-sandbox".to_string(),
+            rsi_root: ".rsi".to_string(),
+            holdouts_dir: None,
+            signing_key_hex: None,
+            require_latency_improvement: false,
         }
     }
 }
@@ -115,6 +131,8 @@ pub struct RsiCycleResult {
     pub proposal: Option<ImprovementProposal>,
     pub invariants: Option<InvariantReport>,
     pub balance: Option<BalanceVerdict>,
+    pub receipt: Option<crate::evaluator::EvaluationReceipt>,
+    pub generation: Option<crate::supervisor::GenerationInfo>,
     pub ratification: Option<RatificationRecord>,
     pub success: bool,
     pub elapsed_ms: f64,

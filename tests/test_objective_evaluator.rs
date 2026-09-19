@@ -164,12 +164,18 @@ fn test_blind_judge_receipt_roundtrip_and_persistence() {
     let parent = tmp.path().join("parent");
     fs::create_dir_all(&parent).unwrap();
 
+    let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new(".")).expect("spark-rsi executable must exist");
+    fs::copy(&exe, candidate.join("spark-rsi")).unwrap();
+    fs::copy(&exe, parent.join("spark-rsi")).unwrap();
+
     let suites = HoldoutSuite::builtin_suites();
     for suite in suites {
         suite.save_to_dir(&holdouts).unwrap();
     }
 
-    let judge = BlindJudge::new(holdouts, outputs.clone());
+    let signing_key = p256::ecdsa::SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
+    let verifying_key = p256::ecdsa::VerifyingKey::from(&signing_key);
+    let judge = BlindJudge::new(holdouts, outputs.clone()).with_signing_key(signing_key);
     let receipt = judge
         .evaluate_cycle(
             "cycle-persisted-99",
@@ -183,6 +189,7 @@ fn test_blind_judge_receipt_roundtrip_and_persistence() {
     assert!(receipt.admitted);
     assert!(receipt.verify_digest());
     assert!(receipt.signature.is_some());
+    assert!(receipt.verify_signature(&verifying_key));
 
     let target_file = outputs.join("cycle-persisted-99.json");
     assert!(target_file.exists());

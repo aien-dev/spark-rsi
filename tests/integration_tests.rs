@@ -116,6 +116,10 @@ async fn test_rsi_cycle_execution() {
         mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
         sandbox_root: "/tmp/spark-rsi-test-sandbox".to_string(),
+        rsi_root: ".rsi".to_string(),
+        holdouts_dir: None,
+        signing_key_hex: None,
+        require_latency_improvement: false,
     };
 
     let result = spark_rsi::daemon::RsiEngine::run_cycle(&config)

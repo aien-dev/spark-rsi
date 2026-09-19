@@ -26,7 +26,7 @@ pub use evaluator::{
     StatmMetrics, StyleEvaluation, StyleLayer, TailNonInferiorityResult,
 };
 pub use isolation::{
-    ArtifactManifest, ArtifactRecord, BuildJail, CandidateManifest, GpuEvaluationJail,
+    ArtifactManifest, ArtifactRecord, BuildJail, CandidateJailRunner, CandidateManifest, GpuEvaluationJail,
     RollbackCheckpoint, RootOfTrust, SandboxLimits,
 };
 pub use models::*;
