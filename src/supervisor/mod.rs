@@ -1,3 +1,7 @@
+pub mod daemon;
+
+pub mod ipc;
+
 use crate::evaluator::metrics::system_page_size_kb;
 use serde::{Deserialize, Serialize};
 use std::fs;
