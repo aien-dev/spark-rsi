@@ -5,6 +5,7 @@ pub mod balance;
 pub mod config;
 pub mod daemon;
 pub mod evaluator;
+pub mod graph;
 pub mod isolation;
 pub mod ledger;
 pub mod models;
@@ -16,6 +17,7 @@ pub mod verifier;
 
 pub use actor::{BlindJudge, HoldoutCase, HoldoutSuite, JudgeCli};
 pub use balance::BalanceKernel;
+pub use graph::{BottleneckRank, CapabilityEdge, CapabilityGraph, CapabilityNode};
 pub use config::{EngineConfig, OperatorProfile, SovereignConfig};
 pub use daemon::RsiEngine;
 pub use evaluator::{

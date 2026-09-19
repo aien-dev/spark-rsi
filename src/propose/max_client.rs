@@ -52,7 +52,7 @@ pub struct MaxClient {
 impl MaxClient {
     pub fn new(base_url: &str, model_id: &str) -> Self {
         let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(120))
+            .timeout(Duration::from_secs(360))
             .build()
             .unwrap_or_default();
 
@@ -117,6 +117,16 @@ impl MaxClient {
             .trim();
 
         if content.is_empty() {
+            if let Some(reasoning) = &choice.message.reasoning {
+                if !reasoning.trim().is_empty() {
+                    return Ok(reasoning.trim().to_string());
+                }
+            }
+            if let Some(reasoning_content) = &choice.message.reasoning_content {
+                if !reasoning_content.trim().is_empty() {
+                    return Ok(reasoning_content.trim().to_string());
+                }
+            }
             return Err("MAX assistant message content is empty".to_string());
         }
 

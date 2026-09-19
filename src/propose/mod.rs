@@ -1,9 +1,11 @@
 pub mod cortex;
 pub mod diagnose;
+pub mod hypothesis;
 pub mod max_client;
 
 pub use cortex::CortexExperienceClient;
 pub use diagnose::{DefectCategory, DiagnosticContext};
+pub use hypothesis::{HypothesisContract, ProtectedMetric};
 pub use max_client::{ChatMessage, MaxClient};
 
 use crate::models::{ImprovementProposal, ProposalKind};
@@ -125,7 +127,7 @@ impl ProposalGenerator {
         ];
 
         let raw_completion = max_client
-            .complete(&messages, 4096, 0.2)
+            .complete(&messages, 1536, 0.2)
             .await
             .map_err(|e| format!("MAX diagnosis proposal generation failed: {}", e))?;
 
