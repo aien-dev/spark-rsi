@@ -9,7 +9,6 @@ use spark_rsi::evaluator::metrics::{
 use spark_rsi::evaluator::stats::StatisticalEngine;
 use spark_rsi::evaluator::{EvaluationReceipt, ObjectiveEvaluator};
 use std::fs;
-use std::path::Path;
 
 #[test]
 fn test_rusage_and_statm_accounting() {
