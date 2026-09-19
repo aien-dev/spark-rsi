@@ -6,6 +6,7 @@ pub mod config;
 pub mod daemon;
 pub mod evaluator;
 pub mod isolation;
+pub mod ledger;
 pub mod models;
 pub mod observe;
 pub mod propose;
@@ -24,6 +25,10 @@ pub use evaluator::{
     PerformanceEvaluation, PerformanceLayer, ProcessMetricsSnapshot, ResourceEfficiencyEvaluation,
     ResourceEfficiencyLayer, RusageMetrics, SecurityEvaluation, SecurityLayer, StatisticalEngine,
     StatmMetrics, StyleEvaluation, StyleLayer, TailNonInferiorityResult,
+};
+pub use ledger::{
+    compute_merkle_root, BlobStore, BlockType, ImprovementLedger, LedgerAuditReport,
+    LedgerBlock, MerkleCheckpoint, PromotionEvidencePayload,
 };
 pub use isolation::{
     ArtifactManifest, ArtifactRecord, BuildJail, CandidateJailRunner, CandidateManifest, GpuEvaluationJail,
