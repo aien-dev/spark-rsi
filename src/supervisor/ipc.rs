@@ -118,6 +118,22 @@ impl IpcServer {
             .accept()
             .await
             .map_err(|e| format!("Failed to accept IPC connection: {}", e))?;
+
+        #[cfg(target_os = "linux")]
+        {
+            let cred = stream
+                .peer_cred()
+                .map_err(|e| format!("Failed to get peer credentials: {}", e))?;
+            let current_uid = unsafe { libc::getuid() };
+            if cred.uid() != current_uid {
+                return Err(format!(
+                    "Unauthorized peer UID: {} != expected current UID {}",
+                    cred.uid(),
+                    current_uid
+                ));
+            }
+        }
+
         Ok(IpcConnection::new(stream))
     }
 

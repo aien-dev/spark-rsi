@@ -290,6 +290,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 require_latency_improvement: false,
                 max_url,
                 max_model,
+                canary_target: 5000,
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -308,6 +309,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 require_latency_improvement: false,
                 max_url,
                 max_model,
+                canary_target: 5000,
             };
             RsiEngine::run_daemon(config).await?;
         }

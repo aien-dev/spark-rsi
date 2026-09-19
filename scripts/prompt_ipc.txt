@@ -1,0 +1,28 @@
+Generate src/supervisor/ipc.rs for spark-rsi on NVIDIA DGX Spark.
+
+Requirements:
+1. Module: src/supervisor/ipc.rs
+2. Implement asynchronous Unix Domain Socket IPC protocol between Host Supervisor and worker processes using tokio::net::{UnixListener, UnixStream}, tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader}.
+3. Data structures (serde Serialize/Deserialize):
+   - SupervisorMessage:
+     * DrainStart { timeout_secs: u64 }
+     * RevertOrder { reason: String }
+     * ShutdownAck { pid: u32 }
+     * Ping
+     * AuthChallenge { nonce: String }
+   - WorkerMessage:
+     * Ready { generation_id: String, pid: u32, auth_token: String }
+     * Heartbeat { generation_id: String, timestamp_secs: u64, active_requests: u32, memory_mb: u64 }
+     * DrainComplete { generation_id: String }
+     * CanaryReport { generation_id: String, transaction_id: u64, success: bool, latency_us: u64, error: Option<String> }
+     * Pong
+     * AuthResponse { response: String }
+4. Helpers:
+   - IpcConnection struct wrapping a UnixStream with read_message::<T>() and write_message::<T>() using newline-delimited JSON.
+   - IpcServer helper that binds to a Unix socket path and accepts client connections.
+   - IpcClient helper that connects to a target Unix socket path with a timeout.
+   - Simple HMAC or token validator to ensure only authenticated workers can communicate with supervisor.
+5. Invariants:
+   - ZERO em dashes (\u{2014}) and ZERO en dashes (\u{2013}).
+   - Full error handling via Result<T, String>.
+   - Include unit tests testing connection, handshake, heartbeat, and canary reporting in mod tests.

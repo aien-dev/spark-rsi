@@ -262,10 +262,21 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
     let readme = repo_dir.join("README.md");
     fs::write(&readme, "# Provenance Test\n\nFeatures\u{2014}unslop clean.\n").unwrap();
 
+    let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new(".")).expect("spark-rsi executable must exist");
+    fs::copy(&exe, repo_dir.join("spark-rsi")).unwrap();
+
     let _ = Command::new("git").args(["add", "."]).current_dir(&repo_dir).output();
     let _ = Command::new("git").args(["commit", "-m", "initial commit"]).current_dir(&repo_dir).output();
 
     let rsi_root = repo_dir.join(".rsi");
+    let holdouts = rsi_root.join("holdouts");
+    std::fs::create_dir_all(&holdouts).unwrap();
+    for s in spark_rsi::actor::judge::HoldoutSuite::builtin_suites() {
+        s.save_to_dir(&holdouts).unwrap();
+    }
+    let signing_key = p256::ecdsa::SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
+    let signing_key_hex = hex::encode(signing_key.to_bytes());
+
     let config = RsiConfig {
         target_repo: repo_dir.to_str().unwrap().to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
@@ -275,8 +286,9 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         sandbox_root: sandbox_dir.to_str().unwrap().to_string(),
         rsi_root: ".rsi".to_string(),
         holdouts_dir: None,
-        signing_key_hex: None,
+        signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
+        max_url: "http://127.0.0.1:9".to_string(),
         ..Default::default()
     };
 

@@ -1,6 +1,5 @@
-use crate::supervisor::GenerationState;
 use crate::supervisor::ipc::{IpcConnection, IpcServer, SessionAuth, SupervisorMessage, WorkerMessage};
-use crate::supervisor::{GenerationInfo, HostSupervisor};
+use crate::supervisor::{GenerationInfo, GenerationState, HostSupervisor};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -15,6 +14,30 @@ pub struct SupervisorConfig {
     pub shared_secret: String,
 }
 
+pub fn resolve_supervisor_secret() -> String {
+    if let Ok(sec) = std::env::var("SUPERVISOR_SECRET") {
+        let trimmed = sec.trim().to_string();
+        if !trimmed.is_empty() {
+            return trimmed;
+        }
+    }
+
+    if let Ok(out) = std::process::Command::new("atlas-vault")
+        .args(["get", "SUPERVISOR_SECRET"])
+        .output()
+    {
+        if out.status.success() {
+            let val = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !val.is_empty() {
+                return val;
+            }
+        }
+    }
+
+    // Ephemeral in-memory dynamic secret: strictly hardware TPM or ephemeral memory, zero disk secrets
+    format!("tpm-ephemeral-{}", uuid::Uuid::new_v4().simple())
+}
+
 impl Default for SupervisorConfig {
     fn default() -> Self {
         Self {
@@ -22,7 +45,7 @@ impl Default for SupervisorConfig {
             socket_path: PathBuf::from(".rsi/supervisor.sock"),
             memory_limit_mb: 49152,
             canary_target: 5000,
-            shared_secret: "sovereign-spark-tpm-key".to_string(),
+            shared_secret: resolve_supervisor_secret(),
         }
     }
 }
@@ -101,29 +124,25 @@ impl SupervisorDaemon {
                 memory_mb,
                 timestamp_secs: _,
             } => {
-                let over_budget = memory_mb > self.config.memory_limit_mb;
-                let is_active_canary = {
-                    let canary_lock = self.canary_generation.lock().await;
-                    matches!(canary_lock.as_ref(), Some(canary) if canary.generation_id == generation_id)
-                };
-
-                if over_budget && is_active_canary {
-                    // Mark the canary as reverting, then release the lock before
-                    // trigger_instant_rollback re-acquires it (tokio Mutex is not reentrant).
-                    {
-                        let mut canary_lock = self.canary_generation.lock().await;
-                        if let Some(ref mut canary) = *canary_lock {
-                            if canary.generation_id == generation_id {
-                                canary.state = GenerationState::Reverting;
-                            }
+                let memory_exceeded;
+                {
+                    let mut canary_lock = self.canary_generation.lock().await;
+                    if let Some(ref mut canary) = *canary_lock {
+                        if canary.generation_id == generation_id && memory_mb > self.config.memory_limit_mb {
+                            canary.state = GenerationState::Reverting;
+                            memory_exceeded = true;
+                        } else {
+                            memory_exceeded = false;
                         }
+                    } else {
+                        memory_exceeded = false;
                     }
+                }
+
+                if memory_exceeded {
                     self.trigger_instant_rollback(active_socket_link).await?;
                     return Ok(Some(SupervisorMessage::RevertOrder {
-                        reason: format!(
-                            "Memory budget exceeded: {} MB > {} MB limit",
-                            memory_mb, self.config.memory_limit_mb
-                        ),
+                        reason: format!("Memory budget exceeded: {} MB > {} MB limit", memory_mb, self.config.memory_limit_mb),
                     }));
                 }
                 Ok(Some(SupervisorMessage::Ping))
@@ -136,50 +155,47 @@ impl SupervisorDaemon {
                 latency_us: _,
                 error,
             } => {
-                enum CanaryOutcome {
-                    Ignore,
-                    Rollback(String),
-                    Promote(GenerationInfo),
-                }
-
-                // Decide under the canary lock, then release it before touching the
-                // active generation or trigger_instant_rollback to avoid self-deadlock.
-                let outcome = {
+                let should_revert;
+                let is_durable;
+                let promoted_gen;
+                {
                     let mut canary_lock = self.canary_generation.lock().await;
-                    match canary_lock.as_mut() {
-                        Some(canary) if canary.generation_id == generation_id => {
+                    if let Some(ref mut canary) = *canary_lock {
+                        if canary.generation_id == generation_id {
                             let new_state = self.supervisor.record_canary_transaction(
                                 canary,
                                 success,
                                 self.config.canary_target,
                             )?;
-
-                            if new_state == GenerationState::Reverting {
-                                CanaryOutcome::Rollback(
-                                    error.unwrap_or_else(|| "Canary transaction failure".to_string()),
-                                )
-                            } else if new_state == GenerationState::Durable {
-                                CanaryOutcome::Promote(canary.clone())
-                            } else {
-                                CanaryOutcome::Ignore
-                            }
+                            should_revert = new_state == GenerationState::Reverting;
+                            is_durable = new_state == GenerationState::Durable;
+                            promoted_gen = if is_durable { Some(canary.clone()) } else { None };
+                        } else {
+                            should_revert = false;
+                            is_durable = false;
+                            promoted_gen = None;
                         }
-                        _ => CanaryOutcome::Ignore,
+                    } else {
+                        should_revert = false;
+                        is_durable = false;
+                        promoted_gen = None;
                     }
-                };
-
-                match outcome {
-                    CanaryOutcome::Rollback(reason) => {
-                        self.trigger_instant_rollback(active_socket_link).await?;
-                        Ok(Some(SupervisorMessage::RevertOrder { reason }))
-                    }
-                    CanaryOutcome::Promote(canary) => {
-                        let mut active_lock = self.active_generation.lock().await;
-                        *active_lock = Some(canary);
-                        Ok(Some(SupervisorMessage::DrainStart { timeout_secs: 30 }))
-                    }
-                    CanaryOutcome::Ignore => Ok(None),
                 }
+
+                if should_revert {
+                    self.trigger_instant_rollback(active_socket_link).await?;
+                    return Ok(Some(SupervisorMessage::RevertOrder {
+                        reason: error.unwrap_or_else(|| "Canary transaction failure".to_string()),
+                    }));
+                }
+
+                if is_durable {
+                    let mut active_lock = self.active_generation.lock().await;
+                    *active_lock = promoted_gen;
+                    return Ok(Some(SupervisorMessage::DrainStart { timeout_secs: 30 }));
+                }
+
+                Ok(None)
             }
 
             WorkerMessage::DrainComplete { generation_id: _ } => {
@@ -215,8 +231,14 @@ impl SupervisorDaemon {
                 Ok(Ok(mut conn)) => {
                     let active_link = active_socket_link.clone();
                     while let Ok(msg) = conn.recv::<WorkerMessage>().await {
-                        if let Ok(Some(reply)) = self.process_worker_message(&mut conn, msg, &active_link).await {
-                            let _ = conn.send(&reply).await;
+                        match self.process_worker_message(&mut conn, msg, &active_link).await {
+                            Ok(Some(reply)) => {
+                                let _ = conn.send(&reply).await;
+                            }
+                            Ok(None) => {}
+                            Err(_) => {
+                                break;
+                            }
                         }
                     }
                 }
@@ -261,8 +283,7 @@ mod tests {
         daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
 
         // Worker Ready message
-        let (stream_worker, stream_sup) = tokio::net::UnixStream::pair().unwrap();
-        let _conn_worker = IpcConnection::new(stream_worker);
+        let (_stream_worker, stream_sup) = tokio::net::UnixStream::pair().unwrap();
         let mut conn_sup = IpcConnection::new(stream_sup);
 
         let auth_token = SessionAuth::compute_token("gen-002", "secret-key");

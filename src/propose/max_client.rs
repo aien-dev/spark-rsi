@@ -117,17 +117,23 @@ impl MaxClient {
             .trim();
 
         if content.is_empty() {
-            if let Some(reasoning) = &choice.message.reasoning {
-                if !reasoning.trim().is_empty() {
-                    return Ok(reasoning.trim().to_string());
+            // Check if a fenced code block exists inside reasoning
+            for r in [&choice.message.reasoning, &choice.message.reasoning_content] {
+                if let Some(text) = r {
+                    if let Some(start) = text.find("```") {
+                        let after = &text[start + 3..];
+                        let code_start = after.find('\n').map(|i| i + 1).unwrap_or(0);
+                        let rest = &after[code_start..];
+                        if let Some(end) = rest.rfind("```") {
+                            let block = rest[..end].trim();
+                            if !block.is_empty() {
+                                return Ok(format!("```rust\n{}\n```", block));
+                            }
+                        }
+                    }
                 }
             }
-            if let Some(reasoning_content) = &choice.message.reasoning_content {
-                if !reasoning_content.trim().is_empty() {
-                    return Ok(reasoning_content.trim().to_string());
-                }
-            }
-            return Err("MAX assistant message content is empty".to_string());
+            return Err("MAX assistant message did not emit code output (exhausted in reasoning)".to_string());
         }
 
         Ok(content.to_string())

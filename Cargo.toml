@@ -11,6 +11,10 @@ name = "spark-rsi"
 path = "src/main.rs"
 
 [[bin]]
+name = "spark-rsi-supervisor"
+path = "src/bin/supervisor.rs"
+
+[[bin]]
 name = "spark-rsi-judge"
 path = "src/actor/judge.rs"
 

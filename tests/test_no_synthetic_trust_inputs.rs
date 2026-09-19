@@ -215,12 +215,23 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
 
     // Write a README with an em-dash to trigger ProposalGenerator
     let readme = repo_dir.join("README.md");
-    fs::write(&readme, "# Test Repo\n\nThis is a feature\u{2014}with an em dash.\n").unwrap();
+    fs::write(&readme, "# Test Repo\n\nWe build, fix, finish, and optimize systems with love, honor, and discipline\u{2014}with an em dash.\n").unwrap();
+
+    let exe = find_executable(Path::new(".")).expect("spark-rsi executable must exist");
+    fs::copy(&exe, repo_dir.join("spark-rsi")).unwrap();
 
     let _ = Command::new("git").args(["add", "."]).current_dir(&repo_dir).output();
     let _ = Command::new("git").args(["commit", "-m", "initial commit"]).current_dir(&repo_dir).output();
 
     let rsi_root = repo_dir.join(".rsi");
+    let holdouts = rsi_root.join("holdouts");
+    std::fs::create_dir_all(&holdouts).unwrap();
+    for s in HoldoutSuite::builtin_suites() {
+        s.save_to_dir(&holdouts).unwrap();
+    }
+    let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
+    let signing_key_hex = hex::encode(signing_key.to_bytes());
+
     let config = RsiConfig {
         target_repo: repo_dir.to_str().unwrap().to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
@@ -230,8 +241,9 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
         sandbox_root: sandbox_dir.to_str().unwrap().to_string(),
         rsi_root: ".rsi".to_string(),
         holdouts_dir: None,
-        signing_key_hex: None,
+        signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
+        max_url: "http://127.0.0.1:9".to_string(),
         ..Default::default()
     };
 

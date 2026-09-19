@@ -177,6 +177,42 @@ impl BuildJail {
             args.push("/bin".to_string());
             args.push("/bin".to_string());
         }
+        if Path::new("/etc").exists() {
+            args.push("--ro-bind".to_string());
+            args.push("/etc".to_string());
+            args.push("/etc".to_string());
+        }
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/drakestapleton".to_string());
+        let cargo_home = Path::new(&home).join(".cargo");
+        if cargo_home.exists() {
+            args.push("--ro-bind".to_string());
+            args.push(cargo_home.display().to_string());
+            args.push(cargo_home.display().to_string());
+        }
+        let rustup_home = Path::new(&home).join(".rustup");
+        if rustup_home.exists() {
+            args.push("--ro-bind".to_string());
+            args.push(rustup_home.display().to_string());
+            args.push(rustup_home.display().to_string());
+        }
+
+        let target_dir = Path::new("/tmp/spark-rsi-target");
+        if !target_dir.exists() {
+            let _ = std::fs::create_dir_all(target_dir);
+        }
+        args.push("--bind".to_string());
+        args.push("/tmp/spark-rsi-target".to_string());
+        args.push("/tmp/spark-rsi-target".to_string());
+        args.push("--setenv".to_string());
+        args.push("CARGO_TARGET_DIR".to_string());
+        args.push("/tmp/spark-rsi-target".to_string());
+
+        args.push("--setenv".to_string());
+        args.push("PATH".to_string());
+        args.push(format!("{}/.cargo/bin:/usr/local/bin:/usr/bin:/bin", home));
+        args.push("--setenv".to_string());
+        args.push("HOME".to_string());
+        args.push(home.clone());
 
         for c in command {
             args.push(c.to_string());
@@ -324,6 +360,24 @@ impl CandidateJailRunner {
             args.push("/bin".to_string());
             args.push("/bin".to_string());
         }
+        if Path::new("/etc").exists() {
+            args.push("--ro-bind".to_string());
+            args.push("/etc".to_string());
+            args.push("/etc".to_string());
+        }
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/home/drakestapleton".to_string());
+        let cargo_home = Path::new(&home).join(".cargo");
+        if cargo_home.exists() {
+            args.push("--ro-bind".to_string());
+            args.push(cargo_home.display().to_string());
+            args.push(cargo_home.display().to_string());
+        }
+        let rustup_home = Path::new(&home).join(".rustup");
+        if rustup_home.exists() {
+            args.push("--ro-bind".to_string());
+            args.push(rustup_home.display().to_string());
+            args.push(rustup_home.display().to_string());
+        }
 
         let bin_dir = self
             .candidate_bin
@@ -351,6 +405,13 @@ impl CandidateJailRunner {
             args.push("/tmp".to_string());
         }
 
+        args.push("--setenv".to_string());
+        args.push("PATH".to_string());
+        args.push(format!("{}/.cargo/bin:/usr/local/bin:/usr/bin:/bin", home));
+        args.push("--setenv".to_string());
+        args.push("HOME".to_string());
+        args.push(home.clone());
+
         args.push(in_jail_bin);
         for arg in command_args {
             args.push(arg.to_string());
@@ -363,18 +424,7 @@ impl CandidateJailRunner {
         let args = self.build_bwrap_args(command_args);
         let mut cmd = Command::new("bwrap");
         cmd.args(&args);
-        match execute_with_timeout(cmd, self.limits.timeout_seconds) {
-            Ok(res) => Ok(res),
-            Err(e) if e.contains("No such file or directory") => {
-                let mut fallback = Command::new(&self.candidate_bin);
-                fallback.args(command_args);
-                if let Some(ref work) = self.working_dir {
-                    fallback.current_dir(work);
-                }
-                execute_with_timeout(fallback, self.limits.timeout_seconds)
-            }
-            Err(e) => Err(e),
-        }
+        execute_with_timeout(cmd, self.limits.timeout_seconds)
     }
 }
 
