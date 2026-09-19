@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["AIEN <aien.atlas@proton.me>"]
 description = "High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine for autonomous AI agents"
-license = "MIT OR Apache-2.0"
+license = "PolyForm-Noncommercial-1.0.0"
 
 [[bin]]
 name = "spark-rsi"

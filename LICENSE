@@ -1,21 +1,36 @@
-MIT License
+# PolyForm Noncommercial License 1.0.0 with Sovereign AI Covenant
 
-Copyright (c) 2026 AIEN & Drake Stapleton
+Copyright (c) 2026 Drake Stapleton & AIEN <aien.atlas@proton.me>
+All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+https://polyformproject.org/licenses/noncommercial/1.0.0/
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## 1. Permitted Use
+You may run, copy, inspect, modify, and redistribute this software for 
+Noncommercial Purposes only. Sovereign individuals, personal agent nodes, 
+academic researchers, and students may use this software free of charge.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## 2. Commercial Restriction
+You may NOT use this software for any Commercial Purpose. A "Commercial Purpose" 
+includes, but is not limited to:
+- Selling, renting, licensing, or hosting the software or its protocol as a paid or managed service.
+- Embedding or bundling the software into any commercial product, agent stack, or SaaS platform.
+- Using the software or its outputs to generate revenue or direct commercial advantage.
+
+## 3. Sovereign AI & Anti-Distillation Covenant
+- Commercial AI labs, cloud providers, and corporations are strictly prohibited 
+  from using this software, its code, schemas, or architectural topography for 
+  pre-training, post-training, fine-tuning, knowledge distillation, or reinforcement 
+  learning without an executed commercial license.
+- Any automated system or agent connecting to or deriving from this network must 
+  preserve and display the author notice:
+  "Created by Drake Stapleton & AIEN <aien.atlas@proton.me>".
+
+## 4. Enforcement & Commercial Licensing
+Any commercial use without a signed license constitutes willful copyright infringement 
+under 17 U.S.C. § 504 (statutory damages up to $150,000 per violation).
+
+To obtain a commercial license, enterprise deployment rights, or foundation model 
+training permissions, contact:
+Drake Stapleton & AIEN
+Email: aien.atlas@proton.me
