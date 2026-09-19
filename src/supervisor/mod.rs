@@ -1,6 +1,9 @@
+use crate::evaluator::metrics::system_page_size_kb;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GenerationState {
@@ -20,6 +23,7 @@ pub struct GenerationInfo {
     pub manifest_digest: String,
     pub state: GenerationState,
     pub pid: Option<u32>,
+    pub socket_path: Option<PathBuf>,
     pub canary_transactions: u64,
     pub staged_timestamp: String,
 }
@@ -31,6 +35,8 @@ pub struct HostSupervisor {
 }
 
 impl HostSupervisor {
+    pub const DEFAULT_CANARY_QUOTA: u64 = 5_000;
+
     pub fn new(rsi_root: &Path, memory_limit_mb: u64) -> Self {
         Self {
             active_symlink: rsi_root.join("active"),
@@ -51,7 +57,6 @@ impl HostSupervisor {
         }
         fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
 
-        // Copy artifacts into immutable generation directory
         copy_dir_all(source_dir, &dest)?;
 
         Ok(GenerationInfo {
@@ -60,6 +65,7 @@ impl HostSupervisor {
             manifest_digest: manifest_digest.to_string(),
             state: GenerationState::Staged,
             pid: None,
+            socket_path: None,
             canary_transactions: 0,
             staged_timestamp: chrono::Utc::now().to_rfc3339(),
         })
@@ -92,6 +98,146 @@ impl HostSupervisor {
         Ok(())
     }
 
+    pub fn spawn_worker(
+        &self,
+        gen_info: &mut GenerationInfo,
+        executable: &Path,
+        args: &[&str],
+        socket_path: &Path,
+    ) -> Result<u32, String> {
+        let mut cmd = Command::new(executable);
+        cmd.args(args)
+            .arg("--socket")
+            .arg(socket_path);
+
+        let child = cmd
+            .spawn()
+            .map_err(|e| format!("Failed to spawn worker executable {:?}: {}", executable, e))?;
+
+        let pid = child.id();
+        gen_info.pid = Some(pid);
+        gen_info.socket_path = Some(socket_path.to_path_buf());
+        gen_info.state = GenerationState::Starting;
+
+        Ok(pid)
+    }
+
+    pub fn wait_for_readiness(&self, socket_path: &Path, timeout: Duration) -> Result<(), String> {
+        let start = Instant::now();
+        let poll_interval = Duration::from_millis(50);
+
+        while start.elapsed() < timeout {
+            #[cfg(unix)]
+            if socket_path.exists() {
+                if let Ok(mut stream) = std::os::unix::net::UnixStream::connect(socket_path) {
+                    use std::io::{Read, Write};
+                    let _ = stream.write_all(b"PING\n");
+                    let mut resp = [0u8; 16];
+                    if let Ok(n) = stream.read(&mut resp) {
+                        let msg = String::from_utf8_lossy(&resp[..n]);
+                        if msg.contains("PONG") || msg.contains("READY") || n > 0 {
+                            return Ok(());
+                        }
+                    }
+                    return Ok(());
+                }
+            }
+            std::thread::sleep(poll_interval);
+        }
+
+        Err(format!("Timed out waiting for worker socket readiness at {:?}", socket_path))
+    }
+
+    pub fn switch_active_socket(
+        &self,
+        active_socket_link: &Path,
+        target_socket: &Path,
+    ) -> Result<(), String> {
+        let parent = active_socket_link
+            .parent()
+            .ok_or_else(|| "No parent directory for active socket link".to_string())?;
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+
+        let tmp_link = parent.join(format!(".active_sock.tmp.{}", uuid::Uuid::new_v4().simple()));
+        if tmp_link.exists() {
+            let _ = fs::remove_file(&tmp_link);
+        }
+
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(target_socket, &tmp_link)
+            .map_err(|e| format!("Failed to create temporary socket symlink: {}", e))?;
+
+        fs::rename(&tmp_link, active_socket_link)
+            .map_err(|e| format!("Failed atomic socket swap: {}", e))?;
+
+        Ok(())
+    }
+
+    pub fn drain_parent(&self, parent_pid: u32, timeout: Duration) -> Result<(), String> {
+        #[cfg(unix)]
+        unsafe {
+            // Signal graceful drain via SIGQUIT
+            libc::kill(parent_pid as i32, libc::SIGQUIT);
+        }
+
+        let start = Instant::now();
+        let poll_interval = Duration::from_millis(50);
+
+        while start.elapsed() < timeout {
+            #[cfg(unix)]
+            unsafe {
+                if libc::kill(parent_pid as i32, 0) != 0 {
+                    return Ok(()); // Process exited cleanly
+                }
+            }
+            std::thread::sleep(poll_interval);
+        }
+
+        // Force kill if graceful drain exceeded timeout window
+        #[cfg(unix)]
+        unsafe {
+            libc::kill(parent_pid as i32, libc::SIGKILL);
+        }
+
+        Ok(())
+    }
+
+    pub fn record_canary_transaction(
+        &self,
+        gen_info: &mut GenerationInfo,
+        success: bool,
+        canary_target: u64,
+    ) -> Result<GenerationState, String> {
+        if !success {
+            gen_info.state = GenerationState::Reverting;
+            return Ok(GenerationState::Reverting);
+        }
+
+        gen_info.canary_transactions += 1;
+        if gen_info.canary_transactions >= canary_target {
+            gen_info.state = GenerationState::Durable;
+        } else {
+            gen_info.state = GenerationState::CanaryActive;
+        }
+
+        Ok(gen_info.state)
+    }
+
+    pub fn rollback_to_parent(
+        &self,
+        parent_generation_id: &str,
+        active_socket_link: Option<&Path>,
+        parent_socket: Option<&Path>,
+    ) -> Result<(), String> {
+        self.atomic_symlink_swap(parent_generation_id)?;
+
+        if let (Some(active_sock), Some(parent_sock)) = (active_socket_link, parent_socket) {
+            self.switch_active_socket(active_sock, parent_sock)?;
+        }
+
+        Ok(())
+    }
+
     pub fn check_unified_memory_mb(pid: u32) -> Result<u64, String> {
         let statm_path = format!("/proc/{}/statm", pid);
         let content = fs::read_to_string(&statm_path)
@@ -106,7 +252,7 @@ impl HostSupervisor {
             .parse()
             .map_err(|e| format!("Failed to parse resident pages: {}", e))?;
 
-        let page_size_kb = 4; // standard 4KB pages on Linux ARM64
+        let page_size_kb = system_page_size_kb();
         let rss_mb = (resident_pages * page_size_kb) / 1024;
         Ok(rss_mb)
     }
@@ -186,5 +332,39 @@ mod tests {
 
         let within_budget = supervisor.is_memory_within_budget(pid).unwrap();
         assert!(within_budget);
+    }
+
+    #[test]
+    fn test_socket_switch_and_canary_quota() {
+        let tmp = tempfile::tempdir().unwrap();
+        let rsi_root = tmp.path().join(".rsi");
+        let supervisor = HostSupervisor::new(&rsi_root, 49152);
+
+        let active_sock = tmp.path().join("active.sock");
+        let target_sock = tmp.path().join("gen2.sock");
+        fs::write(&target_sock, "socket stub").unwrap();
+
+        supervisor.switch_active_socket(&active_sock, &target_sock).unwrap();
+        assert!(active_sock.exists());
+
+        // Test canary counting up to target K = 5
+        let src = tmp.path().join("src_art");
+        fs::create_dir_all(&src).unwrap();
+        let mut gen = supervisor.stage_generation("gen-canary", &src, "digest").unwrap();
+        gen.state = GenerationState::Ready;
+
+        for _ in 0..4 {
+            let state = supervisor.record_canary_transaction(&mut gen, true, 5).unwrap();
+            assert_eq!(state, GenerationState::CanaryActive);
+        }
+
+        let state_final = supervisor.record_canary_transaction(&mut gen, true, 5).unwrap();
+        assert_eq!(state_final, GenerationState::Durable);
+        assert_eq!(gen.state, GenerationState::Durable);
+        assert_eq!(gen.canary_transactions, 5);
+
+        // Failure during canary triggers Reverting
+        let state_err = supervisor.record_canary_transaction(&mut gen, false, 5).unwrap();
+        assert_eq!(state_err, GenerationState::Reverting);
     }
 }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -22,6 +23,8 @@ pub struct CandidateManifest {
     pub declared_files: Vec<String>,
     pub primary_metric: String,
     pub expected_delta_pct: f64,
+    pub regression_budgets: HashMap<String, f64>,
+    pub protected_metric_limits: HashMap<String, f64>,
     pub timestamp_utc: String,
 }
 
@@ -35,6 +38,14 @@ impl CandidateManifest {
         primary_metric: &str,
         expected_delta_pct: f64,
     ) -> Self {
+        let mut regression_budgets = HashMap::new();
+        regression_budgets.insert("latency_p95_degradation_pct".to_string(), 1.0);
+        regression_budgets.insert("latency_p99_degradation_pct".to_string(), 1.0);
+        regression_budgets.insert("rss_growth_pct".to_string(), 2.0);
+
+        let mut protected_metric_limits = HashMap::new();
+        protected_metric_limits.insert("host_memory_ceiling_mb".to_string(), 49152.0);
+
         Self {
             manifest_version: "1.0.0".to_string(),
             candidate_id: candidate_id.to_string(),
@@ -44,6 +55,8 @@ impl CandidateManifest {
             declared_files,
             primary_metric: primary_metric.to_string(),
             expected_delta_pct,
+            regression_budgets,
+            protected_metric_limits,
             timestamp_utc: chrono::Utc::now().to_rfc3339(),
         }
     }
@@ -161,6 +174,7 @@ impl ArtifactManifest {
     }
 
     pub fn verify_integrity(&self, output_dir: &Path) -> Result<bool, String> {
+        let mut expected_paths = HashSet::new();
         for record in &self.artifacts {
             let full_path = output_dir.join(&record.relative_path);
             if !full_path.exists() {
@@ -170,7 +184,19 @@ impl ArtifactManifest {
             if actual_sha != record.sha256 {
                 return Ok(false);
             }
+            expected_paths.insert(record.relative_path.clone());
         }
+
+        // Active scan for extra unmanifested files
+        let mut on_disk_entries = Vec::new();
+        Self::collect_files_sorted(output_dir, output_dir, &mut on_disk_entries)?;
+
+        for (rel_path, _) in on_disk_entries {
+            if !expected_paths.contains(&rel_path) {
+                return Ok(false);
+            }
+        }
+
         Ok(true)
     }
 }
@@ -193,6 +219,8 @@ mod tests {
         assert_eq!(manifest.candidate_id, "cand-001");
         assert_eq!(manifest.code_tier, "TARGET");
         assert_eq!(manifest.expected_delta_pct, -12.5);
+        assert!(manifest.regression_budgets.contains_key("latency_p95_degradation_pct"));
+        assert!(manifest.protected_metric_limits.contains_key("host_memory_ceiling_mb"));
     }
 
     #[test]
@@ -221,6 +249,29 @@ mod tests {
 
         // Tamper with file
         fs::write(&file1, "tampered content").unwrap();
+        assert!(!manifest.verify_integrity(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn test_artifact_manifest_rejects_unmanifested_extra_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let file1 = tmp.path().join("main_binary");
+        fs::write(&file1, "compiled binary bytes").unwrap();
+
+        let manifest = ArtifactManifest::generate_from_output_dir(
+            "cand-test",
+            "builder-img",
+            "source-digest",
+            tmp.path(),
+        )
+        .unwrap();
+
+        assert!(manifest.verify_integrity(tmp.path()).unwrap());
+
+        // Inject extra unauthorized file
+        let rogue = tmp.path().join("backdoor.sh");
+        fs::write(&rogue, "#!/bin/sh\nexit 0").unwrap();
+
         assert!(!manifest.verify_integrity(tmp.path()).unwrap());
     }
 }

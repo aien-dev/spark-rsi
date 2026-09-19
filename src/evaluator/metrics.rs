@@ -3,6 +3,17 @@ use std::fs;
 use std::path::Path;
 use std::time::Instant;
 
+pub fn system_page_size_kb() -> u64 {
+    #[cfg(unix)]
+    {
+        let ps = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+        if ps > 0 {
+            return (ps as u64) / 1024;
+        }
+    }
+    4
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RusageMetrics {
     pub user_time_us: u64,
@@ -108,7 +119,7 @@ impl StatmMetrics {
             .parse()
             .map_err(|e| format!("Invalid data_pages: {}", e))?;
 
-        let page_size_kb = 4u64;
+        let page_size_kb = system_page_size_kb();
         let resident_kb = resident_pages.saturating_mul(page_size_kb);
 
         Ok(Self {
@@ -265,7 +276,8 @@ mod tests {
         assert_eq!(statm.shared_pages, 1234);
         assert_eq!(statm.text_pages, 500);
         assert_eq!(statm.data_pages, 4500);
-        assert_eq!(statm.resident_kb, 6789 * 4);
+        let expected_kb = 6789 * system_page_size_kb();
+        assert_eq!(statm.resident_kb, expected_kb);
     }
 
     #[test]

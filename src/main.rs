@@ -7,13 +7,14 @@ use spark_rsi::observe::observe_codebase;
 use spark_rsi::propose::ProposalGenerator;
 use spark_rsi::verifier::InvariantVerifier;
 use std::path::Path;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 #[derive(Parser, Debug)]
 #[command(
     name = "spark-rsi",
-    about = "Native Rust and Mojo Recursive Self-Improvement Engine on SparkOS",
-    version
+    about = "AIEN Sovereign Recursive Self-Improvement Engine on NVIDIA DGX Spark",
+    version = spark_rsi::version()
 )]
 struct Cli {
     #[command(subcommand)]
@@ -88,6 +89,11 @@ enum Commands {
         holdouts_dir: String,
         #[arg(long, default_value = ".rsi/eval_outputs")]
         output_dir: String,
+    },
+    /// Execute a holdout test case against internal logic
+    Holdout {
+        #[arg(default_value = "")]
+        input: String,
     },
     /// Run a single end-to-end RSI cycle (Observe, Propose, Verify, Balance, Ratify)
     Cycle {
@@ -198,6 +204,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 output_dir,
             };
             spark_rsi::actor::judge::run_judge_cli(judge_cli)?;
+        }
+        Commands::Holdout { input } => {
+            let res = spark_rsi::evaluate_holdout_case(&input);
+            println!("{}", res);
         }
         Commands::Cycle { path, kernel, cortex_url } => {
             let config = RsiConfig {

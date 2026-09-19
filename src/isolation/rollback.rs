@@ -7,7 +7,6 @@ pub struct RollbackCheckpoint {
     pub cycle_id: String,
     pub base_commit_sha: String,
     pub worktree_dir: PathBuf,
-    pub branch_name: String,
     pub ref_name: String,
 }
 
@@ -29,7 +28,6 @@ impl RollbackCheckpoint {
 
         let base_commit_sha = String::from_utf8_lossy(&head_out.stdout).trim().to_string();
         let worktree_dir = PathBuf::from(format!("/tmp/spark-rsi-worktree-{}", cycle_id));
-        let branch_name = format!("rsi/candidate-{}", cycle_id);
         let ref_name = format!("refs/rsi/checkpoints/{}", cycle_id);
 
         if worktree_dir.exists() {
@@ -41,23 +39,23 @@ impl RollbackCheckpoint {
             let _ = std::fs::remove_dir_all(&worktree_dir);
         }
 
+        // Use detached HEAD to avoid branch namespace pollution
         let wt_out = Command::new("git")
             .arg("-C")
             .arg(repo_root)
             .args([
                 "worktree",
                 "add",
-                "-b",
-                &branch_name,
+                "--detach",
                 worktree_dir.to_str().unwrap(),
-                "HEAD",
+                &base_commit_sha,
             ])
             .output()
             .map_err(|e| format!("Failed to spawn git worktree add: {}", e))?;
 
         if !wt_out.status.success() {
             return Err(format!(
-                "Failed to create git worktree: {}",
+                "Failed to create detached git worktree: {}",
                 String::from_utf8_lossy(&wt_out.stderr)
             ));
         }
@@ -73,7 +71,6 @@ impl RollbackCheckpoint {
             cycle_id: cycle_id.to_string(),
             base_commit_sha,
             worktree_dir,
-            branch_name,
             ref_name,
         })
     }
@@ -88,7 +85,7 @@ impl RollbackCheckpoint {
         let _ = Command::new("git")
             .arg("-C")
             .arg(&self.repo_root)
-            .args(["branch", "-D", &self.branch_name])
+            .args(["update-ref", "-d", &self.ref_name])
             .output();
 
         if self.worktree_dir.exists() {
@@ -96,5 +93,46 @@ impl RollbackCheckpoint {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rollback_checkpoint_lifecycle() {
+        let tmp = tempfile::tempdir().unwrap();
+        let repo_path = tmp.path();
+
+        // Initialize mock git repo
+        Command::new("git").arg("init").current_dir(repo_path).output().unwrap();
+        Command::new("git").args(["config", "user.name", "Test"]).current_dir(repo_path).output().unwrap();
+        Command::new("git").args(["config", "user.email", "test@test.local"]).current_dir(repo_path).output().unwrap();
+
+        std::fs::write(repo_path.join("test.txt"), "genesis").unwrap();
+        Command::new("git").args(["add", "."]).current_dir(repo_path).output().unwrap();
+        Command::new("git").args(["commit", "-m", "initial"]).current_dir(repo_path).output().unwrap();
+
+        let cycle_id = format!("test-{}", uuid::Uuid::new_v4().simple());
+        let cp = RollbackCheckpoint::create(repo_path, &cycle_id).unwrap();
+
+        assert!(cp.worktree_dir.exists());
+        assert_eq!(cp.cycle_id, cycle_id);
+        assert!(!cp.base_commit_sha.is_empty());
+
+        // Verify git branch list does NOT contain any rsi/candidate branch
+        let branches = Command::new("git")
+            .arg("-C")
+            .arg(repo_path)
+            .arg("branch")
+            .output()
+            .unwrap();
+        let branch_str = String::from_utf8_lossy(&branches.stdout);
+        assert!(!branch_str.contains("rsi/candidate"), "Detached worktree should not create a named branch: {}", branch_str);
+
+        // Teardown
+        cp.teardown().unwrap();
+        assert!(!cp.worktree_dir.exists());
     }
 }
