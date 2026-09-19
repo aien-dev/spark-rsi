@@ -69,6 +69,31 @@ impl RusageMetrics {
                 .saturating_sub(baseline.involuntary_context_switches),
         }
     }
+
+    pub fn accumulate(&mut self, delta: &Self) {
+        self.user_time_us = self.user_time_us.saturating_add(delta.user_time_us);
+        self.system_time_us = self.system_time_us.saturating_add(delta.system_time_us);
+        self.max_rss_kb = self.max_rss_kb.max(delta.max_rss_kb);
+        self.voluntary_context_switches = self
+            .voluntary_context_switches
+            .saturating_add(delta.voluntary_context_switches);
+        self.involuntary_context_switches = self
+            .involuntary_context_switches
+            .saturating_add(delta.involuntary_context_switches);
+    }
+}
+
+impl Default for RusageMetrics {
+    fn default() -> Self {
+        Self {
+            user_time_us: 0,
+            system_time_us: 0,
+            max_rss_kb: 0,
+            voluntary_context_switches: 0,
+            involuntary_context_switches: 0,
+        }
+    }
+
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

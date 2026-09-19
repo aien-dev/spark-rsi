@@ -133,6 +133,8 @@ enum Commands {
         signing_key_file: Option<String>,
         #[arg(long)]
         require_latency_improvement: bool,
+        #[arg(long, default_value_t = 1.0)]
+        non_inferiority_margin_pct: f64,
     },
     /// Execute a holdout test case against internal logic
     Holdout {
@@ -245,6 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             signing_key_hex,
             signing_key_file,
             require_latency_improvement,
+            non_inferiority_margin_pct,
         } => {
             let judge_cli = spark_rsi::actor::JudgeCli {
                 cycle_id,
@@ -257,6 +260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 signing_key_hex,
                 signing_key_file,
                 require_latency_improvement,
+                non_inferiority_margin_pct,
             };
             spark_rsi::actor::judge::run_judge_cli(judge_cli)?;
         }

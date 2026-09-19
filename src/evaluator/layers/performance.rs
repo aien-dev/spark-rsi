@@ -58,6 +58,7 @@ impl PerformanceLayer {
             candidate_latencies_us,
             target_is_latency_reduction,
             true,
+            1.0,
             resamples,
             seed,
         )
@@ -68,6 +69,7 @@ impl PerformanceLayer {
         candidate_latencies_us: &[f64],
         target_is_latency_reduction: bool,
         require_significant_improvement: bool,
+        non_inferiority_margin_pct: f64,
         resamples: usize,
         seed: Option<u64>,
     ) -> Result<PerformanceEvaluation, String> {
@@ -86,7 +88,7 @@ impl PerformanceLayer {
             boot.is_statistically_significant && boot.observed_delta_mean > 0.0
         };
 
-        if !target_metric_improved {
+        if require_significant_improvement && !target_metric_improved {
             violations.push(format!(
                 "Target metric did not achieve statistical significance (p={:.4}, delta={:.2}%)",
                 boot.p_value, boot.delta_pct
@@ -97,32 +99,30 @@ impl PerformanceLayer {
             parent_latencies_us,
             candidate_latencies_us,
             95.0,
-            1.0,
+            non_inferiority_margin_pct,
             resamples,
             seed.map(|s| s.wrapping_add(1)),
         )?;
 
         if !p95_res.passes_non_inferiority {
             violations.push(format!(
-                "p95 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > 1.0%",
-                p95_res.ci_95_upper_pct
-            ));
+                "p95 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > {:.1}%", p95_res.ci_95_upper_pct, non_inferiority_margin_pct,
+                ));
         }
 
         let p99_res = StatisticalEngine::evaluate_tail_non_inferiority(
             parent_latencies_us,
             candidate_latencies_us,
             99.0,
-            1.0,
+            non_inferiority_margin_pct,
             resamples,
             seed.map(|s| s.wrapping_add(2)),
         )?;
 
         if !p99_res.passes_non_inferiority {
             violations.push(format!(
-                "p99 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > 1.0%",
-                p99_res.ci_95_upper_pct
-            ));
+                "p99 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > {:.1}%", p99_res.ci_95_upper_pct, non_inferiority_margin_pct,
+                ));
         }
 
         let non_target_metrics_safe = p95_res.passes_non_inferiority && p99_res.passes_non_inferiority;
