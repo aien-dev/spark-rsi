@@ -101,6 +101,18 @@ pub struct RsiConfig {
     pub signing_key_hex: Option<String>,
     #[serde(default)]
     pub require_latency_improvement: bool,
+    #[serde(default = "default_max_url")]
+    pub max_url: String,
+    #[serde(default = "default_max_model")]
+    pub max_model: String,
+}
+
+fn default_max_url() -> String {
+    "http://127.0.0.1:18006/v1".to_string()
+}
+
+fn default_max_model() -> String {
+    "atlas-lightning-omni".to_string()
 }
 
 fn default_rsi_root() -> String {
@@ -120,6 +132,8 @@ impl Default for RsiConfig {
             holdouts_dir: None,
             signing_key_hex: None,
             require_latency_improvement: false,
+            max_url: default_max_url(),
+            max_model: default_max_model(),
         }
     }
 }
