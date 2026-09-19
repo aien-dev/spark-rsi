@@ -166,7 +166,7 @@ impl BlindJudge {
             }
         }
 
-        let correctness = if candidate_path.exists() && candidate_path.join("Cargo.toml").exists() {
+        let correctness = if candidate_path.join("Cargo.toml").exists() {
             CorrectnessLayer::evaluate_repo(candidate_path)
         } else {
             CorrectnessLayer::evaluate_synthetic(true, passed_holdouts, 0, 8, 0, true)
@@ -298,18 +298,19 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let holdouts = tmp.path().join("holdouts");
         let outputs = tmp.path().join("eval_outputs");
+        let candidate = tmp.path().join("candidate");
+        fs::create_dir_all(&candidate).unwrap();
+        let parent = tmp.path().join("parent");
+        fs::create_dir_all(&parent).unwrap();
 
         let judge = BlindJudge::new(holdouts, outputs.clone());
-        let candidate_dir = tmp.path().join("cand");
-        fs::create_dir_all(&candidate_dir).unwrap();
-
         let receipt = judge
             .evaluate_cycle(
                 "cycle-test-01",
                 "cand-01",
                 "parent-00",
-                &candidate_dir,
-                &candidate_dir,
+                &candidate,
+                &parent,
             )
             .unwrap();
 

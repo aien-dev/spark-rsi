@@ -95,11 +95,16 @@ impl CorrectnessLayer {
 
     pub fn evaluate_repo(repo_path: &Path) -> CorrectnessEvaluation {
         let mut failures = Vec::new();
+        let target_dir = std::env::temp_dir().join(format!("rsi-target-{}", uuid::Uuid::new_v4().simple()));
 
-        let check_status = Command::new("cargo")
+        let mut check_cmd = Command::new("cargo");
+        check_cmd
             .arg("check")
-            .current_dir(repo_path)
-            .output();
+            .arg("--target-dir")
+            .arg(&target_dir)
+            .current_dir(repo_path);
+
+        let check_status = check_cmd.output();
 
         let compilation_passed = match check_status {
             Ok(out) => {
@@ -120,6 +125,7 @@ impl CorrectnessLayer {
         };
 
         if !compilation_passed {
+            let _ = std::fs::remove_dir_all(&target_dir);
             return CorrectnessEvaluation {
                 compilation_passed: false,
                 unit_tests_passed: 0,
@@ -132,13 +138,17 @@ impl CorrectnessLayer {
             };
         }
 
-        let test_output = Command::new("cargo")
+        let mut test_cmd = Command::new("cargo");
+        test_cmd
             .arg("test")
+            .arg("--target-dir")
+            .arg(&target_dir)
             .arg("--no-fail-fast")
             .arg("--")
             .arg("--nocapture")
-            .current_dir(repo_path)
-            .output();
+            .current_dir(repo_path);
+
+        let test_output = test_cmd.output();
 
         let mut unit_passed = 0;
         let mut unit_failed = 0;
@@ -178,6 +188,7 @@ impl CorrectnessLayer {
             }
         }
 
+        let _ = std::fs::remove_dir_all(&target_dir);
         let abi_stability_passed = true;
         let passed = compilation_passed && unit_failed == 0 && integ_failed == 0 && abi_stability_passed;
 
