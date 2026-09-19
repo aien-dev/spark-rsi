@@ -1,6 +1,10 @@
+extern crate self as spark_rsi;
+
+pub mod actor;
 pub mod balance;
 pub mod config;
 pub mod daemon;
+pub mod evaluator;
 pub mod isolation;
 pub mod models;
 pub mod observe;
@@ -9,9 +13,18 @@ pub mod ratify;
 pub mod supervisor;
 pub mod verifier;
 
+pub use actor::{BlindJudge, HoldoutCase, HoldoutSuite, JudgeCli};
 pub use balance::BalanceKernel;
 pub use config::{EngineConfig, OperatorProfile, SovereignConfig};
 pub use daemon::RsiEngine;
+pub use evaluator::{
+    BootstrapEstimate, CorrectnessEvaluation, CorrectnessLayer, EvaluationReceipt, FastPrng,
+    FishersExactResult, LatencyDistribution, LatencyTimer, LayerResult,
+    LongitudinalReplayEvaluation, LongitudinalReplayLayer, ObjectiveEvaluator, PairedSample,
+    PerformanceEvaluation, PerformanceLayer, ProcessMetricsSnapshot, ResourceEfficiencyEvaluation,
+    ResourceEfficiencyLayer, RusageMetrics, SecurityEvaluation, SecurityLayer, StatisticalEngine,
+    StatmMetrics, StyleEvaluation, StyleLayer, TailNonInferiorityResult,
+};
 pub use isolation::{
     ArtifactManifest, ArtifactRecord, BuildJail, CandidateManifest, GpuEvaluationJail,
     RollbackCheckpoint, RootOfTrust, SandboxLimits,

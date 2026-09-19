@@ -10,6 +10,10 @@ license = "Apache-2.0 WITH LLVM-exception"
 name = "spark-rsi"
 path = "src/main.rs"
 
+[[bin]]
+name = "spark-rsi-judge"
+path = "src/actor/judge.rs"
+
 [lib]
 name = "spark_rsi"
 path = "src/lib.rs"

@@ -72,6 +72,23 @@ enum Commands {
         #[arg(long, default_value = "mojo/balance_bin")]
         kernel: String,
     },
+    /// Execute unprivileged Blind Judge evaluation over candidate generation
+    Judge {
+        #[arg(long, default_value = "cycle-genesis")]
+        cycle_id: String,
+        #[arg(long, default_value = "cand-001")]
+        candidate_id: String,
+        #[arg(long, default_value = "parent-000")]
+        parent_id: String,
+        #[arg(long, default_value = ".")]
+        candidate_path: String,
+        #[arg(long, default_value = ".")]
+        parent_path: String,
+        #[arg(long, default_value = ".rsi/holdouts")]
+        holdouts_dir: String,
+        #[arg(long, default_value = ".rsi/eval_outputs")]
+        output_dir: String,
+    },
     /// Run a single end-to-end RSI cycle (Observe, Propose, Verify, Balance, Ratify)
     Cycle {
         #[arg(default_value = ".")]
@@ -161,6 +178,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::BalanceSimd { d0, d1, d2, d3, h0, h1, h2, h3, kernel } => {
             let verdict = BalanceKernel::evaluate_simd([d0, d1, d2, d3], [h0, h1, h2, h3], Some(&kernel))?;
             println!("{}", serde_json::to_string_pretty(&verdict)?);
+        }
+        Commands::Judge {
+            cycle_id,
+            candidate_id,
+            parent_id,
+            candidate_path,
+            parent_path,
+            holdouts_dir,
+            output_dir,
+        } => {
+            let judge_cli = spark_rsi::actor::JudgeCli {
+                cycle_id,
+                candidate_id,
+                parent_id,
+                candidate_path,
+                parent_path,
+                holdouts_dir,
+                output_dir,
+            };
+            spark_rsi::actor::judge::run_judge_cli(judge_cli)?;
         }
         Commands::Cycle { path, kernel, cortex_url } => {
             let config = RsiConfig {
