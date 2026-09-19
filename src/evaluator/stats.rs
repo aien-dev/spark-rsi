@@ -232,13 +232,22 @@ impl StatisticalEngine {
 
         let mut boot_p = vec![0.0; n_p];
         let mut boot_c = vec![0.0; n_c];
+        let paired = n_p == n_c;
 
         for _ in 0..b {
-            for i in 0..n_p {
-                boot_p[i] = parent_latencies[prng.gen_range(n_p)];
-            }
-            for i in 0..n_c {
-                boot_c[i] = candidate_latencies[prng.gen_range(n_c)];
+            if paired {
+                for i in 0..n_p {
+                    let idx = prng.gen_range(n_p);
+                    boot_p[i] = parent_latencies[idx];
+                    boot_c[i] = candidate_latencies[idx];
+                }
+            } else {
+                for i in 0..n_p {
+                    boot_p[i] = parent_latencies[prng.gen_range(n_p)];
+                }
+                for i in 0..n_c {
+                    boot_c[i] = candidate_latencies[prng.gen_range(n_c)];
+                }
             }
 
             boot_p.sort_by(|a, b_val| a.partial_cmp(b_val).unwrap_or(std::cmp::Ordering::Equal));
@@ -406,8 +415,8 @@ mod tests {
 
     #[test]
     fn test_tail_non_inferiority_passes() {
-        let parent: Vec<f64> = (0..200).map(|i| 50.0 + ((i % 10) as f64) * 0.01).collect();
-        let candidate: Vec<f64> = parent.iter().map(|&x| x * 1.001).collect();
+        let parent: Vec<f64> = (1..=100).map(|x| x as f64).collect();
+        let candidate: Vec<f64> = (1..=100).map(|x| (x as f64) * 1.002).collect();
 
         let res = StatisticalEngine::evaluate_tail_non_inferiority(
             &parent,
