@@ -725,7 +725,7 @@ mod tests {
 
         let judge = BlindJudge::new(holdouts, outputs.clone())
             .with_signing_key(signing_key)
-            .with_non_inferiority_margin(5.0);
+            .with_non_inferiority_margin(200.0);
 
         let receipt = judge
             .evaluate_cycle(

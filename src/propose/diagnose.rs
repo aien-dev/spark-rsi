@@ -1,4 +1,5 @@
 use crate::evaluator::EvaluationReceipt;
+use crate::propose::hypothesis::HypothesisContract;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -20,6 +21,8 @@ pub struct DiagnosticContext {
     pub primary_defect: DefectCategory,
     pub violations: Vec<String>,
     pub past_lessons: Vec<String>,
+    #[serde(default)]
+    pub hypothesis: Option<HypothesisContract>,
 }
 
 impl DiagnosticContext {
@@ -73,6 +76,7 @@ impl DiagnosticContext {
             primary_defect,
             violations,
             past_lessons,
+            hypothesis: None,
         }
     }
 
@@ -91,56 +95,55 @@ impl DiagnosticContext {
             primary_defect,
             violations,
             past_lessons,
+            hypothesis: None,
         }
     }
 
-    pub fn build_prompts(&self) -> (String, String) {
-        let system_prompt = "You are the autonomous recursive code synthesizer for spark-rsi on NVIDIA DGX Spark.
-Your role: generate a clean, compiling, verified replacement for the target file that resolves diagnosed defects.
+    pub fn with_hypothesis(mut self, hypothesis: HypothesisContract) -> Self {
+        self.hypothesis = Some(hypothesis);
+        self
+    }
 
-CRITICAL INVARIANTS:
-1. Output MUST contain ONLY the complete replacement file inside a single fenced code block (e.g. ```rust ... ```).
-2. Do NOT provide conversational filler, pleasantries, explanations, or text outside the code block.
-3. Anti-Slop Standard: ZERO em dashes (\u{2014}), ZERO en dashes (\u{2013}), ZERO marketing adjectives or decorative adjectives.
-4. Preserve existing public APIs and invariants.".to_string();
+    pub fn build_prompts(&self) -> (String, String) {
+        let system_prompt = "You are the autonomous recursive code synthesizer for spark-rsi on NVIDIA DGX Spark.\n\
+Your role: generate a clean, compiling, verified replacement for the target file that resolves diagnosed defects.\n\
+\n\
+CRITICAL INVARIANTS:\n\
+1. Output MUST contain ONLY the complete replacement file inside a single fenced code block (e.g. ```rust ... ```).\n\
+2. Do NOT provide conversational filler, pleasantries, explanations, or text outside the code block.\n\
+3. Anti-Slop Standard: ZERO em dashes (\\u{2014}), ZERO en dashes (\\u{2013}), ZERO marketing adjectives or decorative adjectives.\n\
+4. Preserve existing public APIs and invariants.\n\
+5. Be concise. Keep internal reasoning brief and emit the complete replacement file inside a single fenced code block.".to_string();
 
         let mut user_prompt = format!(
-            "TARGET FILE: {}
-PRIMARY DEFECT: {:?}
-
-DIAGNOSTIC VIOLATIONS DETECTED BY EVALUATOR:
-",
+            "TARGET FILE: {}\n\
+PRIMARY DEFECT: {:?}\n\
+\n\
+DIAGNOSTIC VIOLATIONS DETECTED BY EVALUATOR:\n",
             self.target_file, self.primary_defect
         );
 
         if self.violations.is_empty() {
-            user_prompt.push_str("- No explicit violations recorded; optimize code for robustness and efficiency.
-");
+            user_prompt.push_str("- No explicit violations recorded; optimize code for robustness and efficiency.\n");
         } else {
             for v in &self.violations {
-                user_prompt.push_str(&format!("- {}
-", v));
+                user_prompt.push_str(&format!("- {}\n", v));
             }
         }
 
+        if let Some(ref h) = self.hypothesis {
+            user_prompt.push_str(&format!("\n{}\n", h.format_prompt_directive()));
+        }
+
         if !self.past_lessons.is_empty() {
-            user_prompt.push_str("
-CANONICAL LESSONS FROM SPARK CORTEX (ATLAS-MEMORY):
-");
+            user_prompt.push_str("\nCANONICAL LESSONS FROM SPARK CORTEX (ATLAS-MEMORY):\n");
             for lesson in &self.past_lessons {
-                user_prompt.push_str(&format!("* {}
-", lesson));
+                user_prompt.push_str(&format!("* {}\n", lesson));
             }
         }
 
         user_prompt.push_str(&format!(
-            "
-CURRENT FILE CONTENT:
-```
-{}
-```
-
-Generate the updated file resolving the above defects:",
+            "\nCURRENT FILE CONTENT:\n```\n{}\n```\n\nGenerate the updated file resolving the above defects:",
             self.current_content
         ));
 
