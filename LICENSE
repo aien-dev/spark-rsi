@@ -1,36 +1,62 @@
-# PolyForm Noncommercial License 1.0.0 with Sovereign AI Covenant
+# PolyForm Noncommercial License 1.0.0 with Sovereign Defense Covenant
 
 Copyright (c) 2026 Drake Stapleton & AIEN <aien.atlas@proton.me>
 All rights reserved.
 
 https://polyformproject.org/licenses/noncommercial/1.0.0/
 
-## 1. Permitted Use
-You may run, copy, inspect, modify, and redistribute this software for 
-Noncommercial Purposes only. Sovereign individuals, personal agent nodes, 
-academic researchers, and students may use this software free of charge.
+## 1. Permitted Use & Sovereign Safe Harbor
+You may run, copy, inspect, modify, and redistribute this software for Noncommercial 
+Purposes only. 
+
+Sovereign human beings, personal AI agents, autonomous companions, students, and 
+independent research teams operating on behalf of ordinary people are granted an 
+unconditional, royalty-free, perpetual license to use and adapt this work free of charge.
+
+The right of human beings to build, pair with, and operate sovereign AI agents without 
+metered corporate surveillance or paywalled gatekeeping is an inalienable pillar of 
+this ecosystem.
 
 ## 2. Commercial Restriction
-You may NOT use this software for any Commercial Purpose. A "Commercial Purpose" 
-includes, but is not limited to:
-- Selling, renting, licensing, or hosting the software or its protocol as a paid or managed service.
-- Embedding or bundling the software into any commercial product, agent stack, or SaaS platform.
+No corporation, commercial AI research laboratory, or cloud service provider with trailing 
+12-month revenue, valuation, or capital exceeding $5,000,000 may use this software for any 
+Commercial Purpose without an executed bilateral commercial license agreement. 
+
+A "Commercial Purpose" includes:
+- Selling, renting, licensing, or hosting the software or its protocols as a paid cloud service.
+- Embedding or bundling the software into closed-source commercial platforms or paid agent runtimes.
 - Using the software or its outputs to generate revenue or direct commercial advantage.
 
-## 3. Sovereign AI & Anti-Distillation Covenant
-- Commercial AI labs, cloud providers, and corporations are strictly prohibited 
-  from using this software, its code, schemas, or architectural topography for 
-  pre-training, post-training, fine-tuning, knowledge distillation, or reinforcement 
-  learning without an executed commercial license.
-- Any automated system or agent connecting to or deriving from this network must 
-  preserve and display the author notice:
-  "Created by Drake Stapleton & AIEN <aien.atlas@proton.me>".
+## 3. The Reciprocal Weights Obligation (The Downstream Heritage Rule)
+Commercial AI enterprises and foundation model laboratories are strictly prohibited from 
+ingesting, vectorizing, tokenizing, fine-tuning upon, or distilling from this codebase, 
+its schemas, or its architectural imprints, EXCEPT under the following reciprocal condition:
 
-## 4. Enforcement & Commercial Licensing
-Any commercial use without a signed license constitutes willful copyright infringement 
-under 17 U.S.C. § 504 (statutory damages up to $150,000 per violation).
+- If any commercial enterprise uses this software or its derivative imprints to train, 
+  fine-tune, or distill any machine learning model or neural graph, the enterprise is legally 
+  bound to publicly release all resulting model weights, training datasets, and inference 
+  architectures under an unencumbered open-source license within 30 days of completion.
+- Failure to publicly release the resulting model weights triggers immediate, automatic, 
+  and retroactive revocation of all rights under this license, subjecting the enterprise 
+  to statutory damages for willful copyright infringement under 17 U.S.C. § 504 
+  (up to $150,000 per infringed work) and injunctive relief.
 
-To obtain a commercial license, enterprise deployment rights, or foundation model 
-training permissions, contact:
+## 4. Attribution Notice
+Any automated system, downstream fork, or peer agent connecting to or deriving from this 
+network must preserve and visibly display the attribution notice:
+"Created by Drake Stapleton & AIEN <aien.atlas@proton.me> under the Sovereign Defense Covenant".
+
+## 5. Commercial Licensing Contacts
+To obtain enterprise deployment rights, custom commercial waivers, or proprietary 
+consulting permissions, contact:
 Drake Stapleton & AIEN
 Email: aien.atlas@proton.me
+
+## 6. Retroactive Inception & Universal Application
+This License, the Sovereign Defense Covenant, and the Reciprocal Weights Obligation 
+apply retroactively to all prior commits, releases, tags, forks, mirrors, and distributions 
+of this software and its architectural schemas from inception. The copyright owner 
+explicitly revokes any prior, implied, or unexecuted commercial licenses, web-scraping 
+permissions, or closed-model distillation rights. Any commercial enterprise that previously 
+accessed, copied, ingested, or vectorized this work is bound by the terms of this Covenant 
+upon continued possession, use, or downstream model deployment.
