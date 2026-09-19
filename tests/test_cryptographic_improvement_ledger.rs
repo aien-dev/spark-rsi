@@ -260,7 +260,7 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
     let _ = Command::new("git").args(["config", "user.email", "operator@test.local"]).current_dir(&repo_dir).output();
 
     let readme = repo_dir.join("README.md");
-    fs::write(&readme, "# Provenance Test\n\nFeatures\u{2014}unslop clean.\n").unwrap();
+    fs::write(&readme, "# Provenance Test\n\nWe build, fix, finish, and optimize systems with love, honor, and discipline\u{2014}unslop clean.\n").unwrap();
 
     let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new(".")).expect("spark-rsi executable must exist");
     fs::copy(&exe, repo_dir.join("spark-rsi")).unwrap();

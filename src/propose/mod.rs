@@ -33,6 +33,7 @@ impl ProposalGenerator {
             kind,
             created_at: chrono::Utc::now().to_rfc3339(),
             sandbox_path: None,
+            operator_signature: None,
         }
     }
 

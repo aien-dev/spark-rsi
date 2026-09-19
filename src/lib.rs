@@ -8,6 +8,7 @@ pub mod evaluator;
 pub mod graph;
 pub mod isolation;
 pub mod ledger;
+pub mod meta;
 pub mod models;
 pub mod observe;
 pub mod propose;
@@ -27,6 +28,10 @@ pub use evaluator::{
     PerformanceEvaluation, PerformanceLayer, ProcessMetricsSnapshot, ResourceEfficiencyEvaluation,
     ResourceEfficiencyLayer, RusageMetrics, SecurityEvaluation, SecurityLayer, StatisticalEngine,
     StatmMetrics, StyleEvaluation, StyleLayer, TailNonInferiorityResult,
+};
+pub use meta::{
+    AbForkEvaluator, CandidateTier, CriterionResult, MetaBenchmarkComparison, MetaBenchmarkMetrics,
+    MetaBenchmarkSuite, TierGovernance, TrueRsiEvaluator, TrueRsiVerdict,
 };
 pub use ledger::{
     compute_merkle_root, BlobStore, BlockType, ImprovementLedger, LedgerAuditReport,
