@@ -65,7 +65,14 @@ impl MaxClient {
 
     pub async fn is_available(&self) -> bool {
         let url = format!("{}/models", self.base_url);
-        match self.client.get(&url).send().await {
+        let check_client = match reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(500))
+            .build()
+        {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+        match check_client.get(&url).send().await {
             Ok(resp) => resp.status().is_success(),
             Err(_) => false,
         }

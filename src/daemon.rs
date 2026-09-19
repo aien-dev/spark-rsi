@@ -280,6 +280,8 @@ impl RsiEngine {
                 socket_path: supervisor_sock.clone(),
                 memory_limit_mb: 49152,
                 canary_target: config.canary_target,
+                max_latency_us: 1_000_000,
+                max_error_rate: 0.0,
                 shared_secret: resolve_supervisor_secret(),
             };
             let supervisor_daemon = SupervisorDaemon::new(supervisor_config);
@@ -297,7 +299,10 @@ impl RsiEngine {
                 let state = supervisor_daemon.supervisor.record_canary_transaction(
                     &mut gen_info,
                     true,
+                    1500,
                     config.canary_target,
+                    1_000_000,
+                    0.0,
                 )?;
                 if state == GenerationState::Reverting {
                     canary_passed = false;

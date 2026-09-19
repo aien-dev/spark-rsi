@@ -1,11 +1,11 @@
-use spark_rsi::supervisor::GenerationState;
 use spark_rsi::supervisor::daemon::{SupervisorConfig, SupervisorDaemon};
-use spark_rsi::supervisor::ipc::{IpcClient, SessionAuth, SupervisorMessage, WorkerMessage};
+use spark_rsi::supervisor::ipc::{IpcClient, SupervisorMessage, WorkerMessage};
+use spark_rsi::supervisor::GenerationState;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 #[tokio::test]
-async fn test_end_to_end_supervisor_ipc_handshake_and_canary_promotion() {
+async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
     let tmp = tempfile::tempdir().unwrap();
     let rsi_root = tmp.path().join(".rsi");
     let socket_path = rsi_root.join("supervisor.sock");
@@ -16,6 +16,8 @@ async fn test_end_to_end_supervisor_ipc_handshake_and_canary_promotion() {
         socket_path: socket_path.clone(),
         memory_limit_mb: 49152,
         canary_target: 3,
+        max_latency_us: 1_000_000,
+        max_error_rate: 0.0,
         shared_secret: "tpm-verified-secret-token".to_string(),
     };
 
@@ -42,22 +44,15 @@ async fn test_end_to_end_supervisor_ipc_handshake_and_canary_promotion() {
         let _ = daemon_clone.run_server(active_link_clone).await;
     });
 
-    // Worker simulation
+    // Worker simulation with interactive challenge/HMAC handshake
     let mut client = IpcClient::connect(&socket_path, Duration::from_secs(5))
         .await
         .expect("Worker failed to connect to supervisor socket");
 
-    let auth_token = SessionAuth::compute_token("gen-002", "tpm-verified-secret-token");
-    client
-        .send(&WorkerMessage::Ready {
-            generation_id: "gen-002".to_string(),
-            pid: std::process::id(),
-            auth_token,
-        })
+    let reply = client
+        .perform_worker_handshake("gen-002", std::process::id(), "tpm-verified-secret-token")
         .await
         .unwrap();
-
-    let reply: SupervisorMessage = client.recv().await.unwrap();
     assert_eq!(reply, SupervisorMessage::Ping);
 
     // Send Heartbeat
@@ -136,6 +131,8 @@ async fn test_end_to_end_supervisor_instant_rollback_on_canary_defect() {
         socket_path: socket_path.clone(),
         memory_limit_mb: 49152,
         canary_target: 5,
+        max_latency_us: 1_000_000,
+        max_error_rate: 0.0,
         shared_secret: "tpm-verified-secret-token".to_string(),
     };
 
@@ -165,17 +162,11 @@ async fn test_end_to_end_supervisor_instant_rollback_on_canary_defect() {
         .await
         .expect("Worker failed to connect");
 
-    let auth_token = SessionAuth::compute_token("gen-002", "tpm-verified-secret-token");
-    client
-        .send(&WorkerMessage::Ready {
-            generation_id: "gen-002".to_string(),
-            pid: std::process::id(),
-            auth_token,
-        })
+    let reply = client
+        .perform_worker_handshake("gen-002", std::process::id(), "tpm-verified-secret-token")
         .await
         .unwrap();
-
-    let _ = client.recv::<SupervisorMessage>().await.unwrap();
+    assert_eq!(reply, SupervisorMessage::Ping);
 
     // Report canary failure
     client
@@ -209,6 +200,84 @@ async fn test_end_to_end_supervisor_instant_rollback_on_canary_defect() {
 }
 
 #[tokio::test]
+async fn test_end_to_end_supervisor_instant_rollback_on_latency_budget_exceeded() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rsi_root = tmp.path().join(".rsi");
+    let socket_path = rsi_root.join("supervisor.sock");
+    let active_link = rsi_root.join("active.sock");
+
+    let config = SupervisorConfig {
+        rsi_root: rsi_root.clone(),
+        socket_path: socket_path.clone(),
+        memory_limit_mb: 49152,
+        canary_target: 5,
+        max_latency_us: 50_000, // 50ms budget
+        max_error_rate: 0.0,
+        shared_secret: "tpm-verified-secret-token".to_string(),
+    };
+
+    let daemon = std::sync::Arc::new(SupervisorDaemon::new(config));
+
+    // Stage parent
+    let src_parent = tmp.path().join("art_parent");
+    std::fs::create_dir_all(&src_parent).unwrap();
+    std::fs::write(src_parent.join("bin"), "parent v1").unwrap();
+    let parent_gen = daemon.supervisor.stage_generation("gen-001", &src_parent, "sha-parent").unwrap();
+    daemon.supervisor.atomic_symlink_swap("gen-001").unwrap();
+    *daemon.active_generation.lock().await = Some(parent_gen);
+
+    // Stage canary
+    let src_cand = tmp.path().join("art_cand");
+    std::fs::create_dir_all(&src_cand).unwrap();
+    std::fs::write(src_cand.join("bin"), "canary v2").unwrap();
+    daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
+
+    let daemon_clone = daemon.clone();
+    let active_link_clone = active_link.clone();
+    let server_handle = tokio::spawn(async move {
+        let _ = daemon_clone.run_server(active_link_clone).await;
+    });
+
+    let mut client = IpcClient::connect(&socket_path, Duration::from_secs(5))
+        .await
+        .expect("Worker failed to connect");
+
+    let reply = client
+        .perform_worker_handshake("gen-002", std::process::id(), "tpm-verified-secret-token")
+        .await
+        .unwrap();
+    assert_eq!(reply, SupervisorMessage::Ping);
+
+    // Transaction succeeds functionally, but violates latency budget (75ms > 50ms)
+    client
+        .send(&WorkerMessage::CanaryReport {
+            generation_id: "gen-002".to_string(),
+            transaction_id: 1,
+            success: true,
+            latency_us: 75_000,
+            error: None,
+        })
+        .await
+        .unwrap();
+
+    let revert_msg: SupervisorMessage = client.recv().await.unwrap();
+    match revert_msg {
+        SupervisorMessage::RevertOrder { reason } => {
+            assert!(reason.contains("Latency budget exceeded"));
+            assert!(reason.contains("75000 us > 50000 us"));
+        }
+        _ => panic!("Expected RevertOrder for latency budget violation"),
+    }
+
+    // Verify rollback
+    let canary_lock = daemon.canary_generation.lock().await;
+    assert_eq!(canary_lock.as_ref().unwrap().state, GenerationState::Reverted);
+
+    daemon.running.store(false, Ordering::Relaxed);
+    let _ = server_handle.abort();
+}
+
+#[tokio::test]
 async fn test_unauthenticated_worker_rejected_closed() {
     let tmp = tempfile::tempdir().unwrap();
     let rsi_root = tmp.path().join(".rsi");
@@ -220,6 +289,8 @@ async fn test_unauthenticated_worker_rejected_closed() {
         socket_path: socket_path.clone(),
         memory_limit_mb: 49152,
         canary_target: 5,
+        max_latency_us: 1_000_000,
+        max_error_rate: 0.0,
         shared_secret: "legitimate-secret".to_string(),
     };
 
@@ -239,17 +310,32 @@ async fn test_unauthenticated_worker_rejected_closed() {
         .await
         .unwrap();
 
-    // Send invalid token
+    // Send Ready message
     client
         .send(&WorkerMessage::Ready {
             generation_id: "gen-002".to_string(),
             pid: 12345,
-            auth_token: "invalid-forged-token".to_string(),
+            auth_token: String::new(),
         })
         .await
         .unwrap();
 
-    // Should be disconnected or fail to receive Ping
+    // Receive challenge
+    let challenge: SupervisorMessage = client.recv().await.unwrap();
+    match challenge {
+        SupervisorMessage::AuthChallenge { .. } => {}
+        other => panic!("Expected AuthChallenge, got {:?}", other),
+    }
+
+    // Send forged HMAC response
+    client
+        .send(&WorkerMessage::AuthResponse {
+            response: "invalid-forged-hmac-digest".to_string(),
+        })
+        .await
+        .unwrap();
+
+    // Should be rejected / disconnected
     let res = client.recv::<SupervisorMessage>().await;
     assert!(res.is_err());
 

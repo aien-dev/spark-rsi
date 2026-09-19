@@ -87,6 +87,32 @@ impl IpcConnection {
         serde_json::from_str(line.trim())
             .map_err(|e| format!("Failed to deserialize IPC message: {}", e))
     }
+
+    pub async fn perform_worker_handshake(
+        &mut self,
+        generation_id: &str,
+        pid: u32,
+        shared_secret: &str,
+    ) -> Result<SupervisorMessage, String> {
+        self.send(&WorkerMessage::Ready {
+            generation_id: generation_id.to_string(),
+            pid,
+            auth_token: String::new(),
+        })
+        .await?;
+
+        let challenge_msg: SupervisorMessage = self.recv().await?;
+        let nonce = match challenge_msg {
+            SupervisorMessage::AuthChallenge { nonce } => nonce,
+            other => return Err(format!("Expected AuthChallenge from supervisor, got {:?}", other)),
+        };
+
+        let message = format!("{}:{}", generation_id, nonce);
+        let hmac = SessionAuth::compute_hmac(shared_secret, &message);
+
+        self.send(&WorkerMessage::AuthResponse { response: hmac }).await?;
+        self.recv().await
+    }
 }
 
 pub struct IpcServer {
@@ -174,17 +200,58 @@ impl IpcClient {
 pub struct SessionAuth;
 
 impl SessionAuth {
-    pub fn compute_token(nonce: &str, shared_secret: &str) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(nonce.as_bytes());
-        hasher.update(b":");
-        hasher.update(shared_secret.as_bytes());
-        hex::encode(hasher.finalize())
+    /// Computes RFC 2104 HMAC-SHA256 of `message` using `shared_secret`.
+    pub fn compute_hmac(shared_secret: &str, message: &str) -> String {
+        let key = shared_secret.as_bytes();
+        let mut key_block = [0u8; 64];
+        if key.len() > 64 {
+            let mut hasher = Sha256::new();
+            hasher.update(key);
+            let digest = hasher.finalize();
+            key_block[..32].copy_from_slice(&digest);
+        } else {
+            key_block[..key.len()].copy_from_slice(key);
+        }
+
+        let mut ipad = [0x36u8; 64];
+        let mut opad = [0x5cu8; 64];
+        for i in 0..64 {
+            ipad[i] ^= key_block[i];
+            opad[i] ^= key_block[i];
+        }
+
+        let mut inner = Sha256::new();
+        inner.update(&ipad);
+        inner.update(message.as_bytes());
+        let inner_hash = inner.finalize();
+
+        let mut outer = Sha256::new();
+        outer.update(&opad);
+        outer.update(&inner_hash);
+        hex::encode(outer.finalize())
     }
 
+    /// Verifies candidate HMAC in constant time against expected HMAC.
+    pub fn verify_hmac(shared_secret: &str, message: &str, candidate: &str) -> bool {
+        let expected = Self::compute_hmac(shared_secret, message);
+        if expected.len() != candidate.len() {
+            return false;
+        }
+        let mut diff = 0u8;
+        for (a, b) in expected.as_bytes().iter().zip(candidate.as_bytes().iter()) {
+            diff |= a ^ b;
+        }
+        diff == 0
+    }
+
+    /// Backward-compatible alias for compute_hmac.
+    pub fn compute_token(nonce: &str, shared_secret: &str) -> String {
+        Self::compute_hmac(shared_secret, nonce)
+    }
+
+    /// Backward-compatible alias for verify_hmac.
     pub fn verify_token(nonce: &str, shared_secret: &str, candidate_token: &str) -> bool {
-        let expected = Self::compute_token(nonce, shared_secret);
-        expected == candidate_token
+        Self::verify_hmac(shared_secret, nonce, candidate_token)
     }
 }
 

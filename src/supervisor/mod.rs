@@ -29,6 +29,9 @@ pub struct GenerationInfo {
     pub pid: Option<u32>,
     pub socket_path: Option<PathBuf>,
     pub canary_transactions: u64,
+    pub canary_errors: u64,
+    pub max_latency_us: u64,
+    pub total_latency_us: u64,
     pub staged_timestamp: String,
 }
 
@@ -71,6 +74,9 @@ impl HostSupervisor {
             pid: None,
             socket_path: None,
             canary_transactions: 0,
+            canary_errors: 0,
+            max_latency_us: 0,
+            total_latency_us: 0,
             staged_timestamp: chrono::Utc::now().to_rfc3339(),
         })
     }
@@ -210,14 +216,54 @@ impl HostSupervisor {
         &self,
         gen_info: &mut GenerationInfo,
         success: bool,
+        latency_us: u64,
         canary_target: u64,
+        max_latency_us: u64,
+        max_error_rate: f64,
     ) -> Result<GenerationState, String> {
+        gen_info.canary_transactions += 1;
         if !success {
+            gen_info.canary_errors += 1;
+        }
+        if latency_us > gen_info.max_latency_us {
+            gen_info.max_latency_us = latency_us;
+        }
+        gen_info.total_latency_us += latency_us;
+
+        // 1. Latency budget check
+        if max_latency_us > 0 && latency_us > max_latency_us {
             gen_info.state = GenerationState::Reverting;
-            return Ok(GenerationState::Reverting);
+            return Err(format!(
+                "Latency budget exceeded: {} us > {} us limit (transaction {})",
+                latency_us, max_latency_us, gen_info.canary_transactions
+            ));
         }
 
-        gen_info.canary_transactions += 1;
+        // 2. Error budget check
+        let error_rate = gen_info.canary_errors as f64 / gen_info.canary_transactions as f64;
+        if error_rate > max_error_rate {
+            gen_info.state = GenerationState::Reverting;
+            return Err(format!(
+                "Error budget exceeded: {:.2}% errors ({}/{}) > {:.2}% limit",
+                error_rate * 100.0,
+                gen_info.canary_errors,
+                gen_info.canary_transactions,
+                max_error_rate * 100.0
+            ));
+        }
+
+        // 3. Resource budget check
+        if let Some(pid) = gen_info.pid {
+            if !self.is_memory_within_budget(pid).unwrap_or(true) {
+                gen_info.state = GenerationState::Reverting;
+                return Err(format!(
+                    "Resource budget exceeded: PID {} exceeded {} MB limit",
+                    pid, self.memory_limit_mb
+                ));
+            }
+        }
+
+        // 4. Durability promotion
         if gen_info.canary_transactions >= canary_target {
             gen_info.state = GenerationState::Durable;
         } else {
@@ -358,17 +404,17 @@ mod tests {
         gen.state = GenerationState::Ready;
 
         for _ in 0..4 {
-            let state = supervisor.record_canary_transaction(&mut gen, true, 5).unwrap();
+            let state = supervisor.record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0).unwrap();
             assert_eq!(state, GenerationState::CanaryActive);
         }
 
-        let state_final = supervisor.record_canary_transaction(&mut gen, true, 5).unwrap();
+        let state_final = supervisor.record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0).unwrap();
         assert_eq!(state_final, GenerationState::Durable);
         assert_eq!(gen.state, GenerationState::Durable);
         assert_eq!(gen.canary_transactions, 5);
 
         // Failure during canary triggers Reverting
-        let state_err = supervisor.record_canary_transaction(&mut gen, false, 5).unwrap();
-        assert_eq!(state_err, GenerationState::Reverting);
+        assert!(supervisor.record_canary_transaction(&mut gen, false, 1000, 5, 1_000_000, 0.0).is_err());
+        assert_eq!(gen.state, GenerationState::Reverting);
     }
 }

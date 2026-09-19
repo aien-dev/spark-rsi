@@ -1,5 +1,5 @@
 use clap::Parser;
-use spark_rsi::supervisor::daemon::{SupervisorConfig, SupervisorDaemon};
+use spark_rsi::supervisor::daemon::{resolve_supervisor_secret, SupervisorConfig, SupervisorDaemon};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -21,8 +21,14 @@ struct Args {
     #[arg(long, default_value_t = 5000)]
     canary_target: u64,
 
-    #[arg(long, default_value = "sovereign-spark-tpm-key")]
-    shared_secret: String,
+    #[arg(long, default_value_t = 1_000_000)]
+    max_latency_us: u64,
+
+    #[arg(long, default_value_t = 0.0)]
+    max_error_rate: f64,
+
+    #[arg(long)]
+    shared_secret: Option<String>,
 }
 
 #[tokio::main]
@@ -36,12 +42,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Starting spark-rsi Host Supervisor daemon"
     );
 
+    let shared_secret = match args.shared_secret {
+        Some(s) if !s.trim().is_empty() => s.trim().to_string(),
+        _ => resolve_supervisor_secret(),
+    };
+
     let config = SupervisorConfig {
         rsi_root: args.rsi_root,
         socket_path: args.socket_path,
         memory_limit_mb: args.memory_limit_mb,
         canary_target: args.canary_target,
-        shared_secret: args.shared_secret,
+        max_latency_us: args.max_latency_us,
+        max_error_rate: args.max_error_rate,
+        shared_secret,
     };
 
     let daemon = SupervisorDaemon::new(config);

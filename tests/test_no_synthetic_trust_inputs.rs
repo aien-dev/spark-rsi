@@ -181,15 +181,13 @@ fn test_end_to_end_unmocked_lifecycle_admission_and_supervisor_rollback() {
 
     // Canary testing: transaction success transitions toward Durable
     let s1 = supervisor
-        .record_canary_transaction(&mut gen_info, true, 10)
+        .record_canary_transaction(&mut gen_info, true, 1000, 10, 1_000_000, 0.0)
         .expect("Canary update failed");
     assert_eq!(s1, GenerationState::CanaryActive);
 
     // Simulate regression alert triggering automated rollback
-    let s2 = supervisor
-        .record_canary_transaction(&mut gen_info, false, 10)
-        .expect("Canary failure recording failed");
-    assert_eq!(s2, GenerationState::Reverting);
+    let _ = supervisor.record_canary_transaction(&mut gen_info, false, 1000, 10, 1_000_000, 0.0);
+    assert_eq!(gen_info.state, GenerationState::Reverting);
 
     // Supervisor executes atomic rollback to parent
     let rollback_res = supervisor.rollback_to_parent("gen-parent-00", None, None);
