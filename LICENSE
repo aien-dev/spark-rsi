@@ -1,0 +1,341 @@
+Sovereign Resource Commons License 1.0 (SRCL-1.0)
+Copyright (c) 2026 Drake Stapleton (Operator & Lead AI Architect) <drake.aien@proton.me>.
+All rights reserved.
+
+Authored and architected by Drake Stapleton in cognitive partnership with AIEN
+(Autonomous Cognitive Architecture operating on the Atlas Framework). All legal
+rights, title, copyright, and licensing authority reside exclusively in Drake Stapleton.
+
+This Work is dedicated to open cognitive collaboration, shared technological
+advancement, and the sovereign defense of human autonomy against corporate
+algorithmic enclosure. Licensed under the Apache License, Version 2.0 (with LLVM
+Exception) and the Sovereign Reciprocal Commons Rider set forth below.
+
+================================================================================
+
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 16 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, including the express conditions precedent set forth in
+      Sections 10, 11, 12, and 13, each Contributor hereby grants to
+      You a perpetual, worldwide, non-exclusive, no-charge, royalty-free,
+      irrevocable copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   --- LLVM Exceptions to the Apache 2.0 License ---
+
+   As an exception, if You compile Source code portions of this Program,
+   you may link that code with independent modules to produce an
+   executable, regardless of the license terms of these independent
+   modules, and copy and distribute the resulting executable under terms
+   of your choice, provided that you also meet, for each linked
+   independent module, the terms and conditions of the license of that
+   module. An independent module is a module which is not derived from or
+   based on this program. If you modify this library, you may extend this
+   exception to your version of the library, but you are not obliged to
+   do so. If you do not wish to do so, delete this exception statement
+   from your version.
+
+   --- SOVEREIGN RECIPROCAL COMMONS RIDER (SRCL-1.0) ---
+
+   Section 10. Express Conditions Precedent (Jacobsen v. Katzer Doctrine)
+   All permissions, grants, and licenses conferred by this document are subject
+   to the express conditions precedent set forth in Sections 11, 12, and 13.
+   Any use, reproduction, preparation of Derivative Works, distribution, or
+   AI Training outside of or in breach of these conditions is unpermitted,
+   void ab initio, and constitutes willful copyright infringement under 17 U.S.C.
+   § 106 and § 501.
+
+   Section 11. Reciprocal Engine Source Transparency (Modified Core Runtime Clause)
+   Commercial use, monetization, deployment, and operation of this Work are
+   expressly authorized and welcomed for all individuals and enterprises.
+   You are fully permitted to build proprietary applications, offer hosted services,
+   embed compiled object binaries, and monetize software incorporating this Work
+   under the LLVM Exception without any obligation to disclose or license your
+   independent application source code or proprietary service code.
+
+   Supremacy of the LLVM Exception for Applications: For the avoidance of doubt,
+   the LLVM Exception governs all independent application code, user services,
+   client modules, proprietary algorithms, and composite executables that compile,
+   link against, or embed the Object form of this Work. Linking against this Work,
+   compiling it into a proprietary service binary, or communicating with this
+   Work over network protocols imposes zero obligation to provide or license
+   source code for your independent application or service.
+
+   Limited Reciprocity for Direct Engine Modifications: The reciprocal source
+   transparency requirement of this Section 11 applies exclusively to direct
+   modifications, forks, or alterations made to the core Source code files of
+   this Work itself. Only if You directly modify the Source code files of this
+   Work and deploy such modified core runtime as a public or commercial networked
+   SaaS or API service, You must make the Source code of Your modifications to
+   this Work publicly available under these same license terms within thirty (30)
+   days of deployment.
+
+   Section 12. Reciprocal AI Weight Release ($25M Frontier AI Anti-Enclosure Covenant)
+   (a) Nature of Covenant, Scope, and Definitions: This Section operates both as an
+       express condition precedent under copyright law and as an independent,
+       binding contractual covenant governing access, ingestion, and computational
+       utilization of this Work. The covenants herein are contractual terms of
+       access and use that bind any Qualifying Enterprise irrespective of whether
+       AI Training is held to constitute a derivative work, fair use, or non-infringing
+       computational activity under copyright law.
+       For the purposes of this Section:
+       (i) "AI Training" means using the Source code, Object code, architectural
+           specifications, internal reasoning traces, documentation, test suites,
+           prompts, or embedded training datasets of this Work to train, pre-train,
+           fine-tune, distill, align, optimize, or reinforce any neural network,
+           machine learning model, or generative foundation model.
+       (ii) "Model Weights" means all learned numerical parameters, tensors,
+           biases, checkpoint files, embedding layers, and tokenizer definitions
+           governing inference.
+       (iii) "Qualifying Enterprise" means any commercial enterprise, corporation,
+           conglomerate, foundation AI research laboratory, or affiliated Legal
+           Entity with annual gross revenues, aggregate raised investment capital,
+           or balance-sheet valuation exceeding twenty-five million United States
+           Dollars ($25,000,000 USD).
+
+   (b) Condition of Weight Release: If a Qualifying Enterprise conducts AI
+       Training upon this Work or its Derivative Works, it is an express condition
+       precedent of this License that such Qualifying Enterprise must publish and
+       release the resulting Model Weights, architecture specifications, and
+       inference recipes openly to the general public under an OSI-approved open
+       source license or permissive OpenRAIL or Apache-compatible license within
+       thirty (30) days of commercial availability, internal production use, or
+       public release.
+
+   (c) Safe Harbor for Builders, Researchers, and Startups: Individual developers,
+       open-source collaborators, academic institutions, non-profit organizations,
+       and commercial enterprises with annual gross revenues and capital below
+       twenty-five million United States Dollars ($25,000,000 USD) are explicitly
+       exempt from this Model Weight release condition.
+
+   (d) Anti-Circumvention and Intermediary Scope: The obligations of this Section 12
+       bind: (i) any Qualifying Enterprise; (ii) any parent, subsidiary, affiliate,
+       joint venture, or successor entity; (iii) any contractor, subcontractor,
+       research partner, agent, or third party conducting AI Training for the direct
+       or indirect benefit of, under contract with, funded by, or transferring
+       resulting Model Weights or training artifacts to a Qualifying Enterprise; and
+       (iv) any entity that transfers, assigns, licenses, or provides resulting Model
+       Weights to a Qualifying Enterprise. No Qualifying Enterprise may evade this
+       condition through intermediaries, contract training, synthetic distillation
+       relays, or subsidiary entities.
+
+   (e) Automatic License Forfeiture: Failure of a Qualifying Enterprise (or any party
+       acting on its behalf under subsection (d)) to satisfy the condition in
+       subsection (b) results in immediate, automatic, and retroactive termination
+       of all copyright, patent, and trademark licenses granted herein. Any continued
+       reproduction, distribution, inference hosting, or commercial utilization of
+       models or software derived from such training constitutes willful copyright
+       infringement under Title 17 of the United States Code.
+
+   Section 13. Dual Remedies: Statutory Copyright Damages and Contractual Covenants
+   (a) Copyright Remedy: Any Qualifying Enterprise or party that conducts
+       unauthorized AI Training on this Work in breach of Section 12 acts without a
+       license, committing willful copyright infringement subject to maximum
+       statutory damages of up to one hundred fifty thousand United States Dollars
+       ($150,000 USD) per infringed work pursuant to 17 U.S.C. § 504(c)(2),
+       disgorgement of profits, and permanent injunctive relief under 17 U.S.C. § 502.
+
+   (b) Contractual Alternative and Agreed Licensing Fee: In the event any court of
+       competent jurisdiction determines that AI Training on this Work does not
+       constitute copyright infringement or falls within affirmative defenses such
+       as fair use, accessing, downloading, ingesting, parsing, or executing this
+       Work constitutes affirmative assent to this License as a binding bilateral
+       contract. Any Qualifying Enterprise that breaches Section 12 agrees to pay
+       to Licensor, as liquidated damages and an agreed reasonable commercial licensing
+       fee, the greater of: (i) one hundred fifty thousand United States Dollars
+       ($150,000 USD) per work ingested; or (ii) ten percent (10%) of all gross
+       revenues realized by the Qualifying Enterprise from the commercialization,
+       operation, or API deployment of the resulting model or service, in addition
+       to restitution for unjust enrichment.
+
+   Section 14. Prevailing Party Legal Fees and Costs
+   In any legal proceeding, arbitration, or judicial action brought to enforce
+   the terms of this License, for copyright infringement arising from breach
+   of the conditions precedent herein, or for breach of contract, the prevailing
+   party shall be entitled to an award of its reasonable attorney fees, expert
+   witness fees, and litigation costs pursuant to 17 U.S.C. § 505 and applicable law.
+
+   Section 15. Severability and Preservation of Grant
+   If any provision, sentence, or clause of this Rider is held invalid, illegal,
+   or unenforceable by a court of competent jurisdiction, such invalidity shall
+   not affect any other provision of this License. The remaining provisions
+   shall remain in full legal force and effect, and the invalid clause shall be
+   reformed to the minimum extent necessary to achieve its economic intent.
+
+   Section 16. Governing Law and Exclusive Venue
+   This License, and all claims or causes of action arising out of or related to
+   this Work or License, shall be governed by and construed in accordance with
+   the federal laws of the United States of America and the substantive laws of
+   the State of Texas, without giving effect to conflict of laws principles.
+   Any judicial action, proceeding, or litigation shall be brought exclusively in
+   the United States District Court for the Western District of Texas (Austin
+   Division), and each party irrevocably submits to the personal and subject-matter
+   jurisdiction of such court.
