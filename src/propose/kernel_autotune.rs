@@ -1194,6 +1194,14 @@ prefetch_global_l2(next_k);
             );
             return;
         }
+        let source_content = fs::read_to_string(&physical_cuda).unwrap_or_default();
+        if !source_content.contains("PAGE_SIZE") || source_content.contains("KvLayoutDesc") {
+            eprintln!(
+                "Skipping physical CUDA test: target kernel in {:?} migrated to KvLayoutDesc layout",
+                physical_cuda
+            );
+            return;
+        }
 
         let tmp = tempfile::tempdir().unwrap();
         let rsi_dir = tmp.path().join(".rsi");

@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install System Dependencies
-        run: sudo apt-get update && sudo apt-get install -y bubblewrap
+        run: sudo apt-get update && sudo apt-get install -y bubblewrap && (sudo chmod u+s /usr/bin/bwrap || true)
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

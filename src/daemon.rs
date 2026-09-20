@@ -298,6 +298,9 @@ impl RsiEngine {
                     "proposal_id": candidate.id,
                     "invariants_passed": passed,
                     "is_balanced": is_balanced,
+                    "notes": inv_report.notes,
+                    "compile_error": inv_report.compilation_error,
+                    "test_summary": inv_report.test_output_summary,
                 }))
                 .unwrap_or_default();
                 let _ = ledger.append_block(BlockType::Evaluation, raw_fail, vec![]);
