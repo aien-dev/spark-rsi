@@ -46,7 +46,7 @@ fn execute_with_timeout(
 
     let start = Instant::now();
     let timeout = Duration::from_secs(timeout_secs);
-    let poll_interval = Duration::from_millis(50);
+    let mut poll_interval = Duration::from_micros(100);
 
     loop {
         match child.try_wait() {
@@ -62,10 +62,16 @@ fn execute_with_timeout(
                 return Ok((status.success(), stdout, stderr));
             }
             Ok(None) => {
-                if start.elapsed() >= timeout {
+                let elapsed = start.elapsed();
+                if elapsed >= timeout {
                     let _ = child.kill();
                     let _ = child.wait();
                     return Err(format!("Process timed out after {} seconds", timeout_secs));
+                }
+                if elapsed > Duration::from_millis(50) && poll_interval < Duration::from_millis(1) {
+                    poll_interval = Duration::from_millis(1);
+                } else if elapsed > Duration::from_millis(500) {
+                    poll_interval = Duration::from_millis(5);
                 }
                 std::thread::sleep(poll_interval);
             }

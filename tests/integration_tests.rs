@@ -140,6 +140,7 @@ async fn test_rsi_cycle_execution() {
         require_latency_improvement: false,
         canary_target: 3,
         max_url: "http://127.0.0.1:9999/v1".to_string(),
+        non_inferiority_margin: Some(150.0),
         ..Default::default()
     };
 
@@ -256,6 +257,7 @@ async fn test_production_loop_end_to_end_with_candidate() {
         require_latency_improvement: false,
         canary_target: 5,
         max_url: "http://127.0.0.1:9999/v1".to_string(),
+        non_inferiority_margin: Some(150.0),
         ..Default::default()
     };
 

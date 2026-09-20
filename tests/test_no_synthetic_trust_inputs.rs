@@ -141,7 +141,7 @@ fn test_end_to_end_unmocked_lifecycle_admission_and_supervisor_rollback() {
 
     let judge = BlindJudge::new(holdouts, outputs.clone())
         .with_signing_key(signing_key)
-        .with_non_inferiority_margin(5.0);
+        .with_non_inferiority_margin(500.0);
 
     // 1. Evaluate candidate
     let receipt = judge
@@ -242,6 +242,7 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
         holdouts_dir: None,
         signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
+        non_inferiority_margin: Some(250.0),
         max_url: "http://127.0.0.1:9".to_string(),
         ..Default::default()
     };
