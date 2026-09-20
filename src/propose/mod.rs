@@ -2,10 +2,12 @@ pub mod cortex;
 pub mod diagnose;
 pub mod hypothesis;
 pub mod max_client;
+pub mod kernel_autotune;
 
 pub use cortex::CortexExperienceClient;
 pub use diagnose::{DefectCategory, DiagnosticContext};
 pub use hypothesis::{HypothesisContract, ProtectedMetric};
+pub use kernel_autotune::{KernelAutotuneManager, PagedAttentionConfig};
 pub use max_client::{ChatMessage, MaxClient};
 
 use crate::models::{ImprovementProposal, ProposalKind};

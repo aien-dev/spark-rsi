@@ -45,6 +45,7 @@ pub use isolation::{
 pub use models::*;
 pub use observe::observe_codebase;
 pub use propose::ProposalGenerator;
+pub use propose::{KernelAutotuneManager, PagedAttentionConfig};
 pub use ratify::Ratifier;
 pub use soak::{
     AdmittedMetaCandidate, CycleCandidateRecord, CycleRecord, EngineNSnapshot,
