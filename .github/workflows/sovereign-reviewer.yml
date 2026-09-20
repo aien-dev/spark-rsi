@@ -1,6 +1,6 @@
 name: Sovereign Gatekeeper & Automated Reviewer
 
-on:
+"on":
   pull_request_target:
     types: [opened, synchronize]
   issues:
