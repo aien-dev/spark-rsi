@@ -215,7 +215,7 @@ impl BuildJail {
 
         args.push("--setenv".to_string());
         args.push("PATH".to_string());
-        args.push(format!("{}/.cargo/bin:/usr/local/bin:/usr/bin:/bin", home));
+        args.push(format!("{}/.cargo/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin", home));
         args.push("--setenv".to_string());
         args.push("HOME".to_string());
         args.push(home.clone());
@@ -413,7 +413,7 @@ impl CandidateJailRunner {
 
         args.push("--setenv".to_string());
         args.push("PATH".to_string());
-        args.push(format!("{}/.cargo/bin:/usr/local/bin:/usr/bin:/bin", home));
+        args.push(format!("{}/.cargo/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin", home));
         args.push("--setenv".to_string());
         args.push("HOME".to_string());
         args.push(home.clone());
