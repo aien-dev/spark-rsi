@@ -259,19 +259,13 @@ impl BlindJudge {
             )
         };
 
-        let security = SecurityLayer::evaluate_candidate(
-            &modified_files,
-            &patch_diff,
-            0,
-        );
+        let security = SecurityLayer::evaluate_candidate(&modified_files, &patch_diff, 0);
 
-        let style = StyleLayer::evaluate_text(
-            if style_text.is_empty() {
-                "Native compiled Rust and Mojo execution running on DGX Spark GB10."
-            } else {
-                &style_text
-            },
-        );
+        let style = StyleLayer::evaluate_text(if style_text.is_empty() {
+            "Native compiled Rust and Mojo execution running on DGX Spark GB10."
+        } else {
+            &style_text
+        });
 
         // 5. Paired-workload benchmark execution for latency & resource metrics
         let (parent_latencies, candidate_latencies, parent_rusage, candidate_rusage) =
@@ -395,11 +389,17 @@ pub fn compute_candidate_diff(
         if !abs_parent.exists() {
             modified_files.push(rel_path.clone());
             let cand_content = fs::read_to_string(abs_cand).unwrap_or_default();
-            patch_diff.push_str(&format!("+++ {}
-", rel_path));
+            patch_diff.push_str(&format!(
+                "+++ {}
+",
+                rel_path
+            ));
             for line in cand_content.lines() {
-                patch_diff.push_str(&format!("+ {}
-", line));
+                patch_diff.push_str(&format!(
+                    "+ {}
+",
+                    line
+                ));
             }
             style_text.push_str(&cand_content);
             style_text.push('\n');
@@ -410,13 +410,19 @@ pub fn compute_candidate_diff(
                 modified_files.push(rel_path.clone());
                 let cand_content = String::from_utf8_lossy(&cand_bytes);
                 let parent_content = String::from_utf8_lossy(&parent_bytes);
-                patch_diff.push_str(&format!("--- a/{}
+                patch_diff.push_str(&format!(
+                    "--- a/{}
 +++ b/{}
-", rel_path, rel_path));
+",
+                    rel_path, rel_path
+                ));
                 for line in cand_content.lines() {
                     if !parent_content.contains(line) {
-                        patch_diff.push_str(&format!("+ {}
-", line));
+                        patch_diff.push_str(&format!(
+                            "+ {}
+",
+                            line
+                        ));
                     }
                 }
                 style_text.push_str(&cand_content);
@@ -430,8 +436,11 @@ pub fn compute_candidate_diff(
     for (rel_path, _) in parent_files {
         if !candidate_path.join(&rel_path).exists() {
             modified_files.push(rel_path.clone());
-            patch_diff.push_str(&format!("--- a/{}
-", rel_path));
+            patch_diff.push_str(&format!(
+                "--- a/{}
+",
+                rel_path
+            ));
         }
     }
 
@@ -453,7 +462,10 @@ fn collect_files_recursive(
     entries.sort();
 
     for path in entries {
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
         if name == "target" || name == ".git" || name == "node_modules" || name.starts_with(".") {
             continue;
         }
@@ -513,11 +525,17 @@ pub fn run_paired_benchmarks(
             let p_before = RusageMetrics::capture_children()
                 .map_err(|e| format!("Failed to capture parent baseline: {}", e))?;
             let timer = LatencyTimer::start();
-            let (p_ok, _, p_err) = parent_runner
-                .execute(&["holdout", &input_arg])
-                .map_err(|e| format!("Jail execution failed for parent on iteration {}: {}", i, e))?;
+            let (p_ok, _, p_err) =
+                parent_runner
+                    .execute(&["holdout", &input_arg])
+                    .map_err(|e| {
+                        format!("Jail execution failed for parent on iteration {}: {}", i, e)
+                    })?;
             if !p_ok {
-                return Err(format!("Parent execution exited with error on iteration {}: {}", i, p_err));
+                return Err(format!(
+                    "Parent execution exited with error on iteration {}: {}",
+                    i, p_err
+                ));
             }
             parent_latencies.push(timer.elapsed_us());
             let p_after = RusageMetrics::capture_children()
@@ -527,11 +545,20 @@ pub fn run_paired_benchmarks(
             let c_before = RusageMetrics::capture_children()
                 .map_err(|e| format!("Failed to capture candidate baseline: {}", e))?;
             let timer = LatencyTimer::start();
-            let (c_ok, _, c_err) = candidate_runner
-                .execute(&["holdout", &input_arg])
-                .map_err(|e| format!("Jail execution failed for candidate on iteration {}: {}", i, e))?;
+            let (c_ok, _, c_err) =
+                candidate_runner
+                    .execute(&["holdout", &input_arg])
+                    .map_err(|e| {
+                        format!(
+                            "Jail execution failed for candidate on iteration {}: {}",
+                            i, e
+                        )
+                    })?;
             if !c_ok {
-                return Err(format!("Candidate execution exited with error on iteration {}: {}", i, c_err));
+                return Err(format!(
+                    "Candidate execution exited with error on iteration {}: {}",
+                    i, c_err
+                ));
             }
             candidate_latencies.push(timer.elapsed_us());
             let c_after = RusageMetrics::capture_children()
@@ -542,11 +569,20 @@ pub fn run_paired_benchmarks(
             let c_before = RusageMetrics::capture_children()
                 .map_err(|e| format!("Failed to capture candidate baseline: {}", e))?;
             let timer = LatencyTimer::start();
-            let (c_ok, _, c_err) = candidate_runner
-                .execute(&["holdout", &input_arg])
-                .map_err(|e| format!("Jail execution failed for candidate on iteration {}: {}", i, e))?;
+            let (c_ok, _, c_err) =
+                candidate_runner
+                    .execute(&["holdout", &input_arg])
+                    .map_err(|e| {
+                        format!(
+                            "Jail execution failed for candidate on iteration {}: {}",
+                            i, e
+                        )
+                    })?;
             if !c_ok {
-                return Err(format!("Candidate execution exited with error on iteration {}: {}", i, c_err));
+                return Err(format!(
+                    "Candidate execution exited with error on iteration {}: {}",
+                    i, c_err
+                ));
             }
             candidate_latencies.push(timer.elapsed_us());
             let c_after = RusageMetrics::capture_children()
@@ -556,11 +592,17 @@ pub fn run_paired_benchmarks(
             let p_before = RusageMetrics::capture_children()
                 .map_err(|e| format!("Failed to capture parent baseline: {}", e))?;
             let timer = LatencyTimer::start();
-            let (p_ok, _, p_err) = parent_runner
-                .execute(&["holdout", &input_arg])
-                .map_err(|e| format!("Jail execution failed for parent on iteration {}: {}", i, e))?;
+            let (p_ok, _, p_err) =
+                parent_runner
+                    .execute(&["holdout", &input_arg])
+                    .map_err(|e| {
+                        format!("Jail execution failed for parent on iteration {}: {}", i, e)
+                    })?;
             if !p_ok {
-                return Err(format!("Parent execution exited with error on iteration {}: {}", i, p_err));
+                return Err(format!(
+                    "Parent execution exited with error on iteration {}: {}",
+                    i, p_err
+                ));
             }
             parent_latencies.push(timer.elapsed_us());
             let p_after = RusageMetrics::capture_children()
@@ -569,7 +611,12 @@ pub fn run_paired_benchmarks(
         }
     }
 
-    Ok((parent_latencies, candidate_latencies, parent_rusage, candidate_rusage))
+    Ok((
+        parent_latencies,
+        candidate_latencies,
+        parent_rusage,
+        candidate_rusage,
+    ))
 }
 
 pub fn run_judge_cli(cli: JudgeCli) -> Result<EvaluationReceipt, Box<dyn std::error::Error>> {
@@ -693,13 +740,7 @@ mod tests {
         }
 
         let judge = BlindJudge::new(holdouts, outputs);
-        let res = judge.evaluate_cycle(
-            "cycle-no-key",
-            "cand-01",
-            "parent-00",
-            &candidate,
-            &parent,
-        );
+        let res = judge.evaluate_cycle("cycle-no-key", "cand-01", "parent-00", &candidate, &parent);
 
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("signing key"));
@@ -731,16 +772,14 @@ mod tests {
             .with_non_inferiority_margin(1000.0);
 
         let receipt = judge
-            .evaluate_cycle(
-                "cycle-test-01",
-                "cand-01",
-                "parent-00",
-                &candidate,
-                &parent,
-            )
+            .evaluate_cycle("cycle-test-01", "cand-01", "parent-00", &candidate, &parent)
             .unwrap();
 
-        assert!(receipt.admitted, "Failed layers: {:?}", receipt.layer_results);
+        assert!(
+            receipt.admitted,
+            "Failed layers: {:?}",
+            receipt.layer_results
+        );
         assert!(receipt.passed_all_hard_invariants);
         assert!(receipt.passed_statistical_gates);
         assert!(receipt.verify_digest());
@@ -787,13 +826,7 @@ mod tests {
         let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
         let judge = BlindJudge::new(holdouts, outputs).with_signing_key(signing_key);
         let receipt = judge
-            .evaluate_cycle(
-                "cycle-fail-01",
-                "cand-01",
-                "parent-00",
-                &candidate,
-                &parent,
-            )
+            .evaluate_cycle("cycle-fail-01", "cand-01", "parent-00", &candidate, &parent)
             .unwrap();
 
         assert!(!receipt.admitted);

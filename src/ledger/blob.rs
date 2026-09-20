@@ -24,7 +24,9 @@ impl BlobStore {
             return Ok(digest);
         }
 
-        let tmp_file = self.root.join(format!(".tmp.{}", uuid::Uuid::new_v4().simple()));
+        let tmp_file = self
+            .root
+            .join(format!(".tmp.{}", uuid::Uuid::new_v4().simple()));
         fs::write(&tmp_file, data).map_err(|e| format!("Failed to write tmp blob: {}", e))?;
         fs::rename(&tmp_file, &dest).map_err(|e| format!("Failed to atomic rename blob: {}", e))?;
 
@@ -42,7 +44,10 @@ impl BlobStore {
         hasher.update(&data);
         let computed = format!("{:x}", hasher.finalize());
         if computed != digest {
-            return Err(format!("Blob corrupted: expected={}, computed={}", digest, computed));
+            return Err(format!(
+                "Blob corrupted: expected={}, computed={}",
+                digest, computed
+            ));
         }
 
         Ok(data)

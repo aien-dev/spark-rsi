@@ -1,10 +1,14 @@
 use clap::Parser;
-use spark_rsi::supervisor::daemon::{resolve_supervisor_secret, SupervisorConfig, SupervisorDaemon};
+use spark_rsi::supervisor::daemon::{
+    resolve_supervisor_secret, SupervisorConfig, SupervisorDaemon,
+};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "spark-rsi-supervisor")]
-#[command(about = "Standalone host supervisor daemon for spark-rsi generations on NVIDIA DGX Spark")]
+#[command(
+    about = "Standalone host supervisor daemon for spark-rsi generations on NVIDIA DGX Spark"
+)]
 struct Args {
     #[arg(long, default_value = ".rsi")]
     rsi_root: PathBuf,

@@ -3,9 +3,7 @@ use rusqlite::Connection;
 use spark_rsi::daemon::RsiEngine;
 use spark_rsi::evaluator::EvaluationMetricsSummary;
 use spark_rsi::evaluator::EvaluationReceipt;
-use spark_rsi::ledger::{
-    BlockType, ImprovementLedger, LedgerBlock, PromotionEvidencePayload,
-};
+use spark_rsi::ledger::{BlockType, ImprovementLedger, LedgerBlock, PromotionEvidencePayload};
 use spark_rsi::models::RsiConfig;
 use std::fs;
 use std::process::Command;
@@ -18,7 +16,10 @@ fn test_ledger_genesis_initialization_and_monotonic_chaining() {
     let ledger = ImprovementLedger::open(&rsi_root).expect("Failed to open ledger");
 
     // 1. Verify Genesis block invariants
-    let genesis = ledger.latest_block().unwrap().expect("Genesis block must exist");
+    let genesis = ledger
+        .latest_block()
+        .unwrap()
+        .expect("Genesis block must exist");
     assert_eq!(genesis.sequence, 0);
     assert_eq!(genesis.block_type, BlockType::Genesis);
     assert_eq!(genesis.prev_block_hash, LedgerBlock::GENESIS_PREV_HASH);
@@ -43,7 +44,9 @@ fn test_ledger_genesis_initialization_and_monotonic_chaining() {
         assert_eq!(blocks[i].prev_block_hash, blocks[i - 1].block_hash);
     }
 
-    let report = ledger.verify_chain_integrity(None).expect("Audit must pass");
+    let report = ledger
+        .verify_chain_integrity(None)
+        .expect("Audit must pass");
     assert_eq!(report.total_blocks, 6);
     assert!(report.chain_valid);
 }
@@ -55,7 +58,11 @@ fn test_ledger_detects_sqlite_payload_tampering() {
 
     let ledger = ImprovementLedger::open(&rsi_root).unwrap();
     ledger
-        .append_block(BlockType::Evaluation, "{\"original\": true}".to_string(), Vec::new())
+        .append_block(
+            BlockType::Evaluation,
+            "{\"original\": true}".to_string(),
+            Vec::new(),
+        )
         .unwrap();
 
     // Adversarial attack: modify payload_json directly in SQLite
@@ -68,7 +75,10 @@ fn test_ledger_detects_sqlite_payload_tampering() {
     .unwrap();
 
     let audit_res = ledger.verify_chain_integrity(None);
-    assert!(audit_res.is_err(), "Audit must fail when payload is tampered");
+    assert!(
+        audit_res.is_err(),
+        "Audit must fail when payload is tampered"
+    );
     let err_msg = audit_res.err().unwrap();
     assert!(
         err_msg.contains("Payload digest mismatch at sequence 1"),
@@ -84,10 +94,18 @@ fn test_ledger_detects_hash_chain_discontinuity() {
 
     let ledger = ImprovementLedger::open(&rsi_root).unwrap();
     ledger
-        .append_block(BlockType::Evaluation, "{\"block\": 1}".to_string(), Vec::new())
+        .append_block(
+            BlockType::Evaluation,
+            "{\"block\": 1}".to_string(),
+            Vec::new(),
+        )
         .unwrap();
     ledger
-        .append_block(BlockType::Promotion, "{\"block\": 2}".to_string(), Vec::new())
+        .append_block(
+            BlockType::Promotion,
+            "{\"block\": 2}".to_string(),
+            Vec::new(),
+        )
         .unwrap();
 
     // Adversarial attack: break prev_block_hash pointer
@@ -139,7 +157,9 @@ fn test_content_addressed_blob_store_and_tamper_detection() {
         signature: None,
     };
 
-    let block = ledger.append_evaluation(&receipt, Some(raw_metrics)).unwrap();
+    let block = ledger
+        .append_evaluation(&receipt, Some(raw_metrics))
+        .unwrap();
     assert_eq!(block.blob_hashes.len(), 1);
     let blob_hash = &block.blob_hashes[0];
 
@@ -178,7 +198,11 @@ fn test_merkle_root_computation_and_ecdsa_signature_verification() {
 
     for i in 1..=4 {
         ledger
-            .append_block(BlockType::Evaluation, format!("{{\"eval\": {}}}", i), Vec::new())
+            .append_block(
+                BlockType::Evaluation,
+                format!("{{\"eval\": {}}}", i),
+                Vec::new(),
+            )
             .unwrap();
     }
 
@@ -255,18 +279,34 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
     fs::create_dir_all(&repo_dir).unwrap();
 
     // Init git repo
-    let _ = Command::new("git").args(["init", "-b", "main"]).current_dir(&repo_dir).output();
-    let _ = Command::new("git").args(["config", "user.name", "Test Operator"]).current_dir(&repo_dir).output();
-    let _ = Command::new("git").args(["config", "user.email", "operator@test.local"]).current_dir(&repo_dir).output();
+    let _ = Command::new("git")
+        .args(["init", "-b", "main"])
+        .current_dir(&repo_dir)
+        .output();
+    let _ = Command::new("git")
+        .args(["config", "user.name", "Test Operator"])
+        .current_dir(&repo_dir)
+        .output();
+    let _ = Command::new("git")
+        .args(["config", "user.email", "operator@test.local"])
+        .current_dir(&repo_dir)
+        .output();
 
     let readme = repo_dir.join("README.md");
     fs::write(&readme, "# Provenance Test\n\nWe build, fix, finish, and optimize systems with love, honor, and discipline\u{2014}unslop clean.\n").unwrap();
 
-    let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new(".")).expect("spark-rsi executable must exist");
+    let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new("."))
+        .expect("spark-rsi executable must exist");
     fs::copy(&exe, repo_dir.join("spark-rsi")).unwrap();
 
-    let _ = Command::new("git").args(["add", "."]).current_dir(&repo_dir).output();
-    let _ = Command::new("git").args(["commit", "-m", "initial commit"]).current_dir(&repo_dir).output();
+    let _ = Command::new("git")
+        .args(["add", "."])
+        .current_dir(&repo_dir)
+        .output();
+    let _ = Command::new("git")
+        .args(["commit", "-m", "initial commit"])
+        .current_dir(&repo_dir)
+        .output();
 
     let rsi_root = repo_dir.join(".rsi");
     let holdouts = rsi_root.join("holdouts");
@@ -293,17 +333,27 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         ..Default::default()
     };
 
-    let result = RsiEngine::run_cycle(&config).await.expect("run_cycle failed");
+    let result = RsiEngine::run_cycle(&config)
+        .await
+        .expect("run_cycle failed");
     assert!(result.success);
     assert!(result.proposal.is_some());
     assert!(result.generation.is_some());
-    assert!(result.ledger_block.is_some(), "Ledger block must be emitted upon promotion");
+    assert!(
+        result.ledger_block.is_some(),
+        "Ledger block must be emitted upon promotion"
+    );
 
     // Verify ledger database exists and contains provenance records
     let ledger = ImprovementLedger::open(&rsi_root).expect("Failed to open generated ledger");
     let blocks = ledger.all_blocks().expect("Failed to query blocks");
-    assert!(blocks.len() >= 2, "Ledger must contain Genesis and Promotion blocks");
+    assert!(
+        blocks.len() >= 2,
+        "Ledger must contain Genesis and Promotion blocks"
+    );
 
-    let audit = ledger.verify_chain_integrity(None).expect("Chain audit failed");
+    let audit = ledger
+        .verify_chain_integrity(None)
+        .expect("Chain audit failed");
     assert!(audit.chain_valid);
 }

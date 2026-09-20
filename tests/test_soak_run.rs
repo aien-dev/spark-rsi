@@ -25,7 +25,8 @@ fn test_hypothesis_quarantine_exhaustion_after_3_failures() {
     assert!(!tracker.is_exhausted(node, problem));
 
     // Failure 3: Triggers quarantine exhaustion
-    let newly_exhausted_3 = tracker.record_failure(node, problem, "Blind judge non-inferiority exceeded");
+    let newly_exhausted_3 =
+        tracker.record_failure(node, problem, "Blind judge non-inferiority exceeded");
     assert!(newly_exhausted_3);
     assert!(tracker.is_exhausted(node, problem));
 
@@ -123,7 +124,9 @@ fn test_soak_manifest_serialization_and_roundtrip() {
         overall_status: "SUCCESS".to_string(),
     };
 
-    manifest.save_to_file(&manifest_path).expect("Failed to save manifest");
+    manifest
+        .save_to_file(&manifest_path)
+        .expect("Failed to save manifest");
     assert!(manifest_path.exists());
 
     let raw = fs::read_to_string(&manifest_path).unwrap();
@@ -159,7 +162,8 @@ async fn test_soak_preflight_fails_closed_missing_holdouts() {
     fs::write(
         tmp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
-    ).unwrap();
+    )
+    .unwrap();
 
     let _ledger = ImprovementLedger::open(&rsi_dir).unwrap();
 
@@ -170,7 +174,12 @@ async fn test_soak_preflight_fails_closed_missing_holdouts() {
     config.target_repo = tmp.path().display().to_string();
     config.rsi_root = ".rsi".to_string();
     config.signing_key_hex = Some(sk_hex);
-    config.holdouts_dir = Some(tmp.path().join("non_existent_holdouts").display().to_string());
+    config.holdouts_dir = Some(
+        tmp.path()
+            .join("non_existent_holdouts")
+            .display()
+            .to_string(),
+    );
 
     let res = SoakRunner::run_batch(&config).await;
     assert!(res.is_err());

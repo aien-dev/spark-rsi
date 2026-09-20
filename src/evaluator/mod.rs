@@ -147,10 +147,8 @@ impl ObjectiveEvaluator {
             longitudinal_replay.to_layer_result(),
         ];
 
-        let passed_all_hard_invariants = correctness.passed
-            && security.passed
-            && style.passed
-            && longitudinal_replay.passed;
+        let passed_all_hard_invariants =
+            correctness.passed && security.passed && style.passed && longitudinal_replay.passed;
 
         let passed_statistical_gates = performance.passed && resource_efficiency.passed;
 
@@ -197,7 +195,8 @@ mod tests {
     #[test]
     fn test_objective_evaluator_all_pass() {
         let correctness = CorrectnessLayer::evaluate_synthetic(true, 10, 0, 2, 0, true);
-        let security = SecurityLayer::evaluate_candidate(&["src/observe.rs".to_string()], "+ ok", 0);
+        let security =
+            SecurityLayer::evaluate_candidate(&["src/observe.rs".to_string()], "+ ok", 0);
         let style = StyleLayer::evaluate_text("Clean text without violations.");
         let perf = PerformanceEvaluation {
             bootstrap_estimate: BootstrapEstimate {
@@ -291,7 +290,8 @@ mod tests {
     #[test]
     fn test_objective_evaluator_hard_invariant_rejection() {
         let correctness = CorrectnessLayer::evaluate_synthetic(false, 0, 0, 0, 0, true);
-        let security = SecurityLayer::evaluate_candidate(&["src/observe.rs".to_string()], "+ ok", 0);
+        let security =
+            SecurityLayer::evaluate_candidate(&["src/observe.rs".to_string()], "+ ok", 0);
         let style = StyleLayer::evaluate_text("Clean text.");
         let perf = PerformanceEvaluation {
             bootstrap_estimate: BootstrapEstimate {

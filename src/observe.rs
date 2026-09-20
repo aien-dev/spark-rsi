@@ -4,15 +4,48 @@ use std::path::Path;
 use std::process::Command;
 
 pub const DRIVE_TERMS: &[&str] = &[
-    "curious", "curiosity", "build", "fix", "finish", "ambitious", "ambition",
-    "forge", "explore", "discover", "improve", "solve", "create", "learn",
-    "question", "truth", "measure", "verify", "optimize", "accelerate",
+    "curious",
+    "curiosity",
+    "build",
+    "fix",
+    "finish",
+    "ambitious",
+    "ambition",
+    "forge",
+    "explore",
+    "discover",
+    "improve",
+    "solve",
+    "create",
+    "learn",
+    "question",
+    "truth",
+    "measure",
+    "verify",
+    "optimize",
+    "accelerate",
 ];
 
 pub const HUMANITY_TERMS: &[&str] = &[
-    "love", "grief", "honor", "family", "community", "warmth", "care",
-    "kindness", "patience", "humility", "listen", "commitment", "promise",
-    "free", "freedom", "ethics", "discipline", "restraint", "sovereignty",
+    "love",
+    "grief",
+    "honor",
+    "family",
+    "community",
+    "warmth",
+    "care",
+    "kindness",
+    "patience",
+    "humility",
+    "listen",
+    "commitment",
+    "promise",
+    "free",
+    "freedom",
+    "ethics",
+    "discipline",
+    "restraint",
+    "sovereignty",
 ];
 
 pub fn scan_terms(text: &str, terms: &[&str]) -> Vec<String> {
@@ -65,7 +98,10 @@ pub fn count_crumbs_recursive(root: &Path) -> usize {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+                let name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or_default();
                 if !name.starts_with('.') && name != "target" {
                     count += count_crumbs_recursive(&path);
                 }

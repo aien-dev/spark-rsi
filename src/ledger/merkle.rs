@@ -33,7 +33,9 @@ impl MerkleCheckpoint {
             if let Some(hex_str) = sig_str.strip_prefix("p256:") {
                 if let Ok(sig_bytes) = hex::decode(hex_str) {
                     if let Ok(sig) = Signature::from_slice(&sig_bytes) {
-                        return verifying_key.verify(self.merkle_root.as_bytes(), &sig).is_ok();
+                        return verifying_key
+                            .verify(self.merkle_root.as_bytes(), &sig)
+                            .is_ok();
                     }
                 }
             }

@@ -50,8 +50,9 @@ fn test_paired_bootstrap_and_tail_non_inferiority_matrix() {
         candidate.push(base * 0.85); // 15% improvement
     }
 
-    let boot = StatisticalEngine::bootstrap_paired_comparison(&parent, &candidate, 10_000, Some(42))
-        .expect("Bootstrap failed");
+    let boot =
+        StatisticalEngine::bootstrap_paired_comparison(&parent, &candidate, 10_000, Some(42))
+            .expect("Bootstrap failed");
     assert!(boot.is_statistically_significant);
     assert!(boot.p_value < 0.01);
     assert!(boot.delta_pct < -10.0);
@@ -73,7 +74,8 @@ fn test_paired_bootstrap_and_tail_non_inferiority_matrix() {
 #[test]
 fn test_fishers_exact_contingency_matrix() {
     // Known 2x2 contingency table
-    let res = StatisticalEngine::fishers_exact_test(2, 18, 15, 5).expect("Fisher exact test failed");
+    let res =
+        StatisticalEngine::fishers_exact_test(2, 18, 15, 5).expect("Fisher exact test failed");
     assert!(res.p_value_two_sided < 0.01);
     assert!(res.is_significant);
     assert!(res.candidate_rate > res.parent_rate);
@@ -98,8 +100,9 @@ fn test_six_layer_evaluator_end_to_end() {
 
     let parent_lat: Vec<f64> = (0..30).map(|i| 100.0 + (i as f64) * 0.5).collect();
     let cand_lat: Vec<f64> = (0..30).map(|i| 82.0 + (i as f64) * 0.4).collect();
-    let performance = PerformanceLayer::evaluate_latencies(&parent_lat, &cand_lat, true, 5000, Some(42))
-        .expect("Performance eval failed");
+    let performance =
+        PerformanceLayer::evaluate_latencies(&parent_lat, &cand_lat, true, 5000, Some(42))
+            .expect("Performance eval failed");
     assert!(performance.passed);
 
     let p_ru = RusageMetrics {
@@ -164,7 +167,8 @@ fn test_blind_judge_receipt_roundtrip_and_persistence() {
     let parent = tmp.path().join("parent");
     fs::create_dir_all(&parent).unwrap();
 
-    let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new(".")).expect("spark-rsi executable must exist");
+    let exe = spark_rsi::actor::judge::find_executable(std::path::Path::new("."))
+        .expect("spark-rsi executable must exist");
     fs::copy(&exe, candidate.join("spark-rsi")).unwrap();
     fs::copy(&exe, parent.join("spark-rsi")).unwrap();
 
@@ -175,7 +179,9 @@ fn test_blind_judge_receipt_roundtrip_and_persistence() {
 
     let signing_key = p256::ecdsa::SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
     let verifying_key = p256::ecdsa::VerifyingKey::from(&signing_key);
-    let judge = BlindJudge::new(holdouts, outputs.clone()).with_signing_key(signing_key).with_non_inferiority_margin(1000.0);
+    let judge = BlindJudge::new(holdouts, outputs.clone())
+        .with_signing_key(signing_key)
+        .with_non_inferiority_margin(1000.0);
     let receipt = judge
         .evaluate_cycle(
             "cycle-persisted-99",

@@ -1,8 +1,8 @@
-use std::fs;
-use std::path::Path;
 use p256::ecdsa::SigningKey;
 use spark_rsi::evaluator::{EvaluationMetricsSummary, EvaluationReceipt, LayerResult};
 use spark_rsi::ledger::{BlockType, ImprovementLedger, PromotionEvidencePayload};
+use std::fs;
+use std::path::Path;
 
 fn make_layer(name: &str, hard: bool, passed: bool, score: f64, summary: &str) -> LayerResult {
     LayerResult {
@@ -11,7 +11,11 @@ fn make_layer(name: &str, hard: bool, passed: bool, score: f64, summary: &str) -
         passed,
         score,
         summary: summary.to_string(),
-        violations: if passed { Vec::new() } else { vec![summary.to_string()] },
+        violations: if passed {
+            Vec::new()
+        } else {
+            vec![summary.to_string()]
+        },
     }
 }
 
@@ -21,7 +25,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(&eval_out_dir)?;
 
     let ledger = ImprovementLedger::open(rsi_root)?;
-    println!("Opened ledger. Current blocks: {}", ledger.all_blocks()?.len());
+    println!(
+        "Opened ledger. Current blocks: {}",
+        ledger.all_blocks()?.len()
+    );
 
     let signing_key = SigningKey::from_bytes(&[42u8; 32].into())?;
 
@@ -41,7 +48,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             make_layer("style", true, true, 1.0, "Clean unslop text"),
             make_layer("performance", false, true, 1.0, "Bootstrap delta -6.8%"),
             make_layer("resource_efficiency", false, true, 1.0, "RSS growth 0.2%"),
-            make_layer("longitudinal_replay", true, true, 1.0, "Zero regression on prior cycles"),
+            make_layer(
+                "longitudinal_replay",
+                true,
+                true,
+                1.0,
+                "Zero regression on prior cycles",
+            ),
         ],
         metrics_summary: Some(EvaluationMetricsSummary {
             latency_delta_pct: -6.8,
@@ -57,7 +70,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     receipt1.save_to_file(&eval_out_dir.join("cycle-001.json"))?;
     let raw1 = serde_json::to_vec(&receipt1)?;
     ledger.append_evaluation(&receipt1, Some(&raw1))?;
-    ledger.append_block(BlockType::Promotion, "{\"candidate_id\": \"cand-mojo-opt-01\", \"state\": \"DURABLE\", \"canary_quota\": 5000}".to_string(), vec![])?;
+    ledger.append_block(
+        BlockType::Promotion,
+        "{\"candidate_id\": \"cand-mojo-opt-01\", \"state\": \"DURABLE\", \"canary_quota\": 5000}"
+            .to_string(),
+        vec![],
+    )?;
 
     // Cycle 2: cand-bottleneck-sch-02 (Admitted)
     let receipt2 = EvaluationReceipt {
@@ -108,7 +126,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             make_layer("security", true, true, 1.0, "Passed"),
             make_layer("style", true, true, 1.0, "Passed"),
             make_layer("performance", false, true, 1.0, "Pass"),
-            make_layer("resource_efficiency", false, false, 0.0, "RSS growth +42.0% exceeded limit 5.0%"),
+            make_layer(
+                "resource_efficiency",
+                false,
+                false,
+                0.0,
+                "RSS growth +42.0% exceeded limit 5.0%",
+            ),
             make_layer("longitudinal_replay", true, true, 1.0, "Pass"),
         ],
         metrics_summary: Some(EvaluationMetricsSummary {
@@ -140,7 +164,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         layer_results: vec![
             make_layer("correctness", true, true, 1.0, "Passed"),
             make_layer("security", true, true, 1.0, "Passed"),
-            make_layer("style", true, false, 0.0, "Unslop violation: em-dash found in docstring"),
+            make_layer(
+                "style",
+                true,
+                false,
+                0.0,
+                "Unslop violation: em-dash found in docstring",
+            ),
             make_layer("performance", false, true, 1.0, "Pass"),
             make_layer("resource_efficiency", false, true, 1.0, "Pass"),
             make_layer("longitudinal_replay", true, true, 1.0, "Pass"),
@@ -172,7 +202,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         passed_statistical_gates: true,
         admitted: false,
         layer_results: vec![
-            make_layer("correctness", true, false, 0.0, "Holdout suite 02_edge_cases failed: output mismatch"),
+            make_layer(
+                "correctness",
+                true,
+                false,
+                0.0,
+                "Holdout suite 02_edge_cases failed: output mismatch",
+            ),
             make_layer("security", true, true, 1.0, "Passed"),
             make_layer("style", true, true, 1.0, "Passed"),
             make_layer("performance", false, true, 1.0, "Pass"),
@@ -197,7 +233,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Checkpoint 1
     let cp1 = ledger.checkpoint(Some(&signing_key))?;
-    println!("Checkpoint 1 created up to seq {}: Merkle Root {}", cp1.up_to_sequence, cp1.merkle_root);
+    println!(
+        "Checkpoint 1 created up to seq {}: Merkle Root {}",
+        cp1.up_to_sequence, cp1.merkle_root
+    );
 
     // Cycle 6: cand-kv-cache-simd-06 (Admitted)
     let receipt6 = EvaluationReceipt {
@@ -293,9 +332,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Checkpoint 2
     let cp2 = ledger.checkpoint(Some(&signing_key))?;
-    println!("Checkpoint 2 created up to seq {}: Merkle Root {}", cp2.up_to_sequence, cp2.merkle_root);
+    println!(
+        "Checkpoint 2 created up to seq {}: Merkle Root {}",
+        cp2.up_to_sequence, cp2.merkle_root
+    );
 
     let audit = ledger.verify_chain_integrity(None)?;
-    println!("Final chain audit: valid={}, total_blocks={}, total_blobs={}", audit.chain_valid, audit.total_blocks, audit.total_blobs);
+    println!(
+        "Final chain audit: valid={}, total_blocks={}, total_blobs={}",
+        audit.chain_valid, audit.total_blocks, audit.total_blobs
+    );
     Ok(())
 }

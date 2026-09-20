@@ -1,6 +1,6 @@
 use spark_rsi::graph::{CapabilityGraph, CapabilityNode};
-use spark_rsi::propose::hypothesis::HypothesisContract;
 use spark_rsi::propose::diagnose::{DefectCategory, DiagnosticContext};
+use spark_rsi::propose::hypothesis::HypothesisContract;
 use spark_rsi::propose::max_client::MaxClient;
 use spark_rsi::propose::ProposalGenerator;
 
@@ -9,11 +9,26 @@ fn test_capability_graph_topology_and_bottleneck_detection() {
     let mut graph = CapabilityGraph::new();
 
     // Model DGX Spark GB10 inference pipeline
-    graph.add_node(CapabilityNode::new("req_gateway", "Request Gateway", "network").with_telemetry(120.0, 1024, 0.0));
-    graph.add_node(CapabilityNode::new("scheduler", "Batch Scheduler", "scheduling").with_telemetry(340.0, 2048, 0.0));
-    graph.add_node(CapabilityNode::new("kv_allocator", "Unified LPDDR5x KV Allocator", "memory").with_telemetry(4200.0, 32768, 0.08));
-    graph.add_node(CapabilityNode::new("mojo_kernel", "Mojo Blackwell GEMM Kernel", "compute").with_telemetry(1800.0, 16384, 0.01));
-    graph.add_node(CapabilityNode::new("sampler", "Greedy Token Sampler", "inference").with_telemetry(150.0, 1024, 0.0));
+    graph.add_node(
+        CapabilityNode::new("req_gateway", "Request Gateway", "network")
+            .with_telemetry(120.0, 1024, 0.0),
+    );
+    graph.add_node(
+        CapabilityNode::new("scheduler", "Batch Scheduler", "scheduling")
+            .with_telemetry(340.0, 2048, 0.0),
+    );
+    graph.add_node(
+        CapabilityNode::new("kv_allocator", "Unified LPDDR5x KV Allocator", "memory")
+            .with_telemetry(4200.0, 32768, 0.08),
+    );
+    graph.add_node(
+        CapabilityNode::new("mojo_kernel", "Mojo Blackwell GEMM Kernel", "compute")
+            .with_telemetry(1800.0, 16384, 0.01),
+    );
+    graph.add_node(
+        CapabilityNode::new("sampler", "Greedy Token Sampler", "inference")
+            .with_telemetry(150.0, 1024, 0.0),
+    );
 
     // Define dataflow dependencies
     graph.add_edge("req_gateway", "scheduler", 100.0, 1.0);
@@ -28,7 +43,9 @@ fn test_capability_graph_topology_and_bottleneck_detection() {
     assert_eq!(ranks.len(), 5);
 
     // KV Allocator has highest latency (4200us) and error rate (8%), plus high centrality
-    let top = graph.top_bottleneck().expect("Graph must have a top bottleneck");
+    let top = graph
+        .top_bottleneck()
+        .expect("Graph must have a top bottleneck");
     assert_eq!(top.node_id, "kv_allocator");
     assert_eq!(top.subsystem, "memory");
     assert!(top.bottleneck_score > ranks[1].bottleneck_score);
@@ -49,7 +66,9 @@ fn test_hypothesis_contract_validation_and_falsification() {
         4200.0,
         25.0,
     )
-    .with_falsification_test("assert_eq!(lock_contention_events(), 0, \"Locks must not contend under load\")")
+    .with_falsification_test(
+        "assert_eq!(lock_contention_events(), 0, \"Locks must not contend under load\")",
+    )
     .with_protected_metric("p99_latency", 1.0)
     .with_protected_metric("max_rss_kb", 2.0);
 
@@ -74,7 +93,10 @@ fn test_hypothesis_contract_invalid_deltas_rejected() {
         100.0,
         0.0,
     );
-    assert!(zero_delta.validate().is_err(), "Zero predicted delta must be rejected");
+    assert!(
+        zero_delta.validate().is_err(),
+        "Zero predicted delta must be rejected"
+    );
 
     let empty_target = HypothesisContract::new(
         "hypo-empty-target",
@@ -85,7 +107,10 @@ fn test_hypothesis_contract_invalid_deltas_rejected() {
         100.0,
         10.0,
     );
-    assert!(empty_target.validate().is_err(), "Empty target metric must be rejected");
+    assert!(
+        empty_target.validate().is_err(),
+        "Empty target metric must be rejected"
+    );
 }
 
 #[tokio::test]

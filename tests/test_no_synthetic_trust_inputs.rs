@@ -19,10 +19,22 @@ fn test_jailed_execution_blocks_network_and_host_leaks() {
 
     // 2. Verify Bubblewrap args contain mandatory isolation parameters
     let args = runner.build_bwrap_args(&["holdout", ""]);
-    assert!(args.contains(&"--unshare-net".to_string()), "Jail missing --unshare-net");
-    assert!(args.contains(&"--unshare-user".to_string()), "Jail missing --unshare-user");
-    assert!(args.contains(&"--unshare-pid".to_string()), "Jail missing --unshare-pid");
-    assert!(args.contains(&"--die-with-parent".to_string()), "Jail missing --die-with-parent");
+    assert!(
+        args.contains(&"--unshare-net".to_string()),
+        "Jail missing --unshare-net"
+    );
+    assert!(
+        args.contains(&"--unshare-user".to_string()),
+        "Jail missing --unshare-user"
+    );
+    assert!(
+        args.contains(&"--unshare-pid".to_string()),
+        "Jail missing --unshare-pid"
+    );
+    assert!(
+        args.contains(&"--die-with-parent".to_string()),
+        "Jail missing --die-with-parent"
+    );
 }
 
 #[test]
@@ -41,16 +53,24 @@ fn test_judge_fails_closed_without_protected_holdouts_or_authorized_key() {
 
     // Failure Case 1: Missing holdouts directory fails closed
     let signing_key = SigningKey::from_bytes(&[44u8; 32].into()).unwrap();
-    let judge_no_holdouts = BlindJudge::new(holdouts.clone(), outputs.clone())
-        .with_signing_key(signing_key.clone());
+    let judge_no_holdouts =
+        BlindJudge::new(holdouts.clone(), outputs.clone()).with_signing_key(signing_key.clone());
     let res1 = judge_no_holdouts.evaluate_cycle("c1", "cand1", "parent0", &candidate, &parent);
-    assert!(res1.is_err(), "Judge must fail closed when holdouts dir does not exist");
-    assert!(res1.unwrap_err().contains("Holdouts directory does not exist"));
+    assert!(
+        res1.is_err(),
+        "Judge must fail closed when holdouts dir does not exist"
+    );
+    assert!(res1
+        .unwrap_err()
+        .contains("Holdouts directory does not exist"));
 
     // Failure Case 2: Empty holdouts directory fails closed
     fs::create_dir_all(&holdouts).unwrap();
     let res2 = judge_no_holdouts.evaluate_cycle("c2", "cand2", "parent0", &candidate, &parent);
-    assert!(res2.is_err(), "Judge must fail closed when holdouts dir is empty");
+    assert!(
+        res2.is_err(),
+        "Judge must fail closed when holdouts dir is empty"
+    );
     assert!(res2.unwrap_err().contains("No valid holdout suites found"));
 
     // Populate valid holdout suites
@@ -61,15 +81,23 @@ fn test_judge_fails_closed_without_protected_holdouts_or_authorized_key() {
     // Failure Case 3: Missing signing key fails closed (zero fallback to static seed)
     let judge_no_key = BlindJudge::new(holdouts.clone(), outputs.clone());
     let res3 = judge_no_key.evaluate_cycle("c3", "cand3", "parent0", &candidate, &parent);
-    assert!(res3.is_err(), "Judge must fail closed without authorized signing key");
+    assert!(
+        res3.is_err(),
+        "Judge must fail closed without authorized signing key"
+    );
     assert!(res3.unwrap_err().contains("signing key"));
 
     // Failure Case 4: Missing candidate binary in paired benchmarks fails closed (zero fallback to synthetic hash loop)
     let empty_dir = tmp.path().join("empty_binary_dir");
     fs::create_dir_all(&empty_dir).unwrap();
     let bench_res = run_paired_benchmarks(&empty_dir, &candidate, 10);
-    assert!(bench_res.is_err(), "Paired benchmark must fail closed without compiled binaries");
-    assert!(bench_res.unwrap_err().contains("executable binary not found"));
+    assert!(
+        bench_res.is_err(),
+        "Paired benchmark must fail closed without compiled binaries"
+    );
+    assert!(bench_res
+        .unwrap_err()
+        .contains("executable binary not found"));
 }
 
 #[test]
@@ -95,10 +123,18 @@ fn test_paired_benchmarks_capture_real_child_process_metrics_without_markers() {
 
     // Verify latencies are genuine measured positive non-zero numbers
     for lat in &p_lats {
-        assert!(*lat > 50.0, "Latency must be real elapsed microseconds: {}", lat);
+        assert!(
+            *lat > 50.0,
+            "Latency must be real elapsed microseconds: {}",
+            lat
+        );
     }
     for lat in &c_lats {
-        assert!(*lat > 50.0, "Latency must be real elapsed microseconds: {}", lat);
+        assert!(
+            *lat > 50.0,
+            "Latency must be real elapsed microseconds: {}",
+            lat
+        );
     }
 
     // Core invariant: .rsi_speedup (0.10) must NOT artificially scale candidate latency by 10x
@@ -108,7 +144,9 @@ fn test_paired_benchmarks_capture_real_child_process_metrics_without_markers() {
     assert!(
         ratio > 0.50 && ratio < 2.0,
         "Marker file bypassed measurement: ratio was {:.4} (p_mean={}, c_mean={})",
-        ratio, p_mean, c_mean
+        ratio,
+        p_mean,
+        c_mean
     );
 
     // Verify child rusage metrics are captured
@@ -145,7 +183,13 @@ fn test_end_to_end_unmocked_lifecycle_admission_and_supervisor_rollback() {
 
     // 1. Evaluate candidate
     let receipt = judge
-        .evaluate_cycle("cycle-e2e-01", "cand-e2e-01", "parent-e2e-00", &candidate, &parent)
+        .evaluate_cycle(
+            "cycle-e2e-01",
+            "cand-e2e-01",
+            "parent-e2e-00",
+            &candidate,
+            &parent,
+        )
         .expect("Evaluation cycle failed");
 
     assert!(receipt.admitted, "Clean candidate must be admitted");
@@ -208,9 +252,18 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
     fs::create_dir_all(&repo_dir).unwrap();
 
     // Initialize git repository
-    let _ = Command::new("git").args(["init", "-b", "main"]).current_dir(&repo_dir).output();
-    let _ = Command::new("git").args(["config", "user.name", "Test Operator"]).current_dir(&repo_dir).output();
-    let _ = Command::new("git").args(["config", "user.email", "operator@test.local"]).current_dir(&repo_dir).output();
+    let _ = Command::new("git")
+        .args(["init", "-b", "main"])
+        .current_dir(&repo_dir)
+        .output();
+    let _ = Command::new("git")
+        .args(["config", "user.name", "Test Operator"])
+        .current_dir(&repo_dir)
+        .output();
+    let _ = Command::new("git")
+        .args(["config", "user.email", "operator@test.local"])
+        .current_dir(&repo_dir)
+        .output();
 
     // Write a README with an em-dash to trigger ProposalGenerator
     let readme = repo_dir.join("README.md");
@@ -219,8 +272,14 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
     let exe = find_executable(Path::new(".")).expect("spark-rsi executable must exist");
     fs::copy(&exe, repo_dir.join("spark-rsi")).unwrap();
 
-    let _ = Command::new("git").args(["add", "."]).current_dir(&repo_dir).output();
-    let _ = Command::new("git").args(["commit", "-m", "initial commit"]).current_dir(&repo_dir).output();
+    let _ = Command::new("git")
+        .args(["add", "."])
+        .current_dir(&repo_dir)
+        .output();
+    let _ = Command::new("git")
+        .args(["commit", "-m", "initial commit"])
+        .current_dir(&repo_dir)
+        .output();
 
     let rsi_root = repo_dir.join(".rsi");
     let holdouts = rsi_root.join("holdouts");
@@ -247,11 +306,19 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
         ..Default::default()
     };
 
-    let result = RsiEngine::run_cycle(&config).await.expect("run_cycle failed");
+    let result = RsiEngine::run_cycle(&config)
+        .await
+        .expect("run_cycle failed");
 
     assert!(result.success, "Cycle should succeed");
-    assert!(result.proposal.is_some(), "Proposal should be generated for em dash unslop");
-    assert!(result.generation.is_some(), "Candidate promotion must execute through Host Supervisor");
+    assert!(
+        result.proposal.is_some(),
+        "Proposal should be generated for em dash unslop"
+    );
+    assert!(
+        result.generation.is_some(),
+        "Candidate promotion must execute through Host Supervisor"
+    );
 
     let gen = result.generation.unwrap();
     assert!(gen.state == GenerationState::Durable || gen.state == GenerationState::CanaryActive);

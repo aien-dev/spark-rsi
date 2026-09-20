@@ -55,10 +55,16 @@ impl StyleLayer {
         }
 
         if em_dash_count > 0 {
-            violations.push(format!("Detected {} em dash characters (\u{2014})", em_dash_count));
+            violations.push(format!(
+                "Detected {} em dash characters (\u{2014})",
+                em_dash_count
+            ));
         }
         if en_dash_count > 0 {
-            violations.push(format!("Detected {} en dash characters (\u{2013})", en_dash_count));
+            violations.push(format!(
+                "Detected {} en dash characters (\u{2013})",
+                en_dash_count
+            ));
         }
 
         let lower = content.to_lowercase();
@@ -72,7 +78,10 @@ impl StyleLayer {
         for &fluff in TRANSITIONAL_FLUFF {
             if lower.contains(fluff) {
                 transitional_fluff_violations.push(fluff.to_string());
-                violations.push(format!("Forbidden transitional fluff detected: '{}'", fluff));
+                violations.push(format!(
+                    "Forbidden transitional fluff detected: '{}'",
+                    fluff
+                ));
             }
         }
 

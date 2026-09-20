@@ -17,19 +17,10 @@ pub const FORBIDDEN_BUZZWORDS: &[&str] = &[
     "seamlessly",
 ];
 
-pub const ANTITHESIS_TROPES: &[&str] = &[
-    "it's not ",
-    "it is not ",
-    "not only ",
-    "not just ",
-];
+pub const ANTITHESIS_TROPES: &[&str] = &["it's not ", "it is not ", "not only ", "not just "];
 
-pub const TRANSITIONAL_FLUFF: &[&str] = &[
-    "furthermore",
-    "moreover",
-    "in conclusion",
-    "at its core",
-];
+pub const TRANSITIONAL_FLUFF: &[&str] =
+    &["furthermore", "moreover", "in conclusion", "at its core"];
 
 pub struct InvariantVerifier;
 
@@ -58,7 +49,8 @@ impl InvariantVerifier {
             }
         }
 
-        let clean = em_count == 0 && en_count == 0 && buzzwords_found.is_empty() && tropes_found.is_empty();
+        let clean =
+            em_count == 0 && en_count == 0 && buzzwords_found.is_empty() && tropes_found.is_empty();
         (clean, em_count, en_count, buzzwords_found, tropes_found)
     }
 
@@ -80,20 +72,28 @@ impl InvariantVerifier {
 
         for entry in entries.flatten() {
             let path = entry.path();
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            let name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or_default();
 
             if name == "target" || name == ".git" {
                 continue;
             }
 
             let path_str = path.display().to_string();
-            if path_str.ends_with("src/verifier.rs") || path_str.ends_with("tests/integration_tests.rs") {
+            if path_str.ends_with("src/verifier.rs")
+                || path_str.ends_with("tests/integration_tests.rs")
+            {
                 continue;
             }
 
             if path.is_file() {
                 if name == ".env" || name.starts_with(".env.") {
-                    leaks.push(format!("Found prohibited env file on disk: {}", path.display()));
+                    leaks.push(format!(
+                        "Found prohibited env file on disk: {}",
+                        path.display()
+                    ));
                 }
 
                 if let Ok(content) = fs::read_to_string(&path) {
@@ -105,7 +105,8 @@ impl InvariantVerifier {
                     ];
                     for sig in sec_sigs {
                         if content.contains(sig) {
-                            leaks.push(format!("Found private key signature in {}", path.display()));
+                            leaks
+                                .push(format!("Found private key signature in {}", path.display()));
                             break;
                         }
                     }
@@ -116,10 +117,17 @@ impl InvariantVerifier {
         }
     }
 
-    pub fn verify_compilation_and_tests(target_dir: &Path) -> (bool, Option<String>, bool, Option<String>) {
+    pub fn verify_compilation_and_tests(
+        target_dir: &Path,
+    ) -> (bool, Option<String>, bool, Option<String>) {
         let cargo_toml = target_dir.join("Cargo.toml");
         if !cargo_toml.exists() {
-            return (true, None, true, Some("No Cargo.toml present; skipped".to_string()));
+            return (
+                true,
+                None,
+                true,
+                Some("No Cargo.toml present; skipped".to_string()),
+            );
         }
 
         let check_res = Command::new("cargo")
@@ -195,7 +203,8 @@ impl InvariantVerifier {
         tropes.sort();
         tropes.dedup();
 
-        let unslop_clean = total_em == 0 && total_en == 0 && buzzwords.is_empty() && tropes.is_empty();
+        let unslop_clean =
+            total_em == 0 && total_en == 0 && buzzwords.is_empty() && tropes.is_empty();
         if !unslop_clean {
             notes.push(format!(
                 "Unslop violation: em_dashes={}, en_dashes={}, buzzwords={:?}, tropes={:?}",

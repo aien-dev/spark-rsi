@@ -189,7 +189,9 @@ impl CapabilityGraph {
 
             let explanation = format!(
                 "Centrality={:.3}, LatencyRatio={:.2}x, ErrorRate={:.1}%",
-                c, lat_ratio, node.error_rate * 100.0
+                c,
+                lat_ratio,
+                node.error_rate * 100.0
             );
 
             ranks.push(BottleneckRank {
@@ -205,7 +207,11 @@ impl CapabilityGraph {
             });
         }
 
-        ranks.sort_by(|a, b| b.bottleneck_score.partial_cmp(&a.bottleneck_score).unwrap_or(std::cmp::Ordering::Equal));
+        ranks.sort_by(|a, b| {
+            b.bottleneck_score
+                .partial_cmp(&a.bottleneck_score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         for (idx, item) in ranks.iter_mut().enumerate() {
             item.rank = idx + 1;
@@ -220,11 +226,15 @@ impl CapabilityGraph {
 
     /// Exports graph topology in Graphviz DOT format for visual analysis
     pub fn to_dot(&self) -> String {
-        let mut dot = String::from("digraph CapabilityGraph {\n    node [shape=box, style=rounded];\n");
+        let mut dot =
+            String::from("digraph CapabilityGraph {\n    node [shape=box, style=rounded];\n");
         for (id, node) in &self.nodes {
             dot.push_str(&format!(
                 "    \"{}\" [label=\"{}\\n{}us\\nerr: {:.1}%\"];\n",
-                id, node.name, node.latency_p95_us as u64, node.error_rate * 100.0
+                id,
+                node.name,
+                node.latency_p95_us as u64,
+                node.error_rate * 100.0
             ));
         }
         for edge in &self.edges {
@@ -245,16 +255,28 @@ mod tests {
     #[test]
     fn test_capability_graph_bottleneck_detection() {
         let mut graph = CapabilityGraph::new();
-        graph.add_node(CapabilityNode::new("sched", "Inference Scheduler", "runtime").with_telemetry(500.0, 1024, 0.0));
-        graph.add_node(CapabilityNode::new("kv", "KV Cache Allocator", "memory").with_telemetry(2500.0, 4096, 0.05));
-        graph.add_node(CapabilityNode::new("kernel", "Mojo Balance Kernel", "compute").with_telemetry(100.0, 512, 0.0));
+        graph.add_node(
+            CapabilityNode::new("sched", "Inference Scheduler", "runtime")
+                .with_telemetry(500.0, 1024, 0.0),
+        );
+        graph.add_node(
+            CapabilityNode::new("kv", "KV Cache Allocator", "memory")
+                .with_telemetry(2500.0, 4096, 0.05),
+        );
+        graph.add_node(
+            CapabilityNode::new("kernel", "Mojo Balance Kernel", "compute")
+                .with_telemetry(100.0, 512, 0.0),
+        );
 
         graph.add_edge("sched", "kv", 2000.0, 1.0);
         graph.add_edge("kv", "kernel", 100.0, 1.0);
 
         let ranks = graph.rank_bottlenecks();
         assert_eq!(ranks.len(), 3);
-        assert_eq!(ranks[0].node_id, "kv", "KV Cache Allocator should be detected as top bottleneck");
+        assert_eq!(
+            ranks[0].node_id, "kv",
+            "KV Cache Allocator should be detected as top bottleneck"
+        );
         assert!(ranks[0].bottleneck_score > ranks[1].bottleneck_score);
 
         let dot = graph.to_dot();

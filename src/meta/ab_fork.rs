@@ -52,7 +52,8 @@ impl AbForkEvaluator {
                 self_capability_improvement: crate::meta::three_criteria::CriterionResult {
                     criterion_name: "Criterion 2: Self-Capability Improvement".to_string(),
                     passed: false,
-                    evidence: "Candidate regressed on developmental latency or validity".to_string(),
+                    evidence: "Candidate regressed on developmental latency or validity"
+                        .to_string(),
                 },
                 recursive_persistence: crate::meta::three_criteria::CriterionResult {
                     criterion_name: "Criterion 3: Recursive Persistence & Compounding".to_string(),
@@ -120,7 +121,8 @@ mod tests {
         let proposal = ImprovementProposal {
             id: "meta-prop-01".to_string(),
             title: "accelerate proposal engine".to_string(),
-            description: "Empirical discovery: graph centrality bottleneck in propose/mod.rs".to_string(),
+            description: "Empirical discovery: graph centrality bottleneck in propose/mod.rs"
+                .to_string(),
             target_file: "src/propose/mod.rs".to_string(),
             proposed_patch: patch.to_string(),
             kind: ProposalKind::MetaEngineImprovement,
