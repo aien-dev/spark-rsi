@@ -84,7 +84,12 @@ impl HypothesisQuarantineTracker {
         self.exhausted_pairings.contains(&key)
     }
 
-    pub fn record_failure(&mut self, node_name: &str, problem_summary: &str, _reason: &str) -> bool {
+    pub fn record_failure(
+        &mut self,
+        node_name: &str,
+        problem_summary: &str,
+        _reason: &str,
+    ) -> bool {
         let key = Self::pairing_key(node_name, problem_summary);
         let count = self.failure_counts.entry(key.clone()).or_insert(0);
         *count += 1;

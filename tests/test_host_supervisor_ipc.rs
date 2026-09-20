@@ -27,7 +27,10 @@ async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
     let src_parent = tmp.path().join("art_parent");
     std::fs::create_dir_all(&src_parent).unwrap();
     std::fs::write(src_parent.join("bin"), "parent v1").unwrap();
-    let parent_gen = daemon.supervisor.stage_generation("gen-001", &src_parent, "sha-parent").unwrap();
+    let parent_gen = daemon
+        .supervisor
+        .stage_generation("gen-001", &src_parent, "sha-parent")
+        .unwrap();
     daemon.supervisor.atomic_symlink_swap("gen-001").unwrap();
     *daemon.active_generation.lock().await = Some(parent_gen);
 
@@ -35,7 +38,10 @@ async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
     let src_cand = tmp.path().join("art_cand");
     std::fs::create_dir_all(&src_cand).unwrap();
     std::fs::write(src_cand.join("bin"), "canary v2").unwrap();
-    daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
+    daemon
+        .stage_canary("gen-002", &src_cand, "sha-cand")
+        .await
+        .unwrap();
 
     // Spawn supervisor server loop
     let daemon_clone = daemon.clone();
@@ -96,7 +102,10 @@ async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
         .unwrap();
 
     let drain_msg: SupervisorMessage = client.recv().await.unwrap();
-    assert_eq!(drain_msg, SupervisorMessage::DrainStart { timeout_secs: 30 });
+    assert_eq!(
+        drain_msg,
+        SupervisorMessage::DrainStart { timeout_secs: 30 }
+    );
 
     // Worker sends DrainComplete
     client
@@ -142,7 +151,10 @@ async fn test_end_to_end_supervisor_instant_rollback_on_canary_defect() {
     let src_parent = tmp.path().join("art_parent");
     std::fs::create_dir_all(&src_parent).unwrap();
     std::fs::write(src_parent.join("bin"), "parent v1").unwrap();
-    let parent_gen = daemon.supervisor.stage_generation("gen-001", &src_parent, "sha-parent").unwrap();
+    let parent_gen = daemon
+        .supervisor
+        .stage_generation("gen-001", &src_parent, "sha-parent")
+        .unwrap();
     daemon.supervisor.atomic_symlink_swap("gen-001").unwrap();
     *daemon.active_generation.lock().await = Some(parent_gen);
 
@@ -150,7 +162,10 @@ async fn test_end_to_end_supervisor_instant_rollback_on_canary_defect() {
     let src_cand = tmp.path().join("art_cand");
     std::fs::create_dir_all(&src_cand).unwrap();
     std::fs::write(src_cand.join("bin"), "canary v2").unwrap();
-    daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
+    daemon
+        .stage_canary("gen-002", &src_cand, "sha-cand")
+        .await
+        .unwrap();
 
     let daemon_clone = daemon.clone();
     let active_link_clone = active_link.clone();
@@ -190,9 +205,13 @@ async fn test_end_to_end_supervisor_instant_rollback_on_canary_defect() {
 
     // Verify rollback
     let canary_lock = daemon.canary_generation.lock().await;
-    assert_eq!(canary_lock.as_ref().unwrap().state, GenerationState::Reverted);
+    assert_eq!(
+        canary_lock.as_ref().unwrap().state,
+        GenerationState::Reverted
+    );
 
-    let active_content = std::fs::read_to_string(daemon.supervisor.active_symlink.join("bin")).unwrap();
+    let active_content =
+        std::fs::read_to_string(daemon.supervisor.active_symlink.join("bin")).unwrap();
     assert_eq!(active_content, "parent v1");
 
     daemon.running.store(false, Ordering::Relaxed);
@@ -222,7 +241,10 @@ async fn test_end_to_end_supervisor_instant_rollback_on_latency_budget_exceeded(
     let src_parent = tmp.path().join("art_parent");
     std::fs::create_dir_all(&src_parent).unwrap();
     std::fs::write(src_parent.join("bin"), "parent v1").unwrap();
-    let parent_gen = daemon.supervisor.stage_generation("gen-001", &src_parent, "sha-parent").unwrap();
+    let parent_gen = daemon
+        .supervisor
+        .stage_generation("gen-001", &src_parent, "sha-parent")
+        .unwrap();
     daemon.supervisor.atomic_symlink_swap("gen-001").unwrap();
     *daemon.active_generation.lock().await = Some(parent_gen);
 
@@ -230,7 +252,10 @@ async fn test_end_to_end_supervisor_instant_rollback_on_latency_budget_exceeded(
     let src_cand = tmp.path().join("art_cand");
     std::fs::create_dir_all(&src_cand).unwrap();
     std::fs::write(src_cand.join("bin"), "canary v2").unwrap();
-    daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
+    daemon
+        .stage_canary("gen-002", &src_cand, "sha-cand")
+        .await
+        .unwrap();
 
     let daemon_clone = daemon.clone();
     let active_link_clone = active_link.clone();
@@ -271,7 +296,10 @@ async fn test_end_to_end_supervisor_instant_rollback_on_latency_budget_exceeded(
 
     // Verify rollback
     let canary_lock = daemon.canary_generation.lock().await;
-    assert_eq!(canary_lock.as_ref().unwrap().state, GenerationState::Reverted);
+    assert_eq!(
+        canary_lock.as_ref().unwrap().state,
+        GenerationState::Reverted
+    );
 
     daemon.running.store(false, Ordering::Relaxed);
     let _ = server_handle.abort();
@@ -298,7 +326,10 @@ async fn test_unauthenticated_worker_rejected_closed() {
 
     let src_cand = tmp.path().join("art_cand");
     std::fs::create_dir_all(&src_cand).unwrap();
-    daemon.stage_canary("gen-002", &src_cand, "sha-cand").await.unwrap();
+    daemon
+        .stage_canary("gen-002", &src_cand, "sha-cand")
+        .await
+        .unwrap();
 
     let daemon_clone = daemon.clone();
     let active_link_clone = active_link.clone();

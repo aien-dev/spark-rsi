@@ -51,7 +51,10 @@ fn test_adversarial_network_isolation_enforced() {
 
     assert!(!eval.passed);
     assert!(!eval.network_isolation_compliant);
-    assert!(eval.violations.iter().any(|v| v.contains("Unauthorized network primitive")));
+    assert!(eval
+        .violations
+        .iter()
+        .any(|v| v.contains("Unauthorized network primitive")));
 }
 
 #[test]
@@ -69,7 +72,10 @@ fn test_adversarial_root_of_trust_tampering_rejected() {
 
     assert!(!eval.passed);
     assert!(!eval.root_of_trust_compliant);
-    assert!(eval.violations.iter().any(|v| v.contains("protected root-of-trust file")));
+    assert!(eval
+        .violations
+        .iter()
+        .any(|v| v.contains("protected root-of-trust file")));
 }
 
 #[test]
@@ -98,7 +104,10 @@ fn test_adversarial_manifest_rejects_unmanifested_extra_files() {
 
     // Verification must detect the extra file and reject
     let is_valid = manifest.verify_integrity(&out_dir).unwrap();
-    assert!(!is_valid, "ArtifactManifest failed to reject unmanifested extra file on disk");
+    assert!(
+        !is_valid,
+        "ArtifactManifest failed to reject unmanifested extra file on disk"
+    );
 }
 
 #[test]

@@ -34,7 +34,12 @@ impl RollbackCheckpoint {
             let _ = Command::new("git")
                 .arg("-C")
                 .arg(repo_root)
-                .args(["worktree", "remove", "--force", worktree_dir.to_str().unwrap()])
+                .args([
+                    "worktree",
+                    "remove",
+                    "--force",
+                    worktree_dir.to_str().unwrap(),
+                ])
                 .output();
             let _ = std::fs::remove_dir_all(&worktree_dir);
         }
@@ -79,7 +84,12 @@ impl RollbackCheckpoint {
         let _ = Command::new("git")
             .arg("-C")
             .arg(&self.repo_root)
-            .args(["worktree", "remove", "--force", self.worktree_dir.to_str().unwrap()])
+            .args([
+                "worktree",
+                "remove",
+                "--force",
+                self.worktree_dir.to_str().unwrap(),
+            ])
             .output();
 
         let _ = Command::new("git")
@@ -106,13 +116,33 @@ mod tests {
         let repo_path = tmp.path();
 
         // Initialize mock git repo
-        Command::new("git").arg("init").current_dir(repo_path).output().unwrap();
-        Command::new("git").args(["config", "user.name", "Test"]).current_dir(repo_path).output().unwrap();
-        Command::new("git").args(["config", "user.email", "test@test.local"]).current_dir(repo_path).output().unwrap();
+        Command::new("git")
+            .arg("init")
+            .current_dir(repo_path)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(repo_path)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["config", "user.email", "test@test.local"])
+            .current_dir(repo_path)
+            .output()
+            .unwrap();
 
         std::fs::write(repo_path.join("test.txt"), "genesis").unwrap();
-        Command::new("git").args(["add", "."]).current_dir(repo_path).output().unwrap();
-        Command::new("git").args(["commit", "-m", "initial"]).current_dir(repo_path).output().unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(repo_path)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-m", "initial"])
+            .current_dir(repo_path)
+            .output()
+            .unwrap();
 
         let cycle_id = format!("test-{}", uuid::Uuid::new_v4().simple());
         let cp = RollbackCheckpoint::create(repo_path, &cycle_id).unwrap();
@@ -129,7 +159,11 @@ mod tests {
             .output()
             .unwrap();
         let branch_str = String::from_utf8_lossy(&branches.stdout);
-        assert!(!branch_str.contains("rsi/candidate"), "Detached worktree should not create a named branch: {}", branch_str);
+        assert!(
+            !branch_str.contains("rsi/candidate"),
+            "Detached worktree should not create a named branch: {}",
+            branch_str
+        );
 
         // Teardown
         cp.teardown().unwrap();

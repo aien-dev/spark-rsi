@@ -10,7 +10,10 @@ use spark_rsi::propose::ProposalGenerator;
 async fn test_max_client_availability_and_completion() {
     let client = MaxClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
     let is_avail = client.is_available().await;
-    if !is_avail { eprintln!("Skipping live MAX availability test: service not reachable on port 18006"); return; }
+    if !is_avail {
+        eprintln!("Skipping live MAX availability test: service not reachable on port 18006");
+        return;
+    }
 
     let messages = vec![
         ChatMessage {
@@ -23,8 +26,15 @@ async fn test_max_client_availability_and_completion() {
         },
     ];
 
-    let resp = client.complete(&messages, 256, 0.0).await.expect("MAX completion failed");
-    assert!(resp.contains("PONG"), "Expected PONG in completion, got: {}", resp);
+    let resp = client
+        .complete(&messages, 256, 0.0)
+        .await
+        .expect("MAX completion failed");
+    assert!(
+        resp.contains("PONG"),
+        "Expected PONG in completion, got: {}",
+        resp
+    );
 }
 
 #[test]
@@ -75,13 +85,8 @@ fn test_diagnostic_context_from_failing_receipt() {
     let content = "pub fn example() {}";
     let lessons = vec!["Avoid em dashes in comments".to_string()];
 
-    let diag = DiagnosticContext::from_receipt(
-        "cycle-test-diag",
-        &receipt,
-        target_file,
-        content,
-        lessons,
-    );
+    let diag =
+        DiagnosticContext::from_receipt("cycle-test-diag", &receipt, target_file, content, lessons);
 
     assert_eq!(diag.target_file, "src/example.rs");
     assert_eq!(diag.primary_defect, DefectCategory::StyleViolation);

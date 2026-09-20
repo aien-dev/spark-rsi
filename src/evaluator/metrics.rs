@@ -93,7 +93,6 @@ impl Default for RusageMetrics {
             involuntary_context_switches: 0,
         }
     }
-
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

@@ -66,7 +66,9 @@ impl DiagnosticContext {
         }
 
         if violations.is_empty() && !receipt.admitted {
-            violations.push("Evaluator rejected candidate without explicit layer violations.".to_string());
+            violations.push(
+                "Evaluator rejected candidate without explicit layer violations.".to_string(),
+            );
         }
 
         Self {
@@ -124,7 +126,9 @@ DIAGNOSTIC VIOLATIONS DETECTED BY EVALUATOR:\n",
         );
 
         if self.violations.is_empty() {
-            user_prompt.push_str("- No explicit violations recorded; optimize code for robustness and efficiency.\n");
+            user_prompt.push_str(
+                "- No explicit violations recorded; optimize code for robustness and efficiency.\n",
+            );
         } else {
             for v in &self.violations {
                 user_prompt.push_str(&format!("- {}\n", v));

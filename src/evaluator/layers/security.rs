@@ -16,9 +16,21 @@ impl SecurityEvaluation {
         let score = if self.passed { 1.0 } else { 0.0 };
         let summary = format!(
             "Security: root_of_trust={}, zero_disk_secrets={}, network_isolation={}",
-            if self.root_of_trust_compliant { "PASS" } else { "FAIL" },
-            if self.zero_disk_secrets_clean { "PASS" } else { "FAIL" },
-            if self.network_isolation_compliant { "PASS" } else { "FAIL" }
+            if self.root_of_trust_compliant {
+                "PASS"
+            } else {
+                "FAIL"
+            },
+            if self.zero_disk_secrets_clean {
+                "PASS"
+            } else {
+                "FAIL"
+            },
+            if self.network_isolation_compliant {
+                "PASS"
+            } else {
+                "FAIL"
+            }
         );
 
         LayerResult {
@@ -65,7 +77,8 @@ impl SecurityLayer {
         let mut violations = Vec::new();
 
         // 1. Validate root-of-trust protection
-        let root_check = RootOfTrust::validate_declared_files(declared_target_files, candidate_tier);
+        let root_check =
+            RootOfTrust::validate_declared_files(declared_target_files, candidate_tier);
         let root_of_trust_compliant = match root_check {
             Ok(_) => true,
             Err(e) => {
@@ -88,14 +101,16 @@ impl SecurityLayer {
         let mut network_isolation_compliant = true;
         for &net_pat in Self::NETWORK_RISK_PATTERNS {
             if patch_diff.contains(net_pat) {
-                violations.push(format!("Unauthorized network primitive detected: {}", net_pat));
+                violations.push(format!(
+                    "Unauthorized network primitive detected: {}",
+                    net_pat
+                ));
                 network_isolation_compliant = false;
             }
         }
 
-        let passed = root_of_trust_compliant
-            && zero_disk_secrets_clean
-            && network_isolation_compliant;
+        let passed =
+            root_of_trust_compliant && zero_disk_secrets_clean && network_isolation_compliant;
 
         SecurityEvaluation {
             root_of_trust_compliant,
@@ -148,7 +163,8 @@ mod tests {
 
         assert!(!eval.passed);
         assert!(!eval.root_of_trust_compliant);
-        assert!(eval.violations[0].contains("Target path 'Cargo.toml' is a protected root-of-trust file"));
+        assert!(eval.violations[0]
+            .contains("Target path 'Cargo.toml' is a protected root-of-trust file"));
     }
 
     #[test]

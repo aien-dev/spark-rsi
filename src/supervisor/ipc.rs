@@ -104,13 +104,19 @@ impl IpcConnection {
         let challenge_msg: SupervisorMessage = self.recv().await?;
         let nonce = match challenge_msg {
             SupervisorMessage::AuthChallenge { nonce } => nonce,
-            other => return Err(format!("Expected AuthChallenge from supervisor, got {:?}", other)),
+            other => {
+                return Err(format!(
+                    "Expected AuthChallenge from supervisor, got {:?}",
+                    other
+                ))
+            }
         };
 
         let message = format!("{}:{}", generation_id, nonce);
         let hmac = SessionAuth::compute_hmac(shared_secret, &message);
 
-        self.send(&WorkerMessage::AuthResponse { response: hmac }).await?;
+        self.send(&WorkerMessage::AuthResponse { response: hmac })
+            .await?;
         self.recv().await
     }
 }
@@ -292,7 +298,11 @@ mod tests {
         let mut server_conn = server.accept().await.unwrap();
         let worker_msg: WorkerMessage = server_conn.recv().await.unwrap();
         match worker_msg {
-            WorkerMessage::Ready { generation_id, pid, auth_token } => {
+            WorkerMessage::Ready {
+                generation_id,
+                pid,
+                auth_token,
+            } => {
                 assert_eq!(generation_id, "gen-001");
                 assert_eq!(pid, 12345);
                 assert_eq!(auth_token, "auth-token-xyz");

@@ -110,7 +110,10 @@ impl ArtifactManifest {
         entries.sort();
 
         for path in entries {
-            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            let name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or_default();
             if name == "target" || name == ".git" || name == "node_modules" {
                 continue;
             }
@@ -219,8 +222,12 @@ mod tests {
         assert_eq!(manifest.candidate_id, "cand-001");
         assert_eq!(manifest.code_tier, "TARGET");
         assert_eq!(manifest.expected_delta_pct, -12.5);
-        assert!(manifest.regression_budgets.contains_key("latency_p95_degradation_pct"));
-        assert!(manifest.protected_metric_limits.contains_key("host_memory_ceiling_mb"));
+        assert!(manifest
+            .regression_budgets
+            .contains_key("latency_p95_degradation_pct"));
+        assert!(manifest
+            .protected_metric_limits
+            .contains_key("host_memory_ceiling_mb"));
     }
 
     #[test]

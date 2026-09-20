@@ -116,12 +116,7 @@ impl MaxClient {
             .first()
             .ok_or_else(|| "MAX response returned empty choices array".to_string())?;
 
-        let content = choice
-            .message
-            .content
-            .as_deref()
-            .unwrap_or_default()
-            .trim();
+        let content = choice.message.content.as_deref().unwrap_or_default().trim();
 
         if content.is_empty() {
             // Check if a fenced code block exists inside reasoning
@@ -140,7 +135,10 @@ impl MaxClient {
                     }
                 }
             }
-            return Err("MAX assistant message did not emit code output (exhausted in reasoning)".to_string());
+            return Err(
+                "MAX assistant message did not emit code output (exhausted in reasoning)"
+                    .to_string(),
+            );
         }
 
         Ok(content.to_string())

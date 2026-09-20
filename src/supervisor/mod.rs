@@ -84,7 +84,10 @@ impl HostSupervisor {
     pub fn atomic_symlink_swap(&self, generation_id: &str) -> Result<(), String> {
         let target_dir = self.generations_root.join(generation_id);
         if !target_dir.exists() {
-            return Err(format!("Target generation directory does not exist: {:?}", target_dir));
+            return Err(format!(
+                "Target generation directory does not exist: {:?}",
+                target_dir
+            ));
         }
 
         let parent = self
@@ -116,9 +119,7 @@ impl HostSupervisor {
         socket_path: &Path,
     ) -> Result<u32, String> {
         let mut cmd = Command::new(executable);
-        cmd.args(args)
-            .arg("--socket")
-            .arg(socket_path);
+        cmd.args(args).arg("--socket").arg(socket_path);
 
         let child = cmd
             .spawn()
@@ -155,7 +156,10 @@ impl HostSupervisor {
             std::thread::sleep(poll_interval);
         }
 
-        Err(format!("Timed out waiting for worker socket readiness at {:?}", socket_path))
+        Err(format!(
+            "Timed out waiting for worker socket readiness at {:?}",
+            socket_path
+        ))
     }
 
     pub fn switch_active_socket(
@@ -168,7 +172,10 @@ impl HostSupervisor {
             .ok_or_else(|| "No parent directory for active socket link".to_string())?;
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
 
-        let tmp_link = parent.join(format!(".active_sock.tmp.{}", uuid::Uuid::new_v4().simple()));
+        let tmp_link = parent.join(format!(
+            ".active_sock.tmp.{}",
+            uuid::Uuid::new_v4().simple()
+        ));
         if tmp_link.exists() {
             let _ = fs::remove_file(&tmp_link);
         }
@@ -394,27 +401,37 @@ mod tests {
         let target_sock = tmp.path().join("gen2.sock");
         fs::write(&target_sock, "socket stub").unwrap();
 
-        supervisor.switch_active_socket(&active_sock, &target_sock).unwrap();
+        supervisor
+            .switch_active_socket(&active_sock, &target_sock)
+            .unwrap();
         assert!(active_sock.exists());
 
         // Test canary counting up to target K = 5
         let src = tmp.path().join("src_art");
         fs::create_dir_all(&src).unwrap();
-        let mut gen = supervisor.stage_generation("gen-canary", &src, "digest").unwrap();
+        let mut gen = supervisor
+            .stage_generation("gen-canary", &src, "digest")
+            .unwrap();
         gen.state = GenerationState::Ready;
 
         for _ in 0..4 {
-            let state = supervisor.record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0).unwrap();
+            let state = supervisor
+                .record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0)
+                .unwrap();
             assert_eq!(state, GenerationState::CanaryActive);
         }
 
-        let state_final = supervisor.record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0).unwrap();
+        let state_final = supervisor
+            .record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0)
+            .unwrap();
         assert_eq!(state_final, GenerationState::Durable);
         assert_eq!(gen.state, GenerationState::Durable);
         assert_eq!(gen.canary_transactions, 5);
 
         // Failure during canary triggers Reverting
-        assert!(supervisor.record_canary_transaction(&mut gen, false, 1000, 5, 1_000_000, 0.0).is_err());
+        assert!(supervisor
+            .record_canary_transaction(&mut gen, false, 1000, 5, 1_000_000, 0.0)
+            .is_err());
         assert_eq!(gen.state, GenerationState::Reverting);
     }
 }

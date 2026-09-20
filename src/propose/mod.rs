@@ -1,8 +1,8 @@
 pub mod cortex;
 pub mod diagnose;
 pub mod hypothesis;
-pub mod max_client;
 pub mod kernel_autotune;
+pub mod max_client;
 
 pub use cortex::CortexExperienceClient;
 pub use diagnose::{DefectCategory, DiagnosticContext};
@@ -76,9 +76,7 @@ impl ProposalGenerator {
             if full_path.exists() {
                 if let Ok(content) = fs::read_to_string(&full_path) {
                     if content.contains('\u{2014}') || content.contains('\u{2013}') {
-                        let cleaned = content
-                            .replace('\u{2014}', ", ")
-                            .replace('\u{2013}', "-");
+                        let cleaned = content.replace('\u{2014}', ", ").replace('\u{2013}', "-");
                         return Some(Self::create_proposal(
                             &format!("sanitize unslop punctuation in {}", rel),
                             "Remove em dashes and en dashes in accordance with unslop standard",
@@ -149,10 +147,15 @@ impl ProposalGenerator {
 
         // Validate unslop invariant on generated patch
         if cleaned_patch.contains('\u{2014}') || cleaned_patch.contains('\u{2013}') {
-            let sanitized = cleaned_patch.replace('\u{2014}', ", ").replace('\u{2013}', "-");
+            let sanitized = cleaned_patch
+                .replace('\u{2014}', ", ")
+                .replace('\u{2013}', "-");
             return Ok(Self::create_proposal(
                 &format!("resolve {:?} in {}", diag.primary_defect, diag.target_file),
-                &format!("Automated MAX repair with unslop sanitization for cycle {}", diag.cycle_id),
+                &format!(
+                    "Automated MAX repair with unslop sanitization for cycle {}",
+                    diag.cycle_id
+                ),
                 &diag.target_file,
                 &sanitized,
                 ProposalKind::InvariantFix,
@@ -217,9 +220,15 @@ mod tests {
     fn test_extract_code_block() {
         let raw = "```rust\npub fn hello() -> &'static str {\n    \"world\"\n}\n```";
         let extracted = ProposalGenerator::extract_code_block(raw);
-        assert_eq!(extracted, "pub fn hello() -> &'static str {\n    \"world\"\n}");
+        assert_eq!(
+            extracted,
+            "pub fn hello() -> &'static str {\n    \"world\"\n}"
+        );
 
         let raw_plain = "pub fn simple() {}";
-        assert_eq!(ProposalGenerator::extract_code_block(raw_plain), "pub fn simple() {}");
+        assert_eq!(
+            ProposalGenerator::extract_code_block(raw_plain),
+            "pub fn simple() {}"
+        );
     }
 }

@@ -9,7 +9,8 @@ use std::path::Path;
 #[test]
 fn test_mojo_balance_kernel_scalar() {
     let kernel_path = "mojo/balance_bin";
-    let verdict = BalanceKernel::evaluate(12.0, 10.0, Some(kernel_path)).expect("Evaluation should succeed");
+    let verdict =
+        BalanceKernel::evaluate(12.0, 10.0, Some(kernel_path)).expect("Evaluation should succeed");
     assert_eq!(verdict.verdict, "balanced");
     assert!(verdict.score > 0.7);
 }
@@ -90,8 +91,9 @@ fn test_proposal_staging_in_sandbox() {
         ProposalKind::Optimization,
     );
 
-    let staged_path = ProposalGenerator::stage_in_sandbox(&mut proposal, temp_repo.path(), temp_sandbox.path())
-        .expect("stage should succeed");
+    let staged_path =
+        ProposalGenerator::stage_in_sandbox(&mut proposal, temp_repo.path(), temp_sandbox.path())
+            .expect("stage should succeed");
 
     assert!(staged_path.exists());
     let staged_file = staged_path.join("test_file.txt");
@@ -167,7 +169,12 @@ async fn test_rsi_cycle_missing_holdouts_fails_closed() {
     let config = RsiConfig {
         target_repo: ".".to_string(),
         rsi_root: rsi_root.display().to_string(),
-        holdouts_dir: Some(tmp.path().join("nonexistent_holdouts").display().to_string()),
+        holdouts_dir: Some(
+            tmp.path()
+                .join("nonexistent_holdouts")
+                .display()
+                .to_string(),
+        ),
         signing_key_hex: Some(signing_key_hex),
         ..Default::default()
     };
@@ -197,7 +204,10 @@ async fn test_rsi_cycle_missing_signer_fails_closed() {
 
     let res = spark_rsi::daemon::RsiEngine::run_cycle(&config).await;
     assert!(res.is_err(), "Missing signer must fail closed");
-    assert!(res.err().unwrap().contains("Missing cryptographic signing key"));
+    assert!(res
+        .err()
+        .unwrap()
+        .contains("Missing cryptographic signing key"));
 }
 
 #[tokio::test]
@@ -225,15 +235,36 @@ async fn test_production_loop_end_to_end_with_candidate() {
 
     // Copy complete source tree to test_repo including Cargo.lock, README.md, docs, mojo
     std::process::Command::new("cp")
-        .args(&["-r", "Cargo.toml", "Cargo.lock", "README.md", "src", "mojo", "docs", test_repo.to_str().unwrap()])
+        .args(&[
+            "-r",
+            "Cargo.toml",
+            "Cargo.lock",
+            "README.md",
+            "src",
+            "mojo",
+            "docs",
+            test_repo.to_str().unwrap(),
+        ])
         .output()
         .unwrap();
-    let _ = std::fs::copy("/tmp/spark-rsi-target/release/spark-rsi", test_repo.join("spark-rsi"));
+    let _ = std::fs::copy(
+        "/tmp/spark-rsi-target/release/spark-rsi",
+        test_repo.join("spark-rsi"),
+    );
 
     // Initialize git in test_repo
-    let _ = std::process::Command::new("git").arg("init").current_dir(&test_repo).output();
-    let _ = std::process::Command::new("git").args(&["config", "user.name", "AIEN"]).current_dir(&test_repo).output();
-    let _ = std::process::Command::new("git").args(&["config", "user.email", "aien@dgx-spark.local"]).current_dir(&test_repo).output();
+    let _ = std::process::Command::new("git")
+        .arg("init")
+        .current_dir(&test_repo)
+        .output();
+    let _ = std::process::Command::new("git")
+        .args(&["config", "user.name", "AIEN"])
+        .current_dir(&test_repo)
+        .output();
+    let _ = std::process::Command::new("git")
+        .args(&["config", "user.email", "aien@dgx-spark.local"])
+        .current_dir(&test_repo)
+        .output();
 
     // Inject an unslop violation into docs/PHILOSOPHY.md
     let phil_path = test_repo.join("docs").join("PHILOSOPHY.md");
@@ -241,8 +272,14 @@ async fn test_production_loop_end_to_end_with_candidate() {
     phil_content.push_str("\n# Injected Standard \u{2014} unslop violation to sanitize\n");
     std::fs::write(&phil_path, phil_content).unwrap();
 
-    let _ = std::process::Command::new("git").args(&["add", "."]).current_dir(&test_repo).output();
-    let _ = std::process::Command::new("git").args(&["commit", "-m", "initial commit"]).current_dir(&test_repo).output();
+    let _ = std::process::Command::new("git")
+        .args(&["add", "."])
+        .current_dir(&test_repo)
+        .output();
+    let _ = std::process::Command::new("git")
+        .args(&["commit", "-m", "initial commit"])
+        .current_dir(&test_repo)
+        .output();
 
     let config = RsiConfig {
         target_repo: test_repo.display().to_string(),
@@ -266,9 +303,15 @@ async fn test_production_loop_end_to_end_with_candidate() {
         .expect("cycle should execute");
 
     assert!(result.success, "Production cycle must succeed");
-    assert!(result.proposal.is_some(), "Unslop candidate proposal must be generated");
+    assert!(
+        result.proposal.is_some(),
+        "Unslop candidate proposal must be generated"
+    );
     let prop = result.proposal.unwrap();
-    assert_eq!(prop.kind, spark_rsi::models::ProposalKind::UnslopSanitization);
+    assert_eq!(
+        prop.kind,
+        spark_rsi::models::ProposalKind::UnslopSanitization
+    );
 
     assert!(result.invariants.is_some(), "Invariants must be verified");
     assert!(result.invariants.unwrap().passed, "Invariants must pass");
@@ -276,22 +319,45 @@ async fn test_production_loop_end_to_end_with_candidate() {
     assert!(result.balance.is_some(), "Balance kernel must be evaluated");
     assert_eq!(result.balance.unwrap().verdict, "balanced");
 
-    assert!(result.receipt.is_some(), "BlindJudge receipt must be present");
-    assert!(result.receipt.unwrap().admitted, "BlindJudge must admit the candidate");
+    assert!(
+        result.receipt.is_some(),
+        "BlindJudge receipt must be present"
+    );
+    assert!(
+        result.receipt.unwrap().admitted,
+        "BlindJudge must admit the candidate"
+    );
 
-    assert!(result.generation.is_some(), "Supervisor generation info must be present");
+    assert!(
+        result.generation.is_some(),
+        "Supervisor generation info must be present"
+    );
     let gen = result.generation.unwrap();
     assert_eq!(gen.state, spark_rsi::supervisor::GenerationState::Durable);
     assert_eq!(gen.canary_transactions, 5);
 
-    assert!(result.ledger_block.is_some(), "Ledger block must be present");
+    assert!(
+        result.ledger_block.is_some(),
+        "Ledger block must be present"
+    );
     let blk = result.ledger_block.unwrap();
     assert_eq!(blk.block_type, spark_rsi::ledger::BlockType::Promotion);
 
-    assert!(result.ratification.is_some(), "Ratification must be recorded");
+    assert!(
+        result.ratification.is_some(),
+        "Ratification must be recorded"
+    );
 
     // Verify ledger audit report
-    let audit = ledger.verify_chain_integrity(Some(&signing_key.verifying_key())).expect("ledger audit");
-    assert!(audit.chain_valid, "Ledger chain must be cryptographically valid");
-    assert!(audit.total_blocks >= 2, "Ledger must have evaluation and promotion blocks");
+    let audit = ledger
+        .verify_chain_integrity(Some(&signing_key.verifying_key()))
+        .expect("ledger audit");
+    assert!(
+        audit.chain_valid,
+        "Ledger chain must be cryptographically valid"
+    );
+    assert!(
+        audit.total_blocks >= 2,
+        "Ledger must have evaluation and promotion blocks"
+    );
 }

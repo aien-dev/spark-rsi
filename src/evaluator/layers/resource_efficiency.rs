@@ -26,9 +26,7 @@ impl ResourceEfficiencyEvaluation {
 
         let summary = format!(
             "ResourceEfficiency: rss_growth={:.2}%, limit_mb_ok={}, ctxt_delta={}",
-            self.rss_growth_pct,
-            self.host_memory_within_budget,
-            self.context_switches_delta
+            self.rss_growth_pct, self.host_memory_within_budget, self.context_switches_delta
         );
 
         LayerResult {
@@ -87,8 +85,10 @@ impl ResourceEfficiencyLayer {
             }
         }
 
-        let ctxt_parent = parent_rusage.voluntary_context_switches + parent_rusage.involuntary_context_switches;
-        let ctxt_cand = candidate_rusage.voluntary_context_switches + candidate_rusage.involuntary_context_switches;
+        let ctxt_parent =
+            parent_rusage.voluntary_context_switches + parent_rusage.involuntary_context_switches;
+        let ctxt_cand = candidate_rusage.voluntary_context_switches
+            + candidate_rusage.involuntary_context_switches;
         let context_switches_delta = ctxt_cand - ctxt_parent;
 
         let passed = rss_growth_within_budget && host_memory_within_budget;
@@ -195,7 +195,8 @@ mod tests {
             resident_kb: 52_000_000,
         };
 
-        let eval = ResourceEfficiencyLayer::evaluate(&parent, &candidate, Some(&statm), Some(49_152));
+        let eval =
+            ResourceEfficiencyLayer::evaluate(&parent, &candidate, Some(&statm), Some(49_152));
         assert!(!eval.passed);
         assert!(!eval.host_memory_within_budget);
         assert!(eval.violations[0].contains("exceeded unified memory limit"));

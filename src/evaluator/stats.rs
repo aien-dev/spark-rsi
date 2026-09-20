@@ -175,9 +175,11 @@ impl StatisticalEngine {
 
         let count_leq_zero = boot_means.iter().filter(|&&v| v <= 0.0).count();
         let count_geq_zero = boot_means.iter().filter(|&&v| v >= 0.0).count();
-        let p_val_two_sided = (2.0 * ((count_leq_zero.min(count_geq_zero) as f64) / (b as f64))).min(1.0);
+        let p_val_two_sided =
+            (2.0 * ((count_leq_zero.min(count_geq_zero) as f64) / (b as f64))).min(1.0);
 
-        let is_statistically_significant = p_val_two_sided < 0.01 && (ci_99_lower > 0.0 || ci_99_upper < 0.0);
+        let is_statistically_significant =
+            p_val_two_sided < 0.01 && (ci_99_lower > 0.0 || ci_99_upper < 0.0);
 
         Ok(BootstrapEstimate {
             sample_size: m,
@@ -264,7 +266,8 @@ impl StatisticalEngine {
             degradation_samples.push(deg);
         }
 
-        degradation_samples.sort_by(|a, b_val| a.partial_cmp(b_val).unwrap_or(std::cmp::Ordering::Equal));
+        degradation_samples
+            .sort_by(|a, b_val| a.partial_cmp(b_val).unwrap_or(std::cmp::Ordering::Equal));
         let p95_idx = ((0.95 * (b as f64)).ceil() as usize).min(b - 1);
         let ci_95_upper_pct = degradation_samples[p95_idx];
 
@@ -389,7 +392,9 @@ mod tests {
     fn test_bootstrap_paired_identical_samples() {
         let parent = vec![10.0; 30];
         let candidate = vec![10.0; 30];
-        let res = StatisticalEngine::bootstrap_paired_comparison(&parent, &candidate, 1000, Some(42)).unwrap();
+        let res =
+            StatisticalEngine::bootstrap_paired_comparison(&parent, &candidate, 1000, Some(42))
+                .unwrap();
 
         assert_eq!(res.sample_size, 30);
         assert!((res.observed_delta_mean - 0.0).abs() < 1e-9);
@@ -399,14 +404,20 @@ mod tests {
 
     #[test]
     fn test_bootstrap_paired_significant_improvement() {
-        let parent = vec![100.0, 102.0, 101.0, 99.0, 100.5, 101.2, 98.9, 100.1, 102.3, 100.8,
-                          100.0, 102.0, 101.0, 99.0, 100.5, 101.2, 98.9, 100.1, 102.3, 100.8,
-                          100.0, 102.0, 101.0, 99.0, 100.5, 101.2, 98.9, 100.1, 102.3, 100.8];
-        let candidate = vec![120.0, 122.0, 121.0, 119.0, 120.5, 121.2, 118.9, 120.1, 122.3, 120.8,
-                             120.0, 122.0, 121.0, 119.0, 120.5, 121.2, 118.9, 120.1, 122.3, 120.8,
-                             120.0, 122.0, 121.0, 119.0, 120.5, 121.2, 118.9, 120.1, 122.3, 120.8];
+        let parent = vec![
+            100.0, 102.0, 101.0, 99.0, 100.5, 101.2, 98.9, 100.1, 102.3, 100.8, 100.0, 102.0,
+            101.0, 99.0, 100.5, 101.2, 98.9, 100.1, 102.3, 100.8, 100.0, 102.0, 101.0, 99.0, 100.5,
+            101.2, 98.9, 100.1, 102.3, 100.8,
+        ];
+        let candidate = vec![
+            120.0, 122.0, 121.0, 119.0, 120.5, 121.2, 118.9, 120.1, 122.3, 120.8, 120.0, 122.0,
+            121.0, 119.0, 120.5, 121.2, 118.9, 120.1, 122.3, 120.8, 120.0, 122.0, 121.0, 119.0,
+            120.5, 121.2, 118.9, 120.1, 122.3, 120.8,
+        ];
 
-        let res = StatisticalEngine::bootstrap_paired_comparison(&parent, &candidate, 5000, Some(42)).unwrap();
+        let res =
+            StatisticalEngine::bootstrap_paired_comparison(&parent, &candidate, 5000, Some(42))
+                .unwrap();
         assert!(res.observed_delta_mean > 19.0);
         assert!(res.is_statistically_significant);
         assert!(res.p_value < 0.01);
@@ -425,7 +436,8 @@ mod tests {
             1.0,
             2000,
             Some(42),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(res.percentile, 95.0);
         assert!(res.passes_non_inferiority);
@@ -444,7 +456,8 @@ mod tests {
             1.0,
             2000,
             Some(42),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(!res.passes_non_inferiority);
         assert!(res.ci_95_upper_pct > 1.0);

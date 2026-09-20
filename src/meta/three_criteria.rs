@@ -25,7 +25,9 @@ impl TrueRsiEvaluator {
         is_dynamic_telemetry: bool,
         hardcoded_rules: &[&str],
     ) -> CriterionResult {
-        let is_hardcoded = hardcoded_rules.iter().any(|r| observed_problem.contains(*r));
+        let is_hardcoded = hardcoded_rules
+            .iter()
+            .any(|r| observed_problem.contains(*r));
         let passed = is_dynamic_telemetry && !is_hardcoded;
         let evidence = if passed {
             format!(
@@ -156,9 +158,12 @@ mod tests {
 
     #[test]
     fn test_three_criteria_meta_candidate_and_true_rsi() {
-        let c1 = TrueRsiEvaluator::evaluate_criterion_1_novel_discovery("dynamic bottleneck", true, &[]);
-        let c2 = TrueRsiEvaluator::evaluate_criterion_2_self_capability_improvement(true, "speedup 15%");
-        let c3_pending = TrueRsiEvaluator::evaluate_criterion_3_recursive_persistence(None, None, None, None);
+        let c1 =
+            TrueRsiEvaluator::evaluate_criterion_1_novel_discovery("dynamic bottleneck", true, &[]);
+        let c2 =
+            TrueRsiEvaluator::evaluate_criterion_2_self_capability_improvement(true, "speedup 15%");
+        let c3_pending =
+            TrueRsiEvaluator::evaluate_criterion_3_recursive_persistence(None, None, None, None);
 
         let verdict_pending = TrueRsiEvaluator::evaluate_full(c1.clone(), c2.clone(), c3_pending);
         assert_eq!(verdict_pending.overall_classification, "META_CANDIDATE");
