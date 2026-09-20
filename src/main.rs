@@ -174,7 +174,6 @@ enum Commands {
         #[command(subcommand)]
         action: LedgerCommands,
     },
-    /// Display the sovereign programming philosophy manifesto
     /// Execute Tier 2 autonomous soak run (5 cycles, multi-candidate isolation, strict staging)
     Soak {
         #[arg(long, default_value = ".")]
@@ -202,6 +201,7 @@ enum Commands {
         #[arg(long)]
         margin: Option<f64>,
     },
+    /// Display the sovereign programming philosophy manifesto
     Philosophy,
 }
 
