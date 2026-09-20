@@ -175,6 +175,33 @@ enum Commands {
         action: LedgerCommands,
     },
     /// Display the sovereign programming philosophy manifesto
+    /// Execute Tier 2 autonomous soak run (5 cycles, multi-candidate isolation, strict staging)
+    Soak {
+        #[arg(long, default_value = ".")]
+        path: String,
+        #[arg(long, default_value = ".rsi")]
+        rsi_root: String,
+        #[arg(long, default_value = "5")]
+        cycles: usize,
+        #[arg(long, default_value = "3")]
+        candidates: usize,
+        #[arg(long, default_value = "mojo/balance_bin")]
+        kernel: String,
+        #[arg(long, default_value = "http://127.0.0.1:18080")]
+        cortex_url: String,
+        #[arg(long, default_value = "http://127.0.0.1:18006/v1")]
+        max_url: String,
+        #[arg(long, default_value = "atlas-lightning-omni")]
+        max_model: String,
+        #[arg(long)]
+        signing_key_hex: Option<String>,
+        #[arg(long)]
+        operator_key_hex: Option<String>,
+        #[arg(long)]
+        holdouts_dir: Option<String>,
+        #[arg(long)]
+        margin: Option<f64>,
+    },
     Philosophy,
 }
 
@@ -374,6 +401,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("{}", serde_json::to_string_pretty(&blk)?);
             }
         },
+        Commands::Soak {
+            path,
+            rsi_root,
+            cycles,
+            candidates,
+            kernel,
+            cortex_url,
+            max_url,
+            max_model,
+            signing_key_hex,
+            operator_key_hex,
+            holdouts_dir,
+            margin,
+        } => {
+            let config = spark_rsi::soak::SoakConfig {
+                target_repo: path,
+                rsi_root,
+                sandbox_root: "/tmp/spark-rsi-soak".to_string(),
+                holdouts_dir,
+                signing_key_hex,
+                operator_key_hex,
+                cortex_url,
+                cortex_space: "atlas-memory".to_string(),
+                max_url,
+                max_model,
+                mojo_kernel_path: kernel,
+                total_cycles: cycles,
+                candidates_per_cycle: candidates,
+                canary_target: 5000,
+                non_inferiority_margin: margin.or(Some(10.0)),
+                writable_prefixes: vec![
+                    "src/propose/".to_string(),
+                    "src/graph/".to_string(),
+                    "src/observe.rs".to_string(),
+                ],
+            };
+            let manifest = spark_rsi::soak::SoakRunner::run_batch(&config).await
+                .map_err(|e| format!("Soak run failed: {}", e))?;
+            println!("{}", serde_json::to_string_pretty(&manifest)?);
+        }
         Commands::Philosophy => {
             let philosophy_file = Path::new("docs/PHILOSOPHY.md");
             if philosophy_file.exists() {
