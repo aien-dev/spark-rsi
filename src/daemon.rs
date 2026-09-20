@@ -64,34 +64,31 @@ impl RsiEngine {
         let mut graph = CapabilityGraph::new();
         graph.add_node(
             CapabilityNode::new("Observe", "Observe Subsystem", "observe")
-                .with_telemetry(50.0, 1024, 0.0),
+                .with_resource_metrics(50.0, 1024, 0.0),
         );
+        let is_high_drive = telemetry.soul_tension.drive_score > 0.8; // zero telemetry
         graph.add_node(
-            CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_telemetry(
+            CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_resource_metrics(
                 400.0,
                 4096,
-                if telemetry.soul_tension.drive_score > 0.8 {
-                    0.25
-                } else {
-                    0.0
-                },
+                if is_high_drive { 0.25 } else { 0.0 },
             ),
         );
         graph.add_node(
             CapabilityNode::new("BuildJail", "Build Jail", "isolation")
-                .with_telemetry(150.0, 2048, 0.0),
+                .with_resource_metrics(150.0, 2048, 0.0),
         );
         graph.add_node(
             CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor")
-                .with_telemetry(250.0, 8192, 0.0),
+                .with_resource_metrics(250.0, 8192, 0.0),
         );
         graph.add_node(
             CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor")
-                .with_telemetry(100.0, 4096, 0.0),
+                .with_resource_metrics(100.0, 4096, 0.0),
         );
         graph.add_node(
             CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify")
-                .with_telemetry(50.0, 1024, 0.0),
+                .with_resource_metrics(50.0, 1024, 0.0),
         );
 
         graph.add_edge("Observe", "Propose", 400.0, 1.0);

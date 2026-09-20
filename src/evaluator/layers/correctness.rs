@@ -157,6 +157,7 @@ impl CorrectnessLayer {
             .arg(&target_dir)
             .arg("--no-fail-fast")
             .arg("--")
+            .arg("--test-threads=1")
             .arg("--nocapture")
             .current_dir(repo_path);
 

@@ -25,7 +25,7 @@ impl CapabilityNode {
         }
     }
 
-    pub fn with_telemetry(mut self, p95_us: f64, rss_kb: u64, error_rate: f64) -> Self {
+    pub fn with_resource_metrics(mut self, p95_us: f64, rss_kb: u64, error_rate: f64) -> Self {
         self.latency_p95_us = p95_us;
         self.memory_rss_kb = rss_kb;
         self.error_rate = error_rate;
@@ -257,15 +257,15 @@ mod tests {
         let mut graph = CapabilityGraph::new();
         graph.add_node(
             CapabilityNode::new("sched", "Inference Scheduler", "runtime")
-                .with_telemetry(500.0, 1024, 0.0),
+                .with_resource_metrics(500.0, 1024, 0.0),
         );
         graph.add_node(
             CapabilityNode::new("kv", "KV Cache Allocator", "memory")
-                .with_telemetry(2500.0, 4096, 0.05),
+                .with_resource_metrics(2500.0, 4096, 0.05),
         );
         graph.add_node(
             CapabilityNode::new("kernel", "Mojo Balance Kernel", "compute")
-                .with_telemetry(100.0, 512, 0.0),
+                .with_resource_metrics(100.0, 512, 0.0),
         );
 
         graph.add_edge("sched", "kv", 2000.0, 1.0);

@@ -157,6 +157,7 @@ impl InvariantVerifier {
             .arg("--manifest-path")
             .arg(&cargo_toml)
             .arg("--")
+            .arg("--test-threads=1")
             .arg("--nocapture")
             .output();
 

@@ -151,42 +151,36 @@ impl SoakRunner {
             let thermal_before = ThermalSnapshot::capture();
 
             // Telemetry & CapabilityGraph
-            let telemetry = observe_codebase(repo_path)?;
+            let codebase_obs = observe_codebase(repo_path)?;
             let mut graph = CapabilityGraph::new();
             graph.add_node(
                 CapabilityNode::new("Observe", "Observe Subsystem", "observe")
-                    .with_telemetry(50.0, 1024, 0.0),
+                    .with_resource_metrics(50.0, 1024, 0.0),
             );
+            let is_high_drive = codebase_obs.soul_tension.drive_score > 0.8;
             graph.add_node(
-                CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_telemetry(
-                    400.0,
-                    4096,
-                    if telemetry.soul_tension.drive_score > 0.8 {
-                        0.25
-                    } else {
-                        0.0
-                    },
-                ),
+                CapabilityNode::new("Propose", "Propose Subsystem", "propose")
+                    .with_resource_metrics(400.0, 4096, if is_high_drive { 0.25 } else { 0.0 }),
             );
             graph.add_node(
                 CapabilityNode::new("Graph", "Capability Graph Subsystem", "graph")
-                    .with_telemetry(120.0, 2048, 0.0),
+                    .with_resource_metrics(120.0, 2048, 0.0),
             );
             graph.add_node(
                 CapabilityNode::new("BuildJail", "Build Jail", "isolation")
-                    .with_telemetry(150.0, 2048, 0.0),
+                    .with_resource_metrics(150.0, 2048, 0.0),
             );
             graph.add_node(
                 CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor")
-                    .with_telemetry(250.0, 8192, 0.0),
+                    .with_resource_metrics(250.0, 8192, 0.0),
             );
             graph.add_node(
                 CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor")
-                    .with_telemetry(100.0, 4096, 0.0),
+                    .with_resource_metrics(100.0, 4096, 0.0),
             );
             graph.add_node(
                 CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify")
-                    .with_telemetry(50.0, 1024, 0.0),
+                    .with_resource_metrics(50.0, 1024, 0.0),
             );
 
             graph.add_edge("Observe", "Propose", 400.0, 1.0);
@@ -448,8 +442,8 @@ impl SoakRunner {
                 // Invariant verification
                 let inv_report = InvariantVerifier::run_full_verification(&sandbox_dir);
                 let balance_verdict = BalanceKernel::evaluate(
-                    telemetry.soul_tension.drive_score,
-                    telemetry.soul_tension.humanity_score,
+                    codebase_obs.soul_tension.drive_score,
+                    codebase_obs.soul_tension.humanity_score,
                     Some(&config.mojo_kernel_path),
                 )?;
                 let is_balanced = balance_verdict.verdict == "balanced";

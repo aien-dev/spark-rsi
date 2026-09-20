@@ -14,6 +14,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+static GPU_AUTOTUNE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 type PagedAttentionForwardFn = unsafe extern "C" fn(
     *const u16,
     *const u16,
@@ -506,6 +508,15 @@ impl KernelAutotuneExperiment {
         &self,
         ledger: &ImprovementLedger,
     ) -> Result<KernelExperimentReceipt, String> {
+        let _gpu_guard = GPU_AUTOTUNE_LOCK
+            .lock()
+            .map_err(|e| format!("Failed to acquire GPU autotune lock: {}", e))?;
+
+        // Clear OS page cache pressure before CUDA allocations as mandated by Grace Blackwell GB10 unified memory invariant
+        let _ = std::process::Command::new("sudo")
+            .args(&["-n", "sysctl", "-w", "vm.drop_caches=3"])
+            .output();
+
         // Step 1: Verify coupled KV invariant
         self.coupled_kv.verify_invariant()?;
 
@@ -1016,8 +1027,13 @@ int paged_attention_bf16_forward(
     size_t q_bytes = (size_t)num_seqs * num_q_heads * head_dim * sizeof(__nv_bfloat16);
     void *d_q = NULL;
     void *d_out = NULL;
-    cudaMalloc(&d_q, q_bytes);
-    cudaMalloc(&d_out, q_bytes);
+    cudaError_t e1 = cudaMalloc(&d_q, q_bytes);
+    cudaError_t e2 = cudaMalloc(&d_out, q_bytes);
+    if (e1 != cudaSuccess || e2 != cudaSuccess) {
+        if (d_q) cudaFree(d_q);
+        if (d_out) cudaFree(d_out);
+        return -2;
+    }
     if (q) cudaMemcpy(d_q, q, q_bytes, cudaMemcpyHostToDevice);
 
     int warps_per_block = Q_HEADS_PER_BLOCK;
@@ -1140,6 +1156,20 @@ prefetch_global_l2(next_k);
 
     #[tokio::test]
     async fn test_kernel_autotune_experiment_end_to_end() {
+        let nvcc_available = std::process::Command::new("nvcc")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+            || std::path::Path::new("/usr/local/cuda/bin/nvcc").exists();
+        let gpu_available = std::path::Path::new("/dev/nvidia0").exists();
+        if !nvcc_available || !gpu_available {
+            eprintln!("Skipping CUDA autotune test: nvcc or NVIDIA GPU device (/dev/nvidia0) is not available");
+            return;
+        }
+        let _ = std::process::Command::new("sudo")
+            .args(&["-n", "sysctl", "-w", "vm.drop_caches=3"])
+            .output();
         let tmp = tempfile::tempdir().unwrap();
         let rsi_dir = tmp.path().join(".rsi");
         fs::create_dir_all(&rsi_dir).unwrap();
