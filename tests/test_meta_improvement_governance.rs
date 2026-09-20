@@ -3,8 +3,7 @@ use p256::ecdsa::{Signature, SigningKey};
 use sha2::{Digest, Sha256};
 use spark_rsi::ledger::{BlockType, ImprovementLedger};
 use spark_rsi::meta::{
-    AbForkEvaluator, CandidateTier, MetaBenchmarkMetrics, TierGovernance,
-    TrueRsiEvaluator,
+    AbForkEvaluator, CandidateTier, MetaBenchmarkMetrics, TierGovernance, TrueRsiEvaluator,
 };
 use spark_rsi::models::{ImprovementProposal, ProposalKind};
 use std::fs;
@@ -50,10 +49,19 @@ fn test_tier_classification_and_immutable_containment() {
     assert!(TierGovernance::validate_tier2_candidate_boundaries("src/graph/mod.rs").is_ok());
 
     // Attempts to modify tests, scoring rules, containment, or holdouts must fail closed
-    assert!(TierGovernance::validate_tier2_candidate_boundaries("tests/integration_tests.rs").is_err());
-    assert!(TierGovernance::validate_tier2_candidate_boundaries("src/evaluator/layers/correctness.rs").is_err());
-    assert!(TierGovernance::validate_tier2_candidate_boundaries("src/isolation/container.rs").is_err());
-    assert!(TierGovernance::validate_tier2_candidate_boundaries(".rsi/holdouts/suite1.json").is_err());
+    assert!(
+        TierGovernance::validate_tier2_candidate_boundaries("tests/integration_tests.rs").is_err()
+    );
+    assert!(TierGovernance::validate_tier2_candidate_boundaries(
+        "src/evaluator/layers/correctness.rs"
+    )
+    .is_err());
+    assert!(
+        TierGovernance::validate_tier2_candidate_boundaries("src/isolation/container.rs").is_err()
+    );
+    assert!(
+        TierGovernance::validate_tier2_candidate_boundaries(".rsi/holdouts/suite1.json").is_err()
+    );
     assert!(TierGovernance::validate_tier2_candidate_boundaries("CONSTITUTION.md").is_err());
     assert!(TierGovernance::validate_tier2_candidate_boundaries("LICENSE").is_err());
 }
@@ -109,7 +117,9 @@ fn test_operator_cryptographic_authorization_requirement() {
         None,
     );
     assert!(err_unsigned.is_err());
-    assert!(err_unsigned.unwrap_err().contains("Missing operator cryptographic signature"));
+    assert!(err_unsigned
+        .unwrap_err()
+        .contains("Missing operator cryptographic signature"));
 
     // Forged signature must fail closed
     let mut forged_proposal = authorized_proposal.clone();
@@ -162,7 +172,8 @@ fn test_ab_fork_evaluation_engine_n_judges_engine_n_plus_1() {
         Some(&operator_verifying_key),
         1.0,
         None,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(res_regressed.overall_classification, "REJECTED");
     assert!(!res_regressed.self_capability_improvement.passed);
 
@@ -177,7 +188,8 @@ fn test_ab_fork_evaluation_engine_n_judges_engine_n_plus_1() {
         Some(&operator_verifying_key),
         1.0,
         None,
-    ).unwrap();
+    )
+    .unwrap();
     assert_eq!(res_amplified.overall_classification, "META_CANDIDATE");
     assert!(res_amplified.novel_discovery.passed);
     assert!(res_amplified.self_capability_improvement.passed);
@@ -193,18 +205,23 @@ fn test_three_criteria_true_rsi_lifecycle_and_ledger_compounding() {
     let ledger = ImprovementLedger::open(&rsi_root).expect("Ledger initialization failed");
 
     // 1. Record generation N (MetaCandidate) promotion block
-    let meta_block = ledger.append_block(
-        BlockType::Promotion,
-        "{\"candidate\": \"engine-gen-01\", \"classification\": \"META_CANDIDATE\"}".to_string(),
-        Vec::new(),
-    ).expect("MetaCandidate promotion block append");
+    let meta_block = ledger
+        .append_block(
+            BlockType::Promotion,
+            "{\"candidate\": \"engine-gen-01\", \"classification\": \"META_CANDIDATE\"}"
+                .to_string(),
+            Vec::new(),
+        )
+        .expect("MetaCandidate promotion block append");
 
     // 2. Record downstream generation N+1 cycle evaluation block
-    let downstream_block = ledger.append_block(
-        BlockType::Evaluation,
-        "{\"cycle_id\": \"cycle-02\", \"throughput_gain_pct\": 18.5}".to_string(),
-        Vec::new(),
-    ).expect("Downstream evaluation block append");
+    let downstream_block = ledger
+        .append_block(
+            BlockType::Evaluation,
+            "{\"cycle_id\": \"cycle-02\", \"throughput_gain_pct\": 18.5}".to_string(),
+            Vec::new(),
+        )
+        .expect("Downstream evaluation block append");
 
     // 3. Evaluate Three Criteria with downstream evidence
     let c1 = TrueRsiEvaluator::evaluate_criterion_1_novel_discovery(
@@ -234,7 +251,8 @@ fn test_three_criteria_true_rsi_lifecycle_and_ledger_compounding() {
 
     // 4. Record append-only PromotionEvidence block in cryptographic ledger
     let evidence_payload = verdict.evidence_payload.unwrap();
-    let evidence_block = ledger.append_promotion_evidence(&evidence_payload)
+    let evidence_block = ledger
+        .append_promotion_evidence(&evidence_payload)
         .expect("Appending promotion evidence to ledger failed");
 
     assert_eq!(evidence_block.block_type, BlockType::PromotionEvidence);
@@ -244,7 +262,12 @@ fn test_three_criteria_true_rsi_lifecycle_and_ledger_compounding() {
     let verifying_key = signing_key.verifying_key();
     let _ = ledger.checkpoint(Some(&signing_key));
 
-    let audit = ledger.verify_chain_integrity(Some(&verifying_key)).expect("Ledger audit failed");
-    assert!(audit.chain_valid, "Cryptographic ledger hash chain must be valid");
+    let audit = ledger
+        .verify_chain_integrity(Some(&verifying_key))
+        .expect("Ledger audit failed");
+    assert!(
+        audit.chain_valid,
+        "Cryptographic ledger hash chain must be valid"
+    );
     assert_eq!(audit.total_blocks, 4); // Genesis (0) + Promotion (1) + Evaluation (2) + PromotionEvidence (3)
 }

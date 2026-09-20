@@ -31,8 +31,16 @@ impl CorrectnessEvaluation {
 
         let summary = format!(
             "Correctness: compile={}, abi={}, unit={}/{}, integ={}/{}",
-            if self.compilation_passed { "OK" } else { "FAIL" },
-            if self.abi_stability_passed { "STABLE" } else { "BROKEN" },
+            if self.compilation_passed {
+                "OK"
+            } else {
+                "FAIL"
+            },
+            if self.abi_stability_passed {
+                "STABLE"
+            } else {
+                "BROKEN"
+            },
             self.unit_tests_passed,
             self.unit_tests_passed + self.unit_tests_failed,
             self.integration_tests_passed,
@@ -70,7 +78,10 @@ impl CorrectnessLayer {
             failures.push(format!("{} unit tests failed", unit_tests_failed));
         }
         if integration_tests_failed > 0 {
-            failures.push(format!("{} integration tests failed", integration_tests_failed));
+            failures.push(format!(
+                "{} integration tests failed",
+                integration_tests_failed
+            ));
         }
         if !abi_stability_passed {
             failures.push("ABI stability check failed".to_string());
@@ -95,7 +106,8 @@ impl CorrectnessLayer {
 
     pub fn evaluate_repo(repo_path: &Path) -> CorrectnessEvaluation {
         let mut failures = Vec::new();
-        let target_dir = std::env::temp_dir().join(format!("rsi-target-{}", uuid::Uuid::new_v4().simple()));
+        let target_dir =
+            std::env::temp_dir().join(format!("rsi-target-{}", uuid::Uuid::new_v4().simple()));
 
         let mut check_cmd = Command::new("cargo");
         check_cmd
@@ -145,6 +157,7 @@ impl CorrectnessLayer {
             .arg(&target_dir)
             .arg("--no-fail-fast")
             .arg("--")
+            .arg("--test-threads=1")
             .arg("--nocapture")
             .current_dir(repo_path);
 
@@ -190,7 +203,8 @@ impl CorrectnessLayer {
 
         let _ = std::fs::remove_dir_all(&target_dir);
         let abi_stability_passed = true;
-        let passed = compilation_passed && unit_failed == 0 && integ_failed == 0 && abi_stability_passed;
+        let passed =
+            compilation_passed && unit_failed == 0 && integ_failed == 0 && abi_stability_passed;
 
         CorrectnessEvaluation {
             compilation_passed,

@@ -8,5 +8,8 @@ fn main() {
     for s in &suites {
         s.save_to_dir(holdouts).unwrap();
     }
-    println!("Populated .rsi/holdouts with {} builtin holdout suites", suites.len());
+    println!(
+        "Populated .rsi/holdouts with {} builtin holdout suites",
+        suites.len()
+    );
 }

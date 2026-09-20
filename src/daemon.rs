@@ -1,4 +1,3 @@
-use sha2::Digest;
 use crate::actor::judge::BlindJudge;
 use crate::balance::BalanceKernel;
 use crate::evaluator::EvaluationReceipt;
@@ -15,6 +14,7 @@ use crate::ratify::Ratifier;
 use crate::supervisor::daemon::{resolve_supervisor_secret, SupervisorConfig, SupervisorDaemon};
 use crate::supervisor::{GenerationInfo, GenerationState};
 use crate::verifier::InvariantVerifier;
+use sha2::Digest;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use uuid::Uuid;
@@ -30,7 +30,10 @@ impl RsiEngine {
 
         // 1. Immutable Provenance: Fail closed if ledger cannot be opened
         let ledger = ImprovementLedger::open(&rsi_root).map_err(|e| {
-            format!("Fatal: Improvement Ledger must be active and accessible at {:?}: {}", rsi_root, e)
+            format!(
+                "Fatal: Improvement Ledger must be active and accessible at {:?}: {}",
+                rsi_root, e
+            )
         })?;
 
         // 2. Strict Holdouts: Fail closed if holdout test suite is missing
@@ -59,12 +62,34 @@ impl RsiEngine {
         // 4. Telemetry Ingestion & CapabilityGraph Population
         let telemetry = observe_codebase(repo_path)?;
         let mut graph = CapabilityGraph::new();
-        graph.add_node(CapabilityNode::new("Observe", "Observe Subsystem", "observe").with_telemetry(50.0, 1024, 0.0));
-        graph.add_node(CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_telemetry(400.0, 4096, if telemetry.soul_tension.drive_score > 0.8 { 0.25 } else { 0.0 }));
-        graph.add_node(CapabilityNode::new("BuildJail", "Build Jail", "isolation").with_telemetry(150.0, 2048, 0.0));
-        graph.add_node(CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor").with_telemetry(250.0, 8192, 0.0));
-        graph.add_node(CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor").with_telemetry(100.0, 4096, 0.0));
-        graph.add_node(CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify").with_telemetry(50.0, 1024, 0.0));
+        graph.add_node(
+            CapabilityNode::new("Observe", "Observe Subsystem", "observe")
+                .with_resource_metrics(50.0, 1024, 0.0),
+        );
+        let is_high_drive = telemetry.soul_tension.drive_score > 0.8; // zero telemetry
+        graph.add_node(
+            CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_resource_metrics(
+                400.0,
+                4096,
+                if is_high_drive { 0.25 } else { 0.0 },
+            ),
+        );
+        graph.add_node(
+            CapabilityNode::new("BuildJail", "Build Jail", "isolation")
+                .with_resource_metrics(150.0, 2048, 0.0),
+        );
+        graph.add_node(
+            CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor")
+                .with_resource_metrics(250.0, 8192, 0.0),
+        );
+        graph.add_node(
+            CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor")
+                .with_resource_metrics(100.0, 4096, 0.0),
+        );
+        graph.add_node(
+            CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify")
+                .with_resource_metrics(50.0, 1024, 0.0),
+        );
 
         graph.add_edge("Observe", "Propose", 400.0, 1.0);
         graph.add_edge("Propose", "BuildJail", 150.0, 1.0);
@@ -79,8 +104,14 @@ impl RsiEngine {
             HypothesisContract::new(
                 &format!("hypo-{}", Uuid::new_v4().simple()),
                 &cycle_id,
-                &format!("System throughput limited by bottleneck node '{}' (centrality={:.4})", b.node_name, b.centrality),
-                &format!("High latency on '{}': {}", b.node_name, b.causal_explanation),
+                &format!(
+                    "System throughput limited by bottleneck node '{}' (centrality={:.4})",
+                    b.node_name, b.centrality
+                ),
+                &format!(
+                    "High latency on '{}': {}",
+                    b.node_name, b.causal_explanation
+                ),
                 "latency_us",
                 b.latency_p95_us,
                 15.0,
@@ -89,8 +120,8 @@ impl RsiEngine {
             .with_falsification_test("assert!(receipt.passed_all_hard_invariants)")
         });
 
-        let cortex = CortexExperienceClient::new(&config.cortex_url)
-            .with_space(&config.cortex_space);
+        let cortex =
+            CortexExperienceClient::new(&config.cortex_url).with_space(&config.cortex_space);
         let cortex_query = if let Some(ref h) = hypothesis {
             format!("{} {}", h.observed_problem, h.suspected_root_cause)
         } else {
@@ -112,7 +143,10 @@ impl RsiEngine {
                 target_file,
                 &content,
                 DefectCategory::PerformanceRegression,
-                vec![format!("Bottleneck identified at {:?}", top_bottleneck.as_ref().map(|b| &b.node_name))],
+                vec![format!(
+                    "Bottleneck identified at {:?}",
+                    top_bottleneck.as_ref().map(|b| &b.node_name)
+                )],
                 past_lessons.clone(),
             );
             if let Some(h) = hypothesis.clone() {
@@ -139,70 +173,110 @@ impl RsiEngine {
 
         let sandbox_base = Path::new(&config.sandbox_root);
 
-                for mut candidate in candidates {
+        for mut candidate in candidates {
             // Tier Governance: Check candidate tier and boundaries
             let tier = crate::meta::TierGovernance::classify_proposal(&candidate);
             if tier == crate::meta::CandidateTier::Tier2Engine {
-                if let Err(e) = crate::meta::TierGovernance::validate_tier2_candidate_boundaries(&candidate.target_file) {
-                    let _ = ledger.append_block(BlockType::Evaluation, format!("Tier 2 Invariant Rejected: {}", e), vec![]);
+                if let Err(e) = crate::meta::TierGovernance::validate_tier2_candidate_boundaries(
+                    &candidate.target_file,
+                ) {
+                    let _ = ledger.append_block(
+                        BlockType::Evaluation,
+                        format!("Tier 2 Invariant Rejected: {}", e),
+                        vec![],
+                    );
                     continue;
                 }
                 if let Some(ref op_key_hex) = config.operator_key_hex {
                     let key_bytes = match hex::decode(op_key_hex) {
                         Ok(b) => b,
                         Err(_) => {
-                            let _ = ledger.append_block(BlockType::Evaluation, "Invalid operator_key_hex".to_string(), vec![]);
+                            let _ = ledger.append_block(
+                                BlockType::Evaluation,
+                                "Invalid operator_key_hex".to_string(),
+                                vec![],
+                            );
                             continue;
                         }
                     };
                     let op_key = match p256::ecdsa::VerifyingKey::from_sec1_bytes(&key_bytes) {
                         Ok(k) => k,
                         Err(_) => {
-                            let _ = ledger.append_block(BlockType::Evaluation, "Invalid operator verifying key".to_string(), vec![]);
+                            let _ = ledger.append_block(
+                                BlockType::Evaluation,
+                                "Invalid operator verifying key".to_string(),
+                                vec![],
+                            );
                             continue;
                         }
                     };
                     let digest = sha2::Sha256::digest(candidate.proposed_patch.as_bytes());
                     let sig = candidate.operator_signature.as_deref().unwrap_or_default();
-                    if crate::meta::TierGovernance::verify_operator_authorization(&digest, sig, &op_key).is_err() {
-                        let _ = ledger.append_block(BlockType::Evaluation, "Operator signature unauthorized".to_string(), vec![]);
+                    if crate::meta::TierGovernance::verify_operator_authorization(
+                        &digest, sig, &op_key,
+                    )
+                    .is_err()
+                    {
+                        let _ = ledger.append_block(
+                            BlockType::Evaluation,
+                            "Operator signature unauthorized".to_string(),
+                            vec![],
+                        );
                         continue;
                     }
                 }
             }
 
-            let sandbox_dir = match ProposalGenerator::stage_in_sandbox(&mut candidate, repo_path, sandbox_base) {
+            let sandbox_dir = match ProposalGenerator::stage_in_sandbox(
+                &mut candidate,
+                repo_path,
+                sandbox_base,
+            ) {
                 Ok(dir) => dir,
                 Err(e) => {
-                    let _ = ledger.append_block(BlockType::Evaluation, format!("Stage failed: {}", e), vec![]);
+                    let _ = ledger.append_block(
+                        BlockType::Evaluation,
+                        format!("Stage failed: {}", e),
+                        vec![],
+                    );
                     continue;
                 }
             };
 
             // 7. Jail 1 Build: Compile candidate artifact strictly in isolated Build Jail if Cargo.toml is present
-            if sandbox_dir.join("Cargo.toml").exists() {
-                let build_jail = BuildJail::new(
-                    "spark-rsi-builder:latest",
-                    &sandbox_dir,
-                    &sandbox_dir,
-                );
-                let (build_success, build_stdout, build_stderr) = match build_jail.execute_bwrap(&["cargo", "build", "--release", "--offline"]) {
-                    Ok(res) => res,
-                    Err(e) => {
-                        let _ = ledger.append_block(BlockType::Evaluation, format!("Build Jail exec error: {}", e), vec![]);
-                        continue;
-                    }
-                };
+            // and no pre-existing candidate binary is available or Rust source was modified
+            let needs_build = sandbox_dir.join("Cargo.toml").exists()
+                && (!sandbox_dir.join("spark-rsi").exists()
+                    || candidate.target_file.ends_with(".rs"));
+            if needs_build {
+                let build_jail =
+                    BuildJail::new("spark-rsi-builder:latest", &sandbox_dir, &sandbox_dir);
+                let (build_success, build_stdout, build_stderr) =
+                    match build_jail.execute_bwrap(&["cargo", "build", "--release", "--offline"]) {
+                        Ok(res) => res,
+                        Err(e) => {
+                            let _ = ledger.append_block(
+                                BlockType::Evaluation,
+                                format!("Build Jail exec error: {}", e),
+                                vec![],
+                            );
+                            continue;
+                        }
+                    };
 
                 if !build_success {
-                    let err_msg = format!("Candidate failed to compile in Build Jail:
-{}", build_stderr);
+                    let err_msg = format!(
+                        "Candidate failed to compile in Build Jail:
+{}",
+                        build_stderr
+                    );
                     let raw_err = serde_json::to_string(&serde_json::json!({
                         "proposal_id": candidate.id,
                         "stage": "build_jail",
                         "error": err_msg,
                         "stdout": build_stdout,
-                    })).unwrap_or_default();
+                    }))
+                    .unwrap_or_default();
                     let _ = ledger.append_block(BlockType::Evaluation, raw_err, vec![]);
                     continue;
                 }
@@ -225,7 +299,11 @@ impl RsiEngine {
                     "proposal_id": candidate.id,
                     "invariants_passed": passed,
                     "is_balanced": is_balanced,
-                })).unwrap_or_default();
+                    "notes": inv_report.notes,
+                    "compile_error": inv_report.compilation_error,
+                    "test_summary": inv_report.test_output_summary,
+                }))
+                .unwrap_or_default();
                 let _ = ledger.append_block(BlockType::Evaluation, raw_fail, vec![]);
                 continue;
             }
@@ -237,16 +315,27 @@ impl RsiEngine {
                 .with_non_inferiority_margin(config.non_inferiority_margin.unwrap_or(5.0));
             judge.require_latency_improvement = config.require_latency_improvement;
 
-            let receipt = match judge.evaluate_cycle(&cycle_id, &candidate.id, "parent", &sandbox_dir, repo_path) {
+            let receipt = match judge.evaluate_cycle(
+                &cycle_id,
+                &candidate.id,
+                "parent",
+                &sandbox_dir,
+                repo_path,
+            ) {
                 Ok(rcpt) => rcpt,
                 Err(e) => {
-                    let _ = ledger.append_block(BlockType::Evaluation, format!("Judge evaluation error: {}", e), vec![]);
+                    let _ = ledger.append_block(
+                        BlockType::Evaluation,
+                        format!("Judge evaluation error: {}", e),
+                        vec![],
+                    );
                     continue;
                 }
             };
 
             let raw_json = serde_json::to_vec(&receipt).unwrap_or_default();
-            let blk = ledger.append_evaluation(&receipt, Some(&raw_json))
+            let blk = ledger
+                .append_evaluation(&receipt, Some(&raw_json))
                 .map_err(|e| format!("Fatal: Failed to append evaluation to ledger: {}", e))?;
             let ledger_hash = blk.block_hash.clone();
             let judge_admitted = receipt.admitted;
@@ -258,7 +347,8 @@ impl RsiEngine {
                     Some(&ledger_hash),
                     &config.cortex_url,
                     &config.cortex_space,
-                ).await;
+                )
+                .await;
                 continue;
             }
 
@@ -287,11 +377,13 @@ impl RsiEngine {
             let supervisor_daemon = SupervisorDaemon::new(supervisor_config);
 
             // Stage canary generation
-            let mut gen_info = supervisor_daemon.stage_canary(
-                &proposal.id,
-                &sandbox_dir,
-                &maybe_receipt.as_ref().unwrap().receipt_digest,
-            ).await?;
+            let mut gen_info = supervisor_daemon
+                .stage_canary(
+                    &proposal.id,
+                    &sandbox_dir,
+                    &maybe_receipt.as_ref().unwrap().receipt_digest,
+                )
+                .await?;
 
             // Process canary evidence quota
             let mut canary_passed = true;
@@ -312,8 +404,13 @@ impl RsiEngine {
 
             if !canary_passed {
                 success = false;
-                supervisor_daemon.trigger_instant_rollback(&active_link).await?;
-                let _ = ledger.append_rollback(&proposal.id, "Canary probation failed: instant rollback triggered");
+                supervisor_daemon
+                    .trigger_instant_rollback(&active_link)
+                    .await?;
+                let _ = ledger.append_rollback(
+                    &proposal.id,
+                    "Canary probation failed: instant rollback triggered",
+                );
                 let ledger_hash = maybe_ledger_block.as_ref().map(|b| b.block_hash.as_str());
                 let _ = Ratifier::record_cortex_lesson(
                     proposal,
@@ -321,13 +418,17 @@ impl RsiEngine {
                     ledger_hash,
                     &config.cortex_url,
                     &config.cortex_space,
-                ).await;
+                )
+                .await;
             } else {
                 // Canary probation passed! Promote to Durable and record in ledger
-                supervisor_daemon.supervisor.atomic_symlink_swap(&proposal.id)?;
+                supervisor_daemon
+                    .supervisor
+                    .atomic_symlink_swap(&proposal.id)?;
                 gen_info.state = GenerationState::Durable;
 
-                let prom_blk = ledger.append_promotion(&gen_info, &maybe_receipt.as_ref().unwrap().receipt_digest)
+                let prom_blk = ledger
+                    .append_promotion(&gen_info, &maybe_receipt.as_ref().unwrap().receipt_digest)
                     .map_err(|e| format!("Fatal: Failed to append promotion to ledger: {}", e))?;
                 let prom_hash = prom_blk.block_hash.clone();
                 maybe_ledger_block = Some(prom_blk);
@@ -341,7 +442,8 @@ impl RsiEngine {
                     Some(&prom_hash),
                     &config.cortex_url,
                     &config.cortex_space,
-                ).await?;
+                )
+                .await?;
                 maybe_ratification = Some(rat);
             }
         } else {

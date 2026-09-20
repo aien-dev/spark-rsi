@@ -45,7 +45,10 @@ impl TierGovernance {
         if proposal.kind == ProposalKind::MetaEngineImprovement {
             return CandidateTier::Tier2Engine;
         }
-        let target = proposal.target_file.trim_start_matches("./").trim_start_matches('/');
+        let target = proposal
+            .target_file
+            .trim_start_matches("./")
+            .trim_start_matches('/');
         for prefix in Self::ENGINE_PREFIXES {
             if target == *prefix || target.starts_with(prefix) {
                 return CandidateTier::Tier2Engine;
@@ -79,7 +82,12 @@ impl TierGovernance {
         verifying_key
             .verify(proposal_digest, &signature)
             .map(|_| true)
-            .map_err(|e| format!("Operator cryptographic signature verification failed: {}", e))
+            .map_err(|e| {
+                format!(
+                    "Operator cryptographic signature verification failed: {}",
+                    e
+                )
+            })
     }
 }
 
@@ -103,7 +111,10 @@ mod tests {
             sandbox_path: None,
             operator_signature: None,
         };
-        assert_eq!(TierGovernance::classify_proposal(&p1), CandidateTier::Tier1Target);
+        assert_eq!(
+            TierGovernance::classify_proposal(&p1),
+            CandidateTier::Tier1Target
+        );
 
         let p2 = ImprovementProposal {
             id: "p2".to_string(),
@@ -116,7 +127,10 @@ mod tests {
             sandbox_path: None,
             operator_signature: None,
         };
-        assert_eq!(TierGovernance::classify_proposal(&p2), CandidateTier::Tier2Engine);
+        assert_eq!(
+            TierGovernance::classify_proposal(&p2),
+            CandidateTier::Tier2Engine
+        );
     }
 
     #[test]
@@ -125,8 +139,13 @@ mod tests {
         assert!(TierGovernance::validate_tier2_candidate_boundaries("src/daemon.rs").is_ok());
 
         assert!(TierGovernance::validate_tier2_candidate_boundaries("tests/test_foo.rs").is_err());
-        assert!(TierGovernance::validate_tier2_candidate_boundaries("src/evaluator/stats.rs").is_err());
-        assert!(TierGovernance::validate_tier2_candidate_boundaries("src/isolation/container.rs").is_err());
+        assert!(
+            TierGovernance::validate_tier2_candidate_boundaries("src/evaluator/stats.rs").is_err()
+        );
+        assert!(
+            TierGovernance::validate_tier2_candidate_boundaries("src/isolation/container.rs")
+                .is_err()
+        );
         assert!(TierGovernance::validate_tier2_candidate_boundaries("CONSTITUTION.md").is_err());
     }
 
@@ -145,7 +164,8 @@ mod tests {
         assert!(res.unwrap());
 
         let bad_digest = Sha256::digest(b"tampered patch");
-        let bad_res = TierGovernance::verify_operator_authorization(&bad_digest, &sig_hex, &verifying_key);
+        let bad_res =
+            TierGovernance::verify_operator_authorization(&bad_digest, &sig_hex, &verifying_key);
         assert!(bad_res.is_err());
     }
 }

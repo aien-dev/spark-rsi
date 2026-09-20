@@ -18,6 +18,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install System Dependencies & Configure Kernel Namespaces
+        run: |
+          sudo apt-get update && sudo apt-get install -y bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          sudo chmod u+s /usr/bin/bwrap || true
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -29,5 +35,8 @@ jobs:
       - name: Cargo Check
         run: cargo check --all-targets
 
+      - name: Pre-populate Build Jail Target Cache
+        run: CARGO_TARGET_DIR=/tmp/spark-rsi-target cargo build --release
+
       - name: Run Tests
-        run: cargo test --verbose
+        run: cargo test --verbose -- --test-threads=1

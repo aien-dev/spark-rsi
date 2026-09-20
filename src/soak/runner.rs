@@ -5,13 +5,11 @@ use crate::graph::{CapabilityGraph, CapabilityNode};
 use crate::isolation::BuildJail;
 use crate::ledger::{BlockType, ImprovementLedger, LedgerBlock};
 use crate::meta::TrueRsiEvaluator;
-use crate::models::{
-    ImprovementProposal, ProposalKind,
-};
+use crate::models::{ImprovementProposal, ProposalKind};
 use crate::observe::observe_codebase;
 use crate::propose::{
-    cortex::CortexExperienceClient, max_client::MaxClient, DefectCategory,
-    DiagnosticContext, HypothesisContract, ProposalGenerator,
+    cortex::CortexExperienceClient, max_client::MaxClient, DefectCategory, DiagnosticContext,
+    HypothesisContract, ProposalGenerator,
 };
 use crate::ratify::Ratifier;
 use crate::soak::manifest::*;
@@ -80,11 +78,16 @@ impl SoakRunner {
         let sandbox_base = Path::new(&config.sandbox_root);
 
         // Step 1: Capture Engine N Snapshot
-        let engine_n_snapshot = Self::capture_engine_n(repo_path, &config.max_model, config.operator_key_hex.as_deref());
+        let engine_n_snapshot = Self::capture_engine_n(
+            repo_path,
+            &config.max_model,
+            config.operator_key_hex.as_deref(),
+        );
 
         // Step 2: Resolve Signing Key
         let signing_key_hex = config.signing_key_hex.as_ref().ok_or_else(|| {
-            "Fatal: Missing cryptographic signing key (signing_key_hex). Soak run fails closed.".to_string()
+            "Fatal: Missing cryptographic signing key (signing_key_hex). Soak run fails closed."
+                .to_string()
         })?;
         let key_bytes = hex::decode(signing_key_hex)
             .map_err(|e| format!("Fatal: Invalid signing_key_hex: {}", e))?;
@@ -140,20 +143,45 @@ impl SoakRunner {
 
         // Step 5: Execute Autonomous Bounded Cycles
         for cycle_index in 1..=config.total_cycles {
-            println!("⚡ [Soak Run] Starting Cycle {} of {}", cycle_index, config.total_cycles);
+            println!(
+                "⚡ [Soak Run] Starting Cycle {} of {}",
+                cycle_index, config.total_cycles
+            );
             let cycle_id = format!("soak-{}-c{:02}", run_id, cycle_index);
             let thermal_before = ThermalSnapshot::capture();
 
             // Telemetry & CapabilityGraph
-            let telemetry = observe_codebase(repo_path)?;
+            let codebase_obs = observe_codebase(repo_path)?;
             let mut graph = CapabilityGraph::new();
-            graph.add_node(CapabilityNode::new("Observe", "Observe Subsystem", "observe").with_telemetry(50.0, 1024, 0.0));
-            graph.add_node(CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_telemetry(400.0, 4096, if telemetry.soul_tension.drive_score > 0.8 { 0.25 } else { 0.0 }));
-            graph.add_node(CapabilityNode::new("Graph", "Capability Graph Subsystem", "graph").with_telemetry(120.0, 2048, 0.0));
-            graph.add_node(CapabilityNode::new("BuildJail", "Build Jail", "isolation").with_telemetry(150.0, 2048, 0.0));
-            graph.add_node(CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor").with_telemetry(250.0, 8192, 0.0));
-            graph.add_node(CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor").with_telemetry(100.0, 4096, 0.0));
-            graph.add_node(CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify").with_telemetry(50.0, 1024, 0.0));
+            graph.add_node(
+                CapabilityNode::new("Observe", "Observe Subsystem", "observe")
+                    .with_resource_metrics(50.0, 1024, 0.0),
+            );
+            let is_high_drive = codebase_obs.soul_tension.drive_score > 0.8;
+            graph.add_node(
+                CapabilityNode::new("Propose", "Propose Subsystem", "propose")
+                    .with_resource_metrics(400.0, 4096, if is_high_drive { 0.25 } else { 0.0 }),
+            );
+            graph.add_node(
+                CapabilityNode::new("Graph", "Capability Graph Subsystem", "graph")
+                    .with_resource_metrics(120.0, 2048, 0.0),
+            );
+            graph.add_node(
+                CapabilityNode::new("BuildJail", "Build Jail", "isolation")
+                    .with_resource_metrics(150.0, 2048, 0.0),
+            );
+            graph.add_node(
+                CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor")
+                    .with_resource_metrics(250.0, 8192, 0.0),
+            );
+            graph.add_node(
+                CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor")
+                    .with_resource_metrics(100.0, 4096, 0.0),
+            );
+            graph.add_node(
+                CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify")
+                    .with_resource_metrics(50.0, 1024, 0.0),
+            );
 
             graph.add_edge("Observe", "Propose", 400.0, 1.0);
             graph.add_edge("Propose", "Graph", 120.0, 1.0);
@@ -164,24 +192,34 @@ impl SoakRunner {
 
             // Find top bottleneck not quarantined
             let ranked = graph.rank_bottlenecks();
-            let chosen_bottleneck = ranked.iter().find(|b| {
-                !quarantine_tracker.is_exhausted(&b.node_name, &b.causal_explanation)
-            }).or_else(|| ranked.first());
+            let chosen_bottleneck = ranked
+                .iter()
+                .find(|b| !quarantine_tracker.is_exhausted(&b.node_name, &b.causal_explanation))
+                .or_else(|| ranked.first());
 
             let bottleneck = match chosen_bottleneck {
                 Some(b) => (*b).clone(),
                 None => {
-                    eprintln!("Warning: No bottlenecks available in graph for cycle {}", cycle_index);
+                    eprintln!(
+                        "Warning: No bottlenecks available in graph for cycle {}",
+                        cycle_index
+                    );
                     break;
                 }
             };
 
-            let hypothesis_problem = format!("High latency on {}: {}", bottleneck.node_name, bottleneck.causal_explanation);
+            let hypothesis_problem = format!(
+                "High latency on {}: {}",
+                bottleneck.node_name, bottleneck.causal_explanation
+            );
             let hypothesis_id = format!("hypo-{}", &Uuid::new_v4().simple().to_string()[..12]);
             let hypothesis = HypothesisContract::new(
                 &hypothesis_id,
                 &cycle_id,
-                &format!("Throughput bound by node {} (centrality={:.4})", bottleneck.node_name, bottleneck.centrality),
+                &format!(
+                    "Throughput bound by node {} (centrality={:.4})",
+                    bottleneck.node_name, bottleneck.centrality
+                ),
                 &hypothesis_problem,
                 "latency_us",
                 bottleneck.latency_p95_us,
@@ -191,8 +229,17 @@ impl SoakRunner {
             .with_falsification_test("assert!(receipt.passed_all_hard_invariants)");
 
             // Cortex recall
-            let cortex = CortexExperienceClient::new(&config.cortex_url).with_space(&config.cortex_space);
-            let past_lessons = cortex.recall_lessons(&format!("{} {}", hypothesis.observed_problem, hypothesis.suspected_root_cause), 3).await;
+            let cortex =
+                CortexExperienceClient::new(&config.cortex_url).with_space(&config.cortex_space);
+            let past_lessons = cortex
+                .recall_lessons(
+                    &format!(
+                        "{} {}",
+                        hypothesis.observed_problem, hypothesis.suspected_root_cause
+                    ),
+                    3,
+                )
+                .await;
 
             // Map bottleneck to target file within writable prefixes
             let target_file = match bottleneck.node_name.as_str() {
@@ -205,12 +252,19 @@ impl SoakRunner {
             let parent_content = std::fs::read_to_string(&full_target_path).unwrap_or_default();
 
             let mut candidate_records: Vec<CycleCandidateRecord> = Vec::new();
-            let mut admissible_proposals: Vec<(ImprovementProposal, EvaluationReceipt, LedgerBlock)> = Vec::new();
+            let mut admissible_proposals: Vec<(
+                ImprovementProposal,
+                EvaluationReceipt,
+                LedgerBlock,
+            )> = Vec::new();
 
             // Candidate Generation Loop: exactly 3 isolated candidates against identical parent
             for cand_idx in 1..=config.candidates_per_cycle {
                 let cand_id = format!("{}-c{}", cycle_id, cand_idx);
-                println!("  [Candidate {}/{}] Generating patch for {}", cand_idx, config.candidates_per_cycle, target_file);
+                println!(
+                    "  [Candidate {}/{}] Generating patch for {}",
+                    cand_idx, config.candidates_per_cycle, target_file
+                );
 
                 let mut maybe_prop = None;
 
@@ -231,9 +285,12 @@ impl SoakRunner {
                             variation_directive.to_string(),
                         ],
                         past_lessons.clone(),
-                    ).with_hypothesis(hypothesis.clone());
+                    )
+                    .with_hypothesis(hypothesis.clone());
 
-                    if let Ok(prop) = ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await {
+                    if let Ok(prop) =
+                        ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await
+                    {
                         maybe_prop = Some(prop);
                     }
                 }
@@ -260,7 +317,9 @@ impl SoakRunner {
                             judge_admitted: false,
                             primary_metric_name: "latency_us".to_string(),
                             primary_metric_value: 0.0,
-                            rejection_reason: Some("Model generation failed to produce valid code".to_string()),
+                            rejection_reason: Some(
+                                "Model generation failed to produce valid code".to_string(),
+                            ),
                             ledger_block_hash: None,
                         });
                         total_candidates_evaluated += 1;
@@ -269,19 +328,28 @@ impl SoakRunner {
                 };
 
                 // Validate Tier 2 boundaries
-                let normalized_target = candidate.target_file.trim_start_matches("./").trim_start_matches('/');
+                let normalized_target = candidate
+                    .target_file
+                    .trim_start_matches("./")
+                    .trim_start_matches('/');
                 let is_permitted = config.writable_prefixes.iter().any(|prefix| {
-                    normalized_target == prefix.trim_end_matches('/') || normalized_target.starts_with(prefix)
+                    normalized_target == prefix.trim_end_matches('/')
+                        || normalized_target.starts_with(prefix)
                 });
 
                 if !is_permitted {
-                    let reason = format!("Tier 2 boundary violation: {} is outside permitted soak surface", candidate.target_file);
+                    let reason = format!(
+                        "Tier 2 boundary violation: {} is outside permitted soak surface",
+                        candidate.target_file
+                    );
                     let _ = ledger.append_block(BlockType::Evaluation, reason.clone(), vec![]);
                     candidate_records.push(CycleCandidateRecord {
                         candidate_id: cand_id,
                         candidate_index: cand_idx,
                         target_file: candidate.target_file.clone(),
-                        proposed_patch_digest: hex::encode(Sha256::digest(candidate.proposed_patch.as_bytes())),
+                        proposed_patch_digest: hex::encode(Sha256::digest(
+                            candidate.proposed_patch.as_bytes(),
+                        )),
                         compilation_passed: false,
                         invariants_passed: false,
                         judge_admitted: false,
@@ -295,7 +363,11 @@ impl SoakRunner {
                 }
 
                 // Stage in sandbox
-                let sandbox_dir = match ProposalGenerator::stage_in_sandbox(&mut candidate, repo_path, sandbox_base) {
+                let sandbox_dir = match ProposalGenerator::stage_in_sandbox(
+                    &mut candidate,
+                    repo_path,
+                    sandbox_base,
+                ) {
                     Ok(dir) => dir,
                     Err(e) => {
                         let reason = format!("Staging failed: {}", e);
@@ -304,7 +376,9 @@ impl SoakRunner {
                             candidate_id: cand_id,
                             candidate_index: cand_idx,
                             target_file: candidate.target_file.clone(),
-                            proposed_patch_digest: hex::encode(Sha256::digest(candidate.proposed_patch.as_bytes())),
+                            proposed_patch_digest: hex::encode(Sha256::digest(
+                                candidate.proposed_patch.as_bytes(),
+                            )),
                             compilation_passed: false,
                             invariants_passed: false,
                             judge_admitted: false,
@@ -321,17 +395,26 @@ impl SoakRunner {
                 // Compile inside Jail 1
                 let mut comp_passed = true;
                 if sandbox_dir.join("Cargo.toml").exists() {
-                    let build_jail = BuildJail::new("spark-rsi-builder:latest", &sandbox_dir, &sandbox_dir);
+                    let build_jail =
+                        BuildJail::new("spark-rsi-builder:latest", &sandbox_dir, &sandbox_dir);
                     match build_jail.execute_bwrap(&["cargo", "build", "--release", "--offline"]) {
                         Ok((success, _stdout, stderr)) => {
                             if !success {
                                 comp_passed = false;
-                                let _ = ledger.append_block(BlockType::Evaluation, format!("Build Jail compile failed: {}", stderr), vec![]);
+                                let _ = ledger.append_block(
+                                    BlockType::Evaluation,
+                                    format!("Build Jail compile failed: {}", stderr),
+                                    vec![],
+                                );
                             }
                         }
                         Err(e) => {
                             comp_passed = false;
-                            let _ = ledger.append_block(BlockType::Evaluation, format!("Build Jail execution error: {}", e), vec![]);
+                            let _ = ledger.append_block(
+                                BlockType::Evaluation,
+                                format!("Build Jail execution error: {}", e),
+                                vec![],
+                            );
                         }
                     }
                 }
@@ -341,7 +424,9 @@ impl SoakRunner {
                         candidate_id: cand_id,
                         candidate_index: cand_idx,
                         target_file: candidate.target_file.clone(),
-                        proposed_patch_digest: hex::encode(Sha256::digest(candidate.proposed_patch.as_bytes())),
+                        proposed_patch_digest: hex::encode(Sha256::digest(
+                            candidate.proposed_patch.as_bytes(),
+                        )),
                         compilation_passed: false,
                         invariants_passed: false,
                         judge_admitted: false,
@@ -357,20 +442,25 @@ impl SoakRunner {
                 // Invariant verification
                 let inv_report = InvariantVerifier::run_full_verification(&sandbox_dir);
                 let balance_verdict = BalanceKernel::evaluate(
-                    telemetry.soul_tension.drive_score,
-                    telemetry.soul_tension.humanity_score,
+                    codebase_obs.soul_tension.drive_score,
+                    codebase_obs.soul_tension.humanity_score,
                     Some(&config.mojo_kernel_path),
                 )?;
                 let is_balanced = balance_verdict.verdict == "balanced";
 
                 if !inv_report.passed || !is_balanced {
-                    let reason = format!("Invariants or Balance failed (inv={}, bal={})", inv_report.passed, is_balanced);
+                    let reason = format!(
+                        "Invariants or Balance failed (inv={}, bal={})",
+                        inv_report.passed, is_balanced
+                    );
                     let _ = ledger.append_block(BlockType::Evaluation, reason.clone(), vec![]);
                     candidate_records.push(CycleCandidateRecord {
                         candidate_id: cand_id,
                         candidate_index: cand_idx,
                         target_file: candidate.target_file.clone(),
-                        proposed_patch_digest: hex::encode(Sha256::digest(candidate.proposed_patch.as_bytes())),
+                        proposed_patch_digest: hex::encode(Sha256::digest(
+                            candidate.proposed_patch.as_bytes(),
+                        )),
                         compilation_passed: true,
                         invariants_passed: false,
                         judge_admitted: false,
@@ -390,7 +480,13 @@ impl SoakRunner {
                     .with_non_inferiority_margin(config.non_inferiority_margin.unwrap_or(10.0));
                 judge.require_latency_improvement = false;
 
-                let receipt = match judge.evaluate_cycle(&cycle_id, &candidate.id, "parent", &sandbox_dir, repo_path) {
+                let receipt = match judge.evaluate_cycle(
+                    &cycle_id,
+                    &candidate.id,
+                    "parent",
+                    &sandbox_dir,
+                    repo_path,
+                ) {
                     Ok(r) => r,
                     Err(e) => {
                         let reason = format!("Blind Judge error: {}", e);
@@ -399,7 +495,9 @@ impl SoakRunner {
                             candidate_id: cand_id,
                             candidate_index: cand_idx,
                             target_file: candidate.target_file.clone(),
-                            proposed_patch_digest: hex::encode(Sha256::digest(candidate.proposed_patch.as_bytes())),
+                            proposed_patch_digest: hex::encode(Sha256::digest(
+                                candidate.proposed_patch.as_bytes(),
+                            )),
                             compilation_passed: true,
                             invariants_passed: true,
                             judge_admitted: false,
@@ -414,23 +512,34 @@ impl SoakRunner {
                 };
 
                 let raw_json = serde_json::to_vec(&receipt).unwrap_or_default();
-                let blk = ledger.append_evaluation(&receipt, Some(&raw_json))
+                let blk = ledger
+                    .append_evaluation(&receipt, Some(&raw_json))
                     .map_err(|e| format!("Failed to append evaluation: {}", e))?;
                 let block_hash = blk.block_hash.clone();
 
-                let metric_val = receipt.metrics_summary.as_ref().map(|m| m.latency_delta_pct).unwrap_or(0.0);
+                let metric_val = receipt
+                    .metrics_summary
+                    .as_ref()
+                    .map(|m| m.latency_delta_pct)
+                    .unwrap_or(0.0);
 
                 candidate_records.push(CycleCandidateRecord {
                     candidate_id: cand_id,
                     candidate_index: cand_idx,
                     target_file: candidate.target_file.clone(),
-                    proposed_patch_digest: hex::encode(Sha256::digest(candidate.proposed_patch.as_bytes())),
+                    proposed_patch_digest: hex::encode(Sha256::digest(
+                        candidate.proposed_patch.as_bytes(),
+                    )),
                     compilation_passed: true,
                     invariants_passed: true,
                     judge_admitted: receipt.admitted,
                     primary_metric_name: "latency_delta_pct".to_string(),
                     primary_metric_value: metric_val,
-                    rejection_reason: if receipt.admitted { None } else { Some("Judge non-inferiority margin exceeded or holdout failure".to_string()) },
+                    rejection_reason: if receipt.admitted {
+                        None
+                    } else {
+                        Some("Judge non-inferiority margin exceeded or holdout failure".to_string())
+                    },
                     ledger_block_hash: Some(block_hash),
                 });
                 total_candidates_evaluated += 1;
@@ -445,8 +554,15 @@ impl SoakRunner {
             let mut cycle_cortex_receipt = None;
 
             if admissible_proposals.is_empty() {
-                println!("  ❌ Cycle {}: No admissible candidates produced.", cycle_index);
-                let newly_exhausted = quarantine_tracker.record_failure(&bottleneck.node_name, &hypothesis_problem, "No admissible candidates in 3 variations");
+                println!(
+                    "  ❌ Cycle {}: No admissible candidates produced.",
+                    cycle_index
+                );
+                let newly_exhausted = quarantine_tracker.record_failure(
+                    &bottleneck.node_name,
+                    &hypothesis_problem,
+                    "No admissible candidates in 3 variations",
+                );
                 if newly_exhausted {
                     println!("  ⚠️ Hypothesis/Bottleneck pairing marked EXHAUSTED_FOR_GENERATION_N: {}:{}", bottleneck.node_name, &hypothesis_problem[..20]);
                 }
@@ -463,13 +579,30 @@ impl SoakRunner {
                     sandbox_path: None,
                     operator_signature: None,
                 };
-                let _ = Ratifier::record_cortex_lesson(&dummy_cand, None, None, &config.cortex_url, &config.cortex_space).await;
+                let _ = Ratifier::record_cortex_lesson(
+                    &dummy_cand,
+                    None,
+                    None,
+                    &config.cortex_url,
+                    &config.cortex_space,
+                )
+                .await;
             } else {
                 // Select winner deterministically by lowest latency delta pct
                 admissible_proposals.sort_by(|a, b| {
-                    let lat_a = a.1.metrics_summary.as_ref().map(|m| m.latency_delta_pct).unwrap_or(0.0);
-                    let lat_b = b.1.metrics_summary.as_ref().map(|m| m.latency_delta_pct).unwrap_or(0.0);
-                    lat_a.partial_cmp(&lat_b).unwrap_or(std::cmp::Ordering::Equal)
+                    let lat_a =
+                        a.1.metrics_summary
+                            .as_ref()
+                            .map(|m| m.latency_delta_pct)
+                            .unwrap_or(0.0);
+                    let lat_b =
+                        b.1.metrics_summary
+                            .as_ref()
+                            .map(|m| m.latency_delta_pct)
+                            .unwrap_or(0.0);
+                    lat_a
+                        .partial_cmp(&lat_b)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 });
 
                 let (winner_prop, winner_rcpt, winner_blk) = admissible_proposals.remove(0);
@@ -477,9 +610,17 @@ impl SoakRunner {
                 quarantine_tracker.record_success(&bottleneck.node_name, &hypothesis_problem);
                 total_candidates_admitted += 1;
 
-                let best_metric = winner_rcpt.metrics_summary.as_ref().map(|m| m.latency_delta_pct).unwrap_or(0.0);
-                println!("  ⭐ Winning Admissible Candidate: {} (latency delta={:.2}%, ledger block={})",
-                    winner_prop.id, best_metric, &winner_blk.block_hash[..12]);
+                let best_metric = winner_rcpt
+                    .metrics_summary
+                    .as_ref()
+                    .map(|m| m.latency_delta_pct)
+                    .unwrap_or(0.0);
+                println!(
+                    "  ⭐ Winning Admissible Candidate: {} (latency delta={:.2}%, ledger block={})",
+                    winner_prop.id,
+                    best_metric,
+                    &winner_blk.block_hash[..12]
+                );
 
                 // True RSI Criteria 1 & 2 Evaluation
                 let crit_1 = TrueRsiEvaluator::evaluate_criterion_1_novel_discovery(
@@ -496,14 +637,22 @@ impl SoakRunner {
                 let staging_dir = rsi_root.join("admitted").join(&winner_blk.block_hash);
                 let _ = std::fs::create_dir_all(&staging_dir);
                 let _ = std::fs::write(staging_dir.join("patch.diff"), &winner_prop.proposed_patch);
-                let _ = std::fs::write(staging_dir.join("evaluation_receipt.json"), serde_json::to_string_pretty(&winner_rcpt).unwrap_or_default());
-                let _ = std::fs::write(staging_dir.join("ledger_block.json"), serde_json::to_string_pretty(&winner_blk).unwrap_or_default());
+                let _ = std::fs::write(
+                    staging_dir.join("evaluation_receipt.json"),
+                    serde_json::to_string_pretty(&winner_rcpt).unwrap_or_default(),
+                );
+                let _ = std::fs::write(
+                    staging_dir.join("ledger_block.json"),
+                    serde_json::to_string_pretty(&winner_blk).unwrap_or_default(),
+                );
 
                 admitted_candidates.push(AdmittedMetaCandidate {
                     candidate_id: winner_prop.id.clone(),
                     ledger_block_hash: winner_blk.block_hash.clone(),
                     staging_dir: staging_dir.display().to_string(),
-                    patch_digest: hex::encode(Sha256::digest(winner_prop.proposed_patch.as_bytes())),
+                    patch_digest: hex::encode(Sha256::digest(
+                        winner_prop.proposed_patch.as_bytes(),
+                    )),
                     criteria_1_novel_discovery: crit_1.passed,
                     criteria_2_self_capability_gain: crit_2.passed,
                     classification: "META_CANDIDATE".to_string(),
@@ -516,7 +665,8 @@ impl SoakRunner {
                     Some(&winner_blk.block_hash),
                     &config.cortex_url,
                     &config.cortex_space,
-                ).await;
+                )
+                .await;
                 cycle_cortex_receipt = receipt_id;
             }
 
@@ -542,7 +692,10 @@ impl SoakRunner {
         }
 
         let completed_at = Utc::now().to_rfc3339();
-        let final_cp = ledger.checkpoint(Some(&signing_key)).ok().map(|c| c.merkle_root);
+        let final_cp = ledger
+            .checkpoint(Some(&signing_key))
+            .ok()
+            .map(|c| c.merkle_root);
 
         let manifest = SoakRunManifest {
             manifest_version: "1.0.0".to_string(),
@@ -562,12 +715,19 @@ impl SoakRunner {
 
         let manifest_file = rsi_root.join(format!("soak_manifest_{}.json", run_id));
         manifest.save_to_file(&manifest_file)?;
-        println!("⚡ [Soak Run] Completed successfully. Manifest saved to: {}", manifest_file.display());
+        println!(
+            "⚡ [Soak Run] Completed successfully. Manifest saved to: {}",
+            manifest_file.display()
+        );
 
         Ok(manifest)
     }
 
-    fn capture_engine_n(repo_path: &Path, max_model: &str, op_key: Option<&str>) -> EngineNSnapshot {
+    fn capture_engine_n(
+        repo_path: &Path,
+        max_model: &str,
+        op_key: Option<&str>,
+    ) -> EngineNSnapshot {
         let commit_sha = Command::new("git")
             .current_dir(repo_path)
             .args(["rev-parse", "HEAD"])
@@ -599,11 +759,15 @@ impl SoakRunner {
             .output()
             .map_err(|e| format!("Preflight containment check failed: bwrap missing: {}", e))?;
         if !bwrap_out.status.success() {
-            return Err("Preflight containment check failed: bwrap returned non-zero exit code".to_string());
+            return Err(
+                "Preflight containment check failed: bwrap returned non-zero exit code".to_string(),
+            );
         }
 
-        let key_hex = signing_key_hex.ok_or_else(|| "Preflight failed: missing signing_key_hex".to_string())?;
-        let key_bytes = hex::decode(key_hex).map_err(|e| format!("Preflight failed: invalid hex signing key: {}", e))?;
+        let key_hex = signing_key_hex
+            .ok_or_else(|| "Preflight failed: missing signing_key_hex".to_string())?;
+        let key_bytes = hex::decode(key_hex)
+            .map_err(|e| format!("Preflight failed: invalid hex signing key: {}", e))?;
         let _ = p256::ecdsa::SigningKey::from_slice(&key_bytes)
             .map_err(|e| format!("Preflight failed: invalid P-256 signing key: {}", e))?;
 
@@ -611,11 +775,17 @@ impl SoakRunner {
             .map_err(|e| format!("Preflight failed: cannot open improvement ledger: {}", e))?;
 
         if !holdouts_path.exists() {
-            return Err(format!("Preflight failed: holdouts directory {:?} does not exist", holdouts_path));
+            return Err(format!(
+                "Preflight failed: holdouts directory {:?} does not exist",
+                holdouts_path
+            ));
         }
 
         if !repo_path.join("Cargo.toml").exists() {
-            return Err(format!("Preflight failed: Cargo.toml not found in target repo {:?}", repo_path));
+            return Err(format!(
+                "Preflight failed: Cargo.toml not found in target repo {:?}",
+                repo_path
+            ));
         }
 
         Ok(())

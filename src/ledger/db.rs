@@ -181,9 +181,7 @@ impl ImprovementLedger {
                 let blob_hashes_json: String = row.get(6)?;
                 let block_hash: String = row.get(7)?;
 
-                let block_type = bt_str
-                    .parse::<BlockType>()
-                    .unwrap_or(BlockType::Evaluation);
+                let block_type = bt_str.parse::<BlockType>().unwrap_or(BlockType::Evaluation);
                 let blob_hashes: Vec<String> =
                     serde_json::from_str(&blob_hashes_json).unwrap_or_default();
 
@@ -241,9 +239,9 @@ impl ImprovementLedger {
         payload_json: String,
         blob_hashes: Vec<String>,
     ) -> Result<LedgerBlock, String> {
-        let latest = self
-            .latest_block()?
-            .ok_or_else(|| "Cannot append to uninitialized ledger (Genesis block missing)".to_string())?;
+        let latest = self.latest_block()?.ok_or_else(|| {
+            "Cannot append to uninitialized ledger (Genesis block missing)".to_string()
+        })?;
 
         let next_sequence = latest.sequence + 1;
         let prev_block_hash = latest.block_hash;

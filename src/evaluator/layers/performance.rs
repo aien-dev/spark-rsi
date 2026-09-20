@@ -106,8 +106,9 @@ impl PerformanceLayer {
 
         if !p95_res.passes_non_inferiority {
             violations.push(format!(
-                "p95 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > {:.1}%", p95_res.ci_95_upper_pct, non_inferiority_margin_pct,
-                ));
+                "p95 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > {:.1}%",
+                p95_res.ci_95_upper_pct, non_inferiority_margin_pct,
+            ));
         }
 
         let p99_res = StatisticalEngine::evaluate_tail_non_inferiority(
@@ -121,11 +122,13 @@ impl PerformanceLayer {
 
         if !p99_res.passes_non_inferiority {
             violations.push(format!(
-                "p99 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > {:.1}%", p99_res.ci_95_upper_pct, non_inferiority_margin_pct,
-                ));
+                "p99 tail latency exceeded non-inferiority bound: upper_ci={:.2}% > {:.1}%",
+                p99_res.ci_95_upper_pct, non_inferiority_margin_pct,
+            ));
         }
 
-        let non_target_metrics_safe = p95_res.passes_non_inferiority && p99_res.passes_non_inferiority;
+        let non_target_metrics_safe =
+            p95_res.passes_non_inferiority && p99_res.passes_non_inferiority;
         let passed = if require_significant_improvement {
             target_metric_improved && non_target_metrics_safe
         } else {
@@ -151,17 +154,18 @@ mod tests {
     #[test]
     fn test_performance_evaluation_improvement_passes() {
         let parent = vec![
-            100.0, 101.0, 99.0, 102.0, 98.0, 100.5, 101.5, 99.5, 100.0, 101.0,
-            100.0, 101.0, 99.0, 102.0, 98.0, 100.5, 101.5, 99.5, 100.0, 101.0,
-            100.0, 101.0, 99.0, 102.0, 98.0, 100.5, 101.5, 99.5, 100.0, 101.0,
+            100.0, 101.0, 99.0, 102.0, 98.0, 100.5, 101.5, 99.5, 100.0, 101.0, 100.0, 101.0, 99.0,
+            102.0, 98.0, 100.5, 101.5, 99.5, 100.0, 101.0, 100.0, 101.0, 99.0, 102.0, 98.0, 100.5,
+            101.5, 99.5, 100.0, 101.0,
         ];
         let candidate = vec![
-            80.0, 81.0, 79.0, 82.0, 78.0, 80.5, 81.5, 79.5, 80.0, 81.0,
-            80.0, 81.0, 79.0, 82.0, 78.0, 80.5, 81.5, 79.5, 80.0, 81.0,
-            80.0, 81.0, 79.0, 82.0, 78.0, 80.5, 81.5, 79.5, 80.0, 81.0,
+            80.0, 81.0, 79.0, 82.0, 78.0, 80.5, 81.5, 79.5, 80.0, 81.0, 80.0, 81.0, 79.0, 82.0,
+            78.0, 80.5, 81.5, 79.5, 80.0, 81.0, 80.0, 81.0, 79.0, 82.0, 78.0, 80.5, 81.5, 79.5,
+            80.0, 81.0,
         ];
 
-        let eval = PerformanceLayer::evaluate_latencies(&parent, &candidate, true, 2000, Some(42)).unwrap();
+        let eval = PerformanceLayer::evaluate_latencies(&parent, &candidate, true, 2000, Some(42))
+            .unwrap();
         assert!(eval.passed);
         assert!(eval.target_metric_improved);
         assert!(eval.non_target_metrics_safe);
@@ -176,7 +180,8 @@ mod tests {
         let parent = vec![100.0; 30];
         let candidate = vec![110.0; 30];
 
-        let eval = PerformanceLayer::evaluate_latencies(&parent, &candidate, true, 2000, Some(42)).unwrap();
+        let eval = PerformanceLayer::evaluate_latencies(&parent, &candidate, true, 2000, Some(42))
+            .unwrap();
         assert!(!eval.passed);
         assert!(!eval.target_metric_improved);
         assert!(!eval.non_target_metrics_safe);

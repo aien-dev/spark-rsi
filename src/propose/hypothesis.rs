@@ -75,7 +75,9 @@ impl HypothesisContract {
             return Err("HypothesisContract must specify a non-empty observed_problem".to_string());
         }
         if self.suspected_root_cause.trim().is_empty() {
-            return Err("HypothesisContract must specify a non-empty suspected_root_cause".to_string());
+            return Err(
+                "HypothesisContract must specify a non-empty suspected_root_cause".to_string(),
+            );
         }
         if self.target_metric.trim().is_empty() {
             return Err("HypothesisContract must specify a target_metric".to_string());
@@ -149,15 +151,8 @@ mod tests {
 
     #[test]
     fn test_hypothesis_contract_rejects_empty_problem() {
-        let invalid = HypothesisContract::new(
-            "hypo-bad",
-            "cycle-01",
-            "",
-            "Cause",
-            "p95",
-            100.0,
-            5.0,
-        );
+        let invalid =
+            HypothesisContract::new("hypo-bad", "cycle-01", "", "Cause", "p95", 100.0, 5.0);
         assert!(invalid.validate().is_err());
     }
 }

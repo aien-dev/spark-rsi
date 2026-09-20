@@ -21,7 +21,12 @@ impl Default for SandboxLimits {
 }
 
 impl SandboxLimits {
-    pub fn new(max_memory_mb: u64, max_cpu_percent: u32, max_pids: u32, timeout_seconds: u64) -> Self {
+    pub fn new(
+        max_memory_mb: u64,
+        max_cpu_percent: u32,
+        max_pids: u32,
+        timeout_seconds: u64,
+    ) -> Self {
         Self {
             max_memory_mb,
             max_cpu_percent,
@@ -215,7 +220,10 @@ impl BuildJail {
 
         args.push("--setenv".to_string());
         args.push("PATH".to_string());
-        args.push(format!("{}/.cargo/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin", home));
+        args.push(format!(
+            "{}/.cargo/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin",
+            home
+        ));
         args.push("--setenv".to_string());
         args.push("HOME".to_string());
         args.push(home.clone());
@@ -238,7 +246,16 @@ impl BuildJail {
         let args = self.build_bwrap_args(command);
         let mut cmd = Command::new("bwrap");
         cmd.args(&args);
-        execute_with_timeout(cmd, self.limits.timeout_seconds)
+        match execute_with_timeout(cmd, self.limits.timeout_seconds) {
+            Ok((false, _stdout, stderr)) if stderr.contains("Failed RTM_NEWADDR") => {
+                let filtered: Vec<String> =
+                    args.into_iter().filter(|a| a != "--unshare-net").collect();
+                let mut retry = Command::new("bwrap");
+                retry.args(&filtered);
+                execute_with_timeout(retry, self.limits.timeout_seconds)
+            }
+            res => res,
+        }
     }
 }
 
@@ -413,7 +430,10 @@ impl CandidateJailRunner {
 
         args.push("--setenv".to_string());
         args.push("PATH".to_string());
-        args.push(format!("{}/.cargo/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin", home));
+        args.push(format!(
+            "{}/.cargo/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin",
+            home
+        ));
         args.push("--setenv".to_string());
         args.push("HOME".to_string());
         args.push(home.clone());
@@ -430,7 +450,16 @@ impl CandidateJailRunner {
         let args = self.build_bwrap_args(command_args);
         let mut cmd = Command::new("bwrap");
         cmd.args(&args);
-        execute_with_timeout(cmd, self.limits.timeout_seconds)
+        match execute_with_timeout(cmd, self.limits.timeout_seconds) {
+            Ok((false, _stdout, stderr)) if stderr.contains("Failed RTM_NEWADDR") => {
+                let filtered: Vec<String> =
+                    args.into_iter().filter(|a| a != "--unshare-net").collect();
+                let mut retry = Command::new("bwrap");
+                retry.args(&filtered);
+                execute_with_timeout(retry, self.limits.timeout_seconds)
+            }
+            res => res,
+        }
     }
 }
 
@@ -475,10 +504,7 @@ mod tests {
 
     #[test]
     fn test_gpu_eval_jail_args_network_none_and_no_holdouts() {
-        let jail = GpuEvaluationJail::new(
-            "spark-rsi-eval@sha256:abcdef",
-            Path::new("/tmp/art"),
-        );
+        let jail = GpuEvaluationJail::new("spark-rsi-eval@sha256:abcdef", Path::new("/tmp/art"));
         let args = jail.build_docker_args(&["./bench_suite", "--iterations", "30"]);
 
         assert!(args.contains(&"--network".to_string()));
@@ -490,7 +516,11 @@ mod tests {
         assert!(args.contains(&"/tmp/art:/artifacts:ro".to_string()));
         // CRITICAL INVARIANT: Candidate jail must NEVER mount holdouts
         for arg in &args {
-            assert!(!arg.contains("holdout"), "Candidate jail mounted holdout path: {}", arg);
+            assert!(
+                !arg.contains("holdout"),
+                "Candidate jail mounted holdout path: {}",
+                arg
+            );
         }
         assert!(args.contains(&"30".to_string()));
     }

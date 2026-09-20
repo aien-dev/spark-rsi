@@ -19,7 +19,6 @@ pub mod verifier;
 
 pub use actor::{BlindJudge, HoldoutCase, HoldoutSuite, JudgeCli};
 pub use balance::BalanceKernel;
-pub use graph::{BottleneckRank, CapabilityEdge, CapabilityGraph, CapabilityNode};
 pub use config::{EngineConfig, OperatorProfile, SovereignConfig};
 pub use daemon::RsiEngine;
 pub use evaluator::{
@@ -30,17 +29,18 @@ pub use evaluator::{
     ResourceEfficiencyLayer, RusageMetrics, SecurityEvaluation, SecurityLayer, StatisticalEngine,
     StatmMetrics, StyleEvaluation, StyleLayer, TailNonInferiorityResult,
 };
+pub use graph::{BottleneckRank, CapabilityEdge, CapabilityGraph, CapabilityNode};
+pub use isolation::{
+    ArtifactManifest, ArtifactRecord, BuildJail, CandidateJailRunner, CandidateManifest,
+    GpuEvaluationJail, RollbackCheckpoint, RootOfTrust, SandboxLimits,
+};
+pub use ledger::{
+    compute_merkle_root, BlobStore, BlockType, ImprovementLedger, LedgerAuditReport, LedgerBlock,
+    MerkleCheckpoint, PromotionEvidencePayload,
+};
 pub use meta::{
     AbForkEvaluator, CandidateTier, CriterionResult, MetaBenchmarkComparison, MetaBenchmarkMetrics,
     MetaBenchmarkSuite, TierGovernance, TrueRsiEvaluator, TrueRsiVerdict,
-};
-pub use ledger::{
-    compute_merkle_root, BlobStore, BlockType, ImprovementLedger, LedgerAuditReport,
-    LedgerBlock, MerkleCheckpoint, PromotionEvidencePayload,
-};
-pub use isolation::{
-    ArtifactManifest, ArtifactRecord, BuildJail, CandidateJailRunner, CandidateManifest, GpuEvaluationJail,
-    RollbackCheckpoint, RootOfTrust, SandboxLimits,
 };
 pub use models::*;
 pub use observe::observe_codebase;

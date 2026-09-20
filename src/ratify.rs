@@ -81,8 +81,14 @@ impl Ratifier {
         };
 
         // 3. Record lesson in Cortex memory
-        let (cortex_receipt_id, cortex_recorded) =
-            Self::record_cortex_lesson(proposal, commit_hash.as_deref(), ledger_block_hash, cortex_url, cortex_space).await;
+        let (cortex_receipt_id, cortex_recorded) = Self::record_cortex_lesson(
+            proposal,
+            commit_hash.as_deref(),
+            ledger_block_hash,
+            cortex_url,
+            cortex_space,
+        )
+        .await;
 
         Ok(RatificationRecord {
             proposal_id: proposal.id.clone(),
@@ -92,7 +98,10 @@ impl Ratifier {
             cortex_recorded,
             timestamp: now,
             status: "Ratified".to_string(),
-            message: format!("Proposal '{}' ratified and committed to git.", proposal.title),
+            message: format!(
+                "Proposal '{}' ratified and committed to git.",
+                proposal.title
+            ),
         })
     }
 
@@ -136,7 +145,11 @@ impl Ratifier {
             }
         });
 
-        let url = format!("{}/api/cortex/write?space={}", cortex_url.trim_end_matches('/'), cortex_space);
+        let url = format!(
+            "{}/api/cortex/write?space={}",
+            cortex_url.trim_end_matches('/'),
+            cortex_space
+        );
         let mut req = client.post(&url).json(&payload);
         if !token.is_empty() {
             req = req.header("Authorization", format!("Bearer {}", token));
@@ -145,7 +158,8 @@ impl Ratifier {
         match req.send().await {
             Ok(resp) if resp.status().is_success() => {
                 let body: serde_json::Value = resp.json().await.unwrap_or(json!({}));
-                let receipt_id = body.get("receipt")
+                let receipt_id = body
+                    .get("receipt")
                     .and_then(|r| r.get("id"))
                     .and_then(|id| id.as_str())
                     .map(|s| s.to_string())
