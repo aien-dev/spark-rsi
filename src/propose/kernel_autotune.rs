@@ -67,25 +67,28 @@ impl PagedAttentionConfig {
         out.push_str(&self.render_macro_defines());
         out.push_str("\n");
 
+        let mut in_initial_macros = false;
         for line in base_source.lines() {
-            if line.starts_with("#ifndef PAGE_SIZE")
-                || line.starts_with("#define PAGE_SIZE")
-                || line.starts_with("#ifndef BLOCK_THREADS")
-                || line.starts_with("#define BLOCK_THREADS")
-                || line.starts_with("#ifndef Q_HEADS_PER_BLOCK")
-                || line.starts_with("#define Q_HEADS_PER_BLOCK")
-                || line.starts_with("#ifndef VECTOR_WIDTH")
-                || line.starts_with("#define VECTOR_WIDTH")
-                || line.starts_with("#ifndef PREFETCH_DISTANCE")
-                || line.starts_with("#define PREFETCH_DISTANCE")
-                || line.starts_with("#endif")
-            {
+            if line.contains("Parameterized autotuning search space") {
+                in_initial_macros = true;
                 continue;
+            }
+            if in_initial_macros {
+                if line.starts_with("#define WARP_SIZE") {
+                    in_initial_macros = false;
+                } else {
+                    continue;
+                }
             }
             out.push_str(line);
             out.push('\n');
         }
         out
+    }
+
+    /// Returns the required KV cache pool block size corresponding to this autotuned kernel
+    pub fn recommended_kv_pool_block_size(&self) -> usize {
+        self.page_size
     }
 }
 
@@ -226,6 +229,21 @@ mod tests {
         assert_eq!(contract.protected_metrics[0].max_allowed_degradation_pct, 1.0);
         assert_eq!(contract.protected_metrics[1].name, "energy_joules_per_token");
         assert_eq!(contract.protected_metrics[1].max_allowed_degradation_pct, 2.0);
+    }
+
+    #[test]
+    fn test_apply_to_kernel_source_preserves_internal_directives() {
+        let sample = "#include <cuda_runtime.h>\n// Parameterized autotuning search space with compile-time overrides\n#ifndef PAGE_SIZE\n#define PAGE_SIZE 16\n#endif\n#ifndef BLOCK_THREADS\n#define BLOCK_THREADS 128\n#endif\n#define WARP_SIZE 32\n#if PREFETCH_DISTANCE > 0\nprefetch_global_l2(next_k);\n#endif\n";
+        let mut cfg = PagedAttentionConfig::default();
+        cfg.page_size = 32;
+        cfg.prefetch_distance = 2;
+        let mutated = cfg.apply_to_kernel_source(sample);
+        assert!(mutated.contains("#define PAGE_SIZE 32"));
+        assert!(mutated.contains("#define PREFETCH_DISTANCE 2"));
+        assert!(mutated.contains("#define WARP_SIZE 32"));
+        assert!(mutated.contains("#if PREFETCH_DISTANCE > 0"));
+        assert!(mutated.contains("#endif"));
+        assert_eq!(cfg.recommended_kv_pool_block_size(), 32);
     }
 
     #[test]
