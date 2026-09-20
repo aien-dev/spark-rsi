@@ -13,6 +13,7 @@ pub mod models;
 pub mod observe;
 pub mod propose;
 pub mod ratify;
+pub mod soak;
 pub mod supervisor;
 pub mod verifier;
 
@@ -45,6 +46,10 @@ pub use models::*;
 pub use observe::observe_codebase;
 pub use propose::ProposalGenerator;
 pub use ratify::Ratifier;
+pub use soak::{
+    AdmittedMetaCandidate, CycleCandidateRecord, CycleRecord, EngineNSnapshot,
+    HypothesisQuarantineTracker, SoakConfig, SoakRunManifest, SoakRunner, ThermalSnapshot,
+};
 pub use supervisor::{GenerationInfo, GenerationState, HostSupervisor};
 pub use verifier::InvariantVerifier;
 
