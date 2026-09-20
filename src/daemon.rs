@@ -244,7 +244,11 @@ impl RsiEngine {
             };
 
             // 7. Jail 1 Build: Compile candidate artifact strictly in isolated Build Jail if Cargo.toml is present
-            if sandbox_dir.join("Cargo.toml").exists() {
+            // and no pre-existing candidate binary is available or Rust source was modified
+            let needs_build = sandbox_dir.join("Cargo.toml").exists()
+                && (!sandbox_dir.join("spark-rsi").exists()
+                    || candidate.target_file.ends_with(".rs"));
+            if needs_build {
                 let build_jail =
                     BuildJail::new("spark-rsi-builder:latest", &sandbox_dir, &sandbox_dir);
                 let (build_success, build_stdout, build_stderr) =

@@ -247,10 +247,14 @@ async fn test_production_loop_end_to_end_with_candidate() {
         ])
         .output()
         .unwrap();
-    let _ = std::fs::copy(
-        "/tmp/spark-rsi-target/release/spark-rsi",
-        test_repo.join("spark-rsi"),
-    );
+    if let Some(exe) = spark_rsi::actor::judge::find_executable(std::path::Path::new(".")) {
+        let _ = std::fs::copy(&exe, test_repo.join("spark-rsi"));
+    } else {
+        let _ = std::fs::copy(
+            "/tmp/spark-rsi-target/release/spark-rsi",
+            test_repo.join("spark-rsi"),
+        );
+    }
 
     // Initialize git in test_repo
     let _ = std::process::Command::new("git")
