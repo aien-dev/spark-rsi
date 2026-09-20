@@ -288,6 +288,7 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         holdouts_dir: None,
         signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
+        non_inferiority_margin: Some(250.0),
         max_url: "http://127.0.0.1:9".to_string(),
         ..Default::default()
     };

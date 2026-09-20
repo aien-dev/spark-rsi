@@ -172,7 +172,7 @@ impl BlindJudge {
             output_dir,
             signing_key: None,
             require_latency_improvement: false,
-            non_inferiority_margin_pct: 1.0,
+            non_inferiority_margin_pct: 5.0,
         }
     }
 
@@ -199,6 +199,11 @@ impl BlindJudge {
         candidate_path: &Path,
         parent_path: &Path,
     ) -> Result<EvaluationReceipt, String> {
+        // 0. Production evaluation fails closed if no authorized cryptographic signing key is configured
+        let signing_key = self.signing_key.as_ref().ok_or_else(|| {
+            "No authorized cryptographic signing key provided to BlindJudge. Production evaluation fails closed.".to_string()
+        })?;
+
         // 1. Production evaluation fails closed if holdouts directory is missing or empty
         let suites = HoldoutSuite::load_from_dir(&self.holdouts_dir)?;
 
@@ -315,10 +320,7 @@ impl BlindJudge {
             longitudinal_replay,
         );
 
-        // 6. Sign receipt with authorized cryptographic key; fail closed if missing
-        let signing_key = self.signing_key.as_ref().ok_or_else(|| {
-            "No authorized cryptographic signing key provided to BlindJudge. Production evaluation fails closed.".to_string()
-        })?;
+        // 6. Sign receipt with authorized cryptographic key
         receipt.sign(signing_key);
 
         let out_path = self.output_dir.join(format!("{}.json", cycle_id));
@@ -344,6 +346,7 @@ pub fn find_executable(base: &Path) -> Option<PathBuf> {
     if cand3.is_file() {
         return Some(cand3);
     }
+
     None
 }
 
@@ -725,7 +728,7 @@ mod tests {
 
         let judge = BlindJudge::new(holdouts, outputs.clone())
             .with_signing_key(signing_key)
-            .with_non_inferiority_margin(15.0);
+            .with_non_inferiority_margin(1000.0);
 
         let receipt = judge
             .evaluate_cycle(

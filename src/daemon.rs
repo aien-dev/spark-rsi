@@ -234,7 +234,7 @@ impl RsiEngine {
             let output_dir = Path::new(&config.sandbox_root).join("eval_outputs");
             let mut judge = BlindJudge::new(holdouts_path.clone(), output_dir)
                 .with_signing_key(signing_key.clone())
-                .with_non_inferiority_margin(5.0);
+                .with_non_inferiority_margin(config.non_inferiority_margin.unwrap_or(5.0));
             judge.require_latency_improvement = config.require_latency_improvement;
 
             let receipt = match judge.evaluate_cycle(&cycle_id, &candidate.id, "parent", &sandbox_dir, repo_path) {

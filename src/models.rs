@@ -112,6 +112,8 @@ pub struct RsiConfig {
     pub canary_target: u64,
     #[serde(default)]
     pub operator_key_hex: Option<String>,
+    #[serde(default)]
+    pub non_inferiority_margin: Option<f64>,
 }
 
 fn default_max_url() -> String {
@@ -147,6 +149,7 @@ impl Default for RsiConfig {
             max_model: default_max_model(),
             canary_target: 5000,
             operator_key_hex: None,
+            non_inferiority_margin: None,
         }
     }
 }

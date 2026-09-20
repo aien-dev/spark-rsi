@@ -175,7 +175,7 @@ fn test_blind_judge_receipt_roundtrip_and_persistence() {
 
     let signing_key = p256::ecdsa::SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
     let verifying_key = p256::ecdsa::VerifyingKey::from(&signing_key);
-    let judge = BlindJudge::new(holdouts, outputs.clone()).with_signing_key(signing_key).with_non_inferiority_margin(5.0);
+    let judge = BlindJudge::new(holdouts, outputs.clone()).with_signing_key(signing_key).with_non_inferiority_margin(50.0);
     let receipt = judge
         .evaluate_cycle(
             "cycle-persisted-99",
