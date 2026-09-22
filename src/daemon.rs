@@ -445,7 +445,9 @@ impl RsiEngine {
                     trusted_build_digest: aien_protocol_types::Digest32(patch_digest),
                     policy_bundle_digest: aien_protocol_types::Digest32({
                         let mut h = sha2::Sha256::new();
-                        h.update(format!("rsi-production-policy:{}", config.canary_target).as_bytes());
+                        h.update(
+                            format!("rsi-production-policy:{}", config.canary_target).as_bytes(),
+                        );
                         h.finalize().into()
                     }),
                 };
@@ -489,30 +491,35 @@ impl RsiEngine {
                     )
                     .await;
                 } else {
-                // Canary probation passed and envelope admitted. Promote to Durable and record in ledger
-                supervisor_daemon
-                    .supervisor
-                    .atomic_symlink_swap(&proposal.id)?;
-                gen_info.state = GenerationState::Durable;
+                    // Canary probation passed and envelope admitted. Promote to Durable and record in ledger
+                    supervisor_daemon
+                        .supervisor
+                        .atomic_symlink_swap(&proposal.id)?;
+                    gen_info.state = GenerationState::Durable;
 
-                let prom_blk = ledger
-                    .append_promotion(&gen_info, &maybe_receipt.as_ref().unwrap().receipt_digest)
-                    .map_err(|e| format!("Fatal: Failed to append promotion to ledger: {}", e))?;
-                let prom_hash = prom_blk.block_hash.clone();
-                maybe_ledger_block = Some(prom_blk);
-                maybe_generation = Some(gen_info);
+                    let prom_blk = ledger
+                        .append_promotion(
+                            &gen_info,
+                            &maybe_receipt.as_ref().unwrap().receipt_digest,
+                        )
+                        .map_err(|e| {
+                            format!("Fatal: Failed to append promotion to ledger: {}", e)
+                        })?;
+                    let prom_hash = prom_blk.block_hash.clone();
+                    maybe_ledger_block = Some(prom_blk);
+                    maybe_generation = Some(gen_info);
 
-                // 12. Ratify proposal, commit to git, and record in Cortex memory tied to ledger hash
-                let rat = Ratifier::ratify_proposal(
-                    proposal,
-                    maybe_invariants.as_ref().unwrap(),
-                    repo_path,
-                    Some(&prom_hash),
-                    &config.cortex_url,
-                    &config.cortex_space,
-                )
-                .await?;
-                maybe_ratification = Some(rat);
+                    // 12. Ratify proposal, commit to git, and record in Cortex memory tied to ledger hash
+                    let rat = Ratifier::ratify_proposal(
+                        proposal,
+                        maybe_invariants.as_ref().unwrap(),
+                        repo_path,
+                        Some(&prom_hash),
+                        &config.cortex_url,
+                        &config.cortex_space,
+                    )
+                    .await?;
+                    maybe_ratification = Some(rat);
                 }
             }
         } else {
