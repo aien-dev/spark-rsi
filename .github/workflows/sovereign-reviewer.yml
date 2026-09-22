@@ -27,6 +27,12 @@ jobs:
           repository: aien-dev/aien-sovereign-core
           path: sovereign-core
 
+      - name: Checkout Sibling Protocols Dependency
+        uses: actions/checkout@v4
+        with:
+          repository: aien-dev/aien-protocols
+          path: aien-protocols
+
       - name: Install System Dependencies
         run: sudo apt-get update && sudo apt-get install -y bubblewrap
 
@@ -98,6 +104,17 @@ jobs:
         with:
           repository: aien-dev/aien-sovereign-core
 
+      - name: Checkout Sibling Protocols Dependency
+        uses: actions/checkout@v4
+        with:
+          repository: aien-dev/aien-protocols
+          path: aien-protocols
+
+      - name: Setup Sibling Dependencies
+        run: |
+          mkdir -p ../aien-protocols
+          cp -r aien-protocols/* ../aien-protocols/
+
       - name: Build Sovereign Inquisitor
         run: cargo build --release -p spark-inquisitor
 
@@ -148,6 +165,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: aien-dev/aien-sovereign-core
+
+      - name: Checkout Sibling Protocols Dependency
+        uses: actions/checkout@v4
+        with:
+          repository: aien-dev/aien-protocols
+          path: aien-protocols
+
+      - name: Setup Sibling Dependencies
+        run: |
+          mkdir -p ../aien-protocols
+          cp -r aien-protocols/* ../aien-protocols/
 
       - name: Build Sovereign Inquisitor
         run: cargo build --release -p spark-inquisitor
