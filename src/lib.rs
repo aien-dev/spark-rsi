@@ -71,3 +71,6 @@ pub fn evaluate_holdout_case(input: &str) -> String {
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
+
+pub mod safety_envelope;
+pub use safety_envelope::CanarySafetyEnvelope;

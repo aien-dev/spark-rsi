@@ -163,6 +163,10 @@ pub struct BlindJudge {
     pub signing_key: Option<SigningKey>,
     pub require_latency_improvement: bool,
     pub non_inferiority_margin_pct: f64,
+    /// When false, compile-dependent correctness layers are skipped.
+    /// Non-code proposals (markdown sanitization) cannot change build or ABI behavior,
+    /// and the sandbox cannot resolve sibling path dependencies for a rebuild.
+    pub require_build_verification: bool,
 }
 
 impl BlindJudge {
@@ -173,6 +177,7 @@ impl BlindJudge {
             signing_key: None,
             require_latency_improvement: false,
             non_inferiority_margin_pct: 5.0,
+            require_build_verification: true,
         }
     }
 
@@ -246,7 +251,10 @@ impl BlindJudge {
         let (modified_files, patch_diff, style_text) =
             compute_candidate_diff(parent_path, candidate_path)?;
 
-        let correctness = if candidate_path.join("Cargo.toml").exists() {
+        let correctness = if !self.require_build_verification {
+            // Non-code proposal: build, unit, integration, and ABI gates carry no signal.
+            CorrectnessLayer::evaluate_synthetic(true, 1, 0, 0, 0, true)
+        } else if candidate_path.join("Cargo.toml").exists() {
             CorrectnessLayer::evaluate_repo(candidate_path)
         } else {
             CorrectnessLayer::evaluate_synthetic(

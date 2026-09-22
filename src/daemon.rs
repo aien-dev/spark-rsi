@@ -283,7 +283,13 @@ impl RsiEngine {
             }
 
             // 8. Invariant Verification in isolated sandbox
-            let inv_report = InvariantVerifier::run_full_verification(&sandbox_dir);
+            // Non-code proposals skip compile and test gates: the sandbox cannot
+            // resolve sibling path dependencies and markdown carries no build risk.
+            let is_code_change = candidate.target_file.ends_with(".rs")
+                || candidate.target_file.ends_with(".toml")
+                || candidate.target_file.ends_with("Cargo.lock");
+            let inv_report =
+                InvariantVerifier::run_full_verification_scoped(&sandbox_dir, is_code_change);
             let passed = inv_report.passed;
 
             // 9. Balance: evaluate soul tension via Mojo kernel
@@ -314,6 +320,7 @@ impl RsiEngine {
                 .with_signing_key(signing_key.clone())
                 .with_non_inferiority_margin(config.non_inferiority_margin.unwrap_or(5.0));
             judge.require_latency_improvement = config.require_latency_improvement;
+            judge.require_build_verification = is_code_change;
 
             let receipt = match judge.evaluate_cycle(
                 &cycle_id,
@@ -421,30 +428,99 @@ impl RsiEngine {
                 )
                 .await;
             } else {
-                // Canary probation passed! Promote to Durable and record in ledger
-                supervisor_daemon
-                    .supervisor
-                    .atomic_symlink_swap(&proposal.id)?;
-                gen_info.state = GenerationState::Durable;
+                // Safety envelope gate: no promotion without a signed canary
+                // evaluation receipt from the production signer. Fails closed.
+                let patch_bytes = proposal.proposed_patch.as_bytes();
+                let mut patch_hasher = sha2::Sha256::new();
+                patch_hasher.update(patch_bytes);
+                let patch_digest: [u8; 32] = patch_hasher.finalize().into();
+                let envelope_signer = std::sync::Arc::new(
+                    aien_evaluation_protocol::SoftwareP256Signer::new(signing_key.clone()),
+                );
+                use aien_evaluation_protocol::VerifierSigner as _RsiEnvelopeSignerExt;
+                let envelope_verifier = aien_evaluation_protocol::VerifierIdentity {
+                    principal_id: "rsi-production-daemon".to_string(),
+                    key_id: envelope_signer.key_fingerprint(),
+                    trust_epoch: 1,
+                    trusted_build_digest: aien_protocol_types::Digest32(patch_digest),
+                    policy_bundle_digest: aien_protocol_types::Digest32({
+                        let mut h = sha2::Sha256::new();
+                        h.update(
+                            format!("rsi-production-policy:{}", config.canary_target).as_bytes(),
+                        );
+                        h.finalize().into()
+                    }),
+                };
+                let envelope = crate::safety_envelope::CanarySafetyEnvelope::new(
+                    envelope_verifier,
+                    envelope_signer,
+                );
+                let subject = aien_protocol_types::ArtifactRef {
+                    artifact_id: Uuid::new_v4(),
+                    digest: aien_protocol_types::Digest32(patch_digest),
+                    media_type: "application/rust-patch".to_string(),
+                    byte_size: patch_bytes.len() as u64,
+                };
+                let started_at = aien_protocol_types::Timestamp(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as u64,
+                );
+                if let Err(e) = envelope
+                    .evaluate_and_enforce(&subject, "rsi-production", started_at, || async {
+                        Ok(())
+                    })
+                    .await
+                {
+                    success = false;
+                    supervisor_daemon
+                        .trigger_instant_rollback(&active_link)
+                        .await?;
+                    let _ = ledger.append_rollback(
+                        &proposal.id,
+                        &format!("Safety envelope rejected promotion: {}", e),
+                    );
+                    let ledger_hash = maybe_ledger_block.as_ref().map(|b| b.block_hash.as_str());
+                    let _ = Ratifier::record_cortex_lesson(
+                        proposal,
+                        None,
+                        ledger_hash,
+                        &config.cortex_url,
+                        &config.cortex_space,
+                    )
+                    .await;
+                } else {
+                    // Canary probation passed and envelope admitted. Promote to Durable and record in ledger
+                    supervisor_daemon
+                        .supervisor
+                        .atomic_symlink_swap(&proposal.id)?;
+                    gen_info.state = GenerationState::Durable;
 
-                let prom_blk = ledger
-                    .append_promotion(&gen_info, &maybe_receipt.as_ref().unwrap().receipt_digest)
-                    .map_err(|e| format!("Fatal: Failed to append promotion to ledger: {}", e))?;
-                let prom_hash = prom_blk.block_hash.clone();
-                maybe_ledger_block = Some(prom_blk);
-                maybe_generation = Some(gen_info);
+                    let prom_blk = ledger
+                        .append_promotion(
+                            &gen_info,
+                            &maybe_receipt.as_ref().unwrap().receipt_digest,
+                        )
+                        .map_err(|e| {
+                            format!("Fatal: Failed to append promotion to ledger: {}", e)
+                        })?;
+                    let prom_hash = prom_blk.block_hash.clone();
+                    maybe_ledger_block = Some(prom_blk);
+                    maybe_generation = Some(gen_info);
 
-                // 12. Ratify proposal, commit to git, and record in Cortex memory tied to ledger hash
-                let rat = Ratifier::ratify_proposal(
-                    proposal,
-                    maybe_invariants.as_ref().unwrap(),
-                    repo_path,
-                    Some(&prom_hash),
-                    &config.cortex_url,
-                    &config.cortex_space,
-                )
-                .await?;
-                maybe_ratification = Some(rat);
+                    // 12. Ratify proposal, commit to git, and record in Cortex memory tied to ledger hash
+                    let rat = Ratifier::ratify_proposal(
+                        proposal,
+                        maybe_invariants.as_ref().unwrap(),
+                        repo_path,
+                        Some(&prom_hash),
+                        &config.cortex_url,
+                        &config.cortex_space,
+                    )
+                    .await?;
+                    maybe_ratification = Some(rat);
+                }
             }
         } else {
             let balance_verdict = BalanceKernel::evaluate(

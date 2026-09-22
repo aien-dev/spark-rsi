@@ -40,6 +40,10 @@ uuid = { version = "1.8", features = ["v4"] }
 libc = "0.2"
 p256 = { version = "0.14.0", features = ["ecdsa"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
+aien-protocol-types = { path = "../aien-protocols/crates/aien-protocol-types" }
+aien-evaluation-protocol = { path = "../aien-protocols/crates/aien-evaluation-protocol" }
+aien-probe = { path = "../aien-protocols/crates/aien-probe" }
+
 tempfile = "3.17"
 
 [dev-dependencies]
