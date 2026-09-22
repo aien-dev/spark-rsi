@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 #[tokio::test]
 async fn test_canary_safety_envelope_evaluation_and_rollback_enforcement() {
-    let envelope = CanarySafetyEnvelope::new_with_ephemeral_key("rsi-daemon-01");
+    let envelope = CanarySafetyEnvelope::new_reference_for_tests("rsi-daemon-01");
 
     let subject = ArtifactRef {
         artifact_id: uuid::Uuid::new_v4(),

@@ -8,6 +8,7 @@ use aien_probe::{
 };
 use aien_protocol_types::{ArtifactRef, Digest32, EvaluationId, Timestamp};
 use p256::ecdsa::SigningKey;
+use sha2::Digest as Sha2Digest;
 use std::future::Future;
 use std::sync::Arc;
 
@@ -17,19 +18,34 @@ pub struct CanarySafetyEnvelope {
 }
 
 impl CanarySafetyEnvelope {
-    /// Creates a safety envelope using a generated software signing authority.
-    pub fn new_with_ephemeral_key(principal_id: impl Into<String>) -> Self {
+    /// Reference-only constructor for tests and local fixtures.
+    /// Uses a fixed test key and derived (not provisioned) identity digests.
+    /// Never use for production safety authority.
+    pub fn new_reference_for_tests(principal_id: impl Into<String>) -> Self {
         let signing_key = SigningKey::from_slice(&[0x42; 32]).expect("valid p256 key");
         let signer = Arc::new(SoftwareP256Signer::new(signing_key));
+        let principal = principal_id.into();
+        let build_digest = Digest32(Self::derived_digest(
+            format!("rsi-test-build:{}", principal).as_bytes(),
+        ));
+        let policy_digest = Digest32(Self::derived_digest(
+            format!("rsi-test-policy:{}", principal).as_bytes(),
+        ));
         let verifier = VerifierIdentity {
-            principal_id: principal_id.into(),
+            principal_id: principal,
             key_id: signer.key_fingerprint(),
-            trust_epoch: 1,
-            trusted_build_digest: Digest32([0x01; 32]),
-            policy_bundle_digest: Digest32([0x02; 32]),
+            trust_epoch: 0,
+            trusted_build_digest: build_digest,
+            policy_bundle_digest: policy_digest,
         };
         let harness = CanaryRollbackHarness::new(verifier, signer);
         Self { harness }
+    }
+
+    /// Deprecated alias kept for existing test call sites.
+    #[deprecated(note = "Use new_reference_for_tests. Fixed test key, never production authority.")]
+    pub fn new_with_ephemeral_key(principal_id: impl Into<String>) -> Self {
+        Self::new_reference_for_tests(principal_id)
     }
 
     /// Creates a safety envelope using a provided verifier identity and signer authority.
@@ -38,7 +54,15 @@ impl CanarySafetyEnvelope {
         Self { harness }
     }
 
+    fn derived_digest(bytes: &[u8]) -> [u8; 32] {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(bytes);
+        hasher.finalize().into()
+    }
+
     /// Builds a standard evaluation plan for candidate self-modification patches.
+    /// Policy and manifest digests are derived from the profile and evaluator
+    /// descriptors, never fixed constants.
     pub fn build_plan(
         &self,
         subject: &ArtifactRef,
@@ -52,8 +76,12 @@ impl CanarySafetyEnvelope {
             evaluators,
             baseline: None,
             sandbox_profile: "rsi-canary-isolated".to_string(),
-            policy_digest: Digest32([0xaa; 32]),
-            evaluator_manifest_digest: Digest32([0xbb; 32]),
+            policy_digest: Digest32(Self::derived_digest(
+                format!("rsi-policy:{}", profile).as_bytes(),
+            )),
+            evaluator_manifest_digest: Digest32(Self::derived_digest(
+                format!("rsi-evaluators:{}", profile).as_bytes(),
+            )),
             plan_digest: Digest32::ZERO,
         };
         plan.plan_digest = plan.compute_plan_digest();
