@@ -18,6 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout AIEN Protocols Dependency
+        uses: actions/checkout@v4
+        with:
+          repository: aien-dev/aien-protocols
+          path: aien-protocols
+
+      - name: Setup Sibling Dependencies
+        run: |
+          mkdir -p ../aien-protocols
+          cp -r aien-protocols/* ../aien-protocols/
+
+
       - name: Install System Dependencies & Configure Kernel Namespaces
         run: |
           sudo apt-get update && sudo apt-get install -y bubblewrap
