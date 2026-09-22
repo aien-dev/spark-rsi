@@ -283,7 +283,13 @@ impl RsiEngine {
             }
 
             // 8. Invariant Verification in isolated sandbox
-            let inv_report = InvariantVerifier::run_full_verification(&sandbox_dir);
+            // Non-code proposals skip compile and test gates: the sandbox cannot
+            // resolve sibling path dependencies and markdown carries no build risk.
+            let is_code_change = candidate.target_file.ends_with(".rs")
+                || candidate.target_file.ends_with(".toml")
+                || candidate.target_file.ends_with("Cargo.lock");
+            let inv_report =
+                InvariantVerifier::run_full_verification_scoped(&sandbox_dir, is_code_change);
             let passed = inv_report.passed;
 
             // 9. Balance: evaluate soul tension via Mojo kernel
@@ -314,6 +320,7 @@ impl RsiEngine {
                 .with_signing_key(signing_key.clone())
                 .with_non_inferiority_margin(config.non_inferiority_margin.unwrap_or(5.0));
             judge.require_latency_improvement = config.require_latency_improvement;
+            judge.require_build_verification = is_code_change;
 
             let receipt = match judge.evaluate_cycle(
                 &cycle_id,

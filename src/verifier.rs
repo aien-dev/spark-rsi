@@ -179,6 +179,16 @@ impl InvariantVerifier {
     }
 
     pub fn run_full_verification(target_dir: &Path) -> InvariantReport {
+        Self::run_full_verification_scoped(target_dir, true)
+    }
+
+    /// Runs invariants with build checks optionally disabled.
+    /// Non-code proposals (markdown sanitization) must not be gated by compilation,
+    /// because the sandbox cannot resolve sibling path dependencies.
+    pub fn run_full_verification_scoped(
+        target_dir: &Path,
+        run_build_checks: bool,
+    ) -> InvariantReport {
         let mut notes = Vec::new();
 
         let mut total_em = 0;
@@ -218,8 +228,16 @@ impl InvariantVerifier {
             notes.push(format!("Zero disk secrets violation: {:?}", leaks));
         }
 
-        let (compile_ok, compile_err, test_ok, test_summary) =
-            Self::verify_compilation_and_tests(target_dir);
+        let (compile_ok, compile_err, test_ok, test_summary) = if run_build_checks {
+            Self::verify_compilation_and_tests(target_dir)
+        } else {
+            (
+                true,
+                None,
+                true,
+                Some("Skipped: non-code proposal".to_string()),
+            )
+        };
 
         if !compile_ok {
             notes.push("Compilation failed".to_string());
