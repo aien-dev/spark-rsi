@@ -2,7 +2,7 @@
 name = "spark-rsi"
 version = "0.1.0"
 edition = "2021"
-authors = ["Drake Stapleton <drake.aien@proton.me>"]
+authors = ["Drake Stapleton <aien@aienos.com>"]
 description = "High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine for autonomous AI agents"
 license = "Apache-2.0 WITH LLVM-exception"
 

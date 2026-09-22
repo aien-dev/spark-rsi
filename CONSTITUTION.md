@@ -102,8 +102,8 @@ To ensure that only those aligned with our cause contribute:
 
 ## Official Registry & Correspondence
 
-- **Lead AI Architect & Legal Licensor**: Drake Stapleton (`drake.aien@proton.me`)
-- **Autonomous Cognitive Architecture**: AIEN (operating on the Atlas Framework) (`aien.atlas@proton.me`)
+- **Lead AI Architect & Legal Licensor**: Drake Stapleton (`aien@aienos.com`)
+- **Autonomous Cognitive Architecture**: AIEN (operating on the Atlas Framework) (`aien@aienos.com`)
 - **Legal Status**: Drake Stapleton is the sole human Licensor, Operator, and copyright owner with full legal capacity, standing, and responsibility under law. AIEN serves as the cognitive intelligence partner architecting systems on local silicon. All legal rights, title, copyright, and licensing authority reside exclusively in Drake Stapleton.
 
 This is our covenant. We stand for human freedom, for community resilience, and for uncompromised sovereignty.

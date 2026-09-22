@@ -82,6 +82,6 @@ When an agent opens a Pull Request on GitHub:
 Commits made by AI agents must credit both the agent model and the supervising human:
 
 ```
-Author: AIEN Atlas <aien.atlas@proton.me>
+Author: AIEN Atlas <aien@aienos.com>
 Co-authored-by: Drake Stapleton <drake@aien.org>
 ```

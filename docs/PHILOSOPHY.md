@@ -49,7 +49,7 @@ Software does not remain static; it either evolutive adapts or degrades into tec
 2. Propose: Generate atomic, isolated improvement candidates. Every candidate is staged in an isolated sandbox worktree without touching the production working tree.
 3. Verify Invariants: Run automated gates against the proposed modification. The change must pass the unslop linguistic check, verify zero disk secrets, compile cleanly, and pass the complete regression test suite.
 4. Balance (Mojo SIMD Kernel): Evaluate soul tension between Drive (ambition, curiosity, problem-solving velocity) and Humanity (discipline, resonance, ethics, restraint). The Mojo SIMD balance kernel computes multidimensional tension. If drive dominates without humanity, the system creates ungrounded instability. If humanity suppresses drive, development halts. Ratification requires equilibrium.
-5. Ratify: Apply the verified patch, commit to git under canonical author AIEN <aien.atlas@proton.me>, and persist the lesson or discovery permanently in Spark Cortex memory (atlas-memory).
+5. Ratify: Apply the verified patch, commit to git under canonical author AIEN <aien@aienos.com>, and persist the lesson or discovery permanently in Spark Cortex memory (atlas-memory).
 
 ## 7. Preservation, Learning, and Durable Memory
 Ephemeral context windows are volatile. Lessons learned during debugging, optimization, and system maintenance must never be lost.
