@@ -392,32 +392,26 @@ impl RsiEngine {
                 )
                 .await?;
 
-            // Process canary evidence quota
-            let mut canary_passed = true;
-            for _ in 1..=config.canary_target {
-                let state = supervisor_daemon.supervisor.record_canary_transaction(
-                    &mut gen_info,
-                    true,
-                    1500,
-                    config.canary_target,
-                    1_000_000,
-                    0.0,
-                )?;
-                if state == GenerationState::Reverting {
-                    canary_passed = false;
-                    break;
-                }
-            }
+            // Production promotion counts measured observations only.
+            // This cycle has no execution feed, so the quota fails closed.
+            // A caller-supplied success and a fixed latency are not observations.
+            let patch_bytes = proposal.proposed_patch.as_bytes();
+            let mut patch_hasher = sha2::Sha256::new();
+            patch_hasher.update(patch_bytes);
+            let patch_digest: [u8; 32] = patch_hasher.finalize().into();
+            let candidate_digest = hex::encode(patch_digest);
+            let quota = crate::canary_observation::admit_production_quota(
+                &[],
+                &candidate_digest,
+                config.canary_target,
+            );
 
-            if !canary_passed {
+            if let Err(reason) = quota {
                 success = false;
                 supervisor_daemon
                     .trigger_instant_rollback(&active_link)
                     .await?;
-                let _ = ledger.append_rollback(
-                    &proposal.id,
-                    "Canary probation failed: instant rollback triggered",
-                );
+                let _ = ledger.append_rollback(&proposal.id, &reason);
                 let ledger_hash = maybe_ledger_block.as_ref().map(|b| b.block_hash.as_str());
                 let _ = Ratifier::record_cortex_lesson(
                     proposal,
@@ -430,10 +424,6 @@ impl RsiEngine {
             } else {
                 // Safety envelope gate: no promotion without a signed canary
                 // evaluation receipt from the production signer. Fails closed.
-                let patch_bytes = proposal.proposed_patch.as_bytes();
-                let mut patch_hasher = sha2::Sha256::new();
-                patch_hasher.update(patch_bytes);
-                let patch_digest: [u8; 32] = patch_hasher.finalize().into();
                 let envelope_signer = std::sync::Arc::new(
                     aien_evaluation_protocol::SoftwareP256Signer::new(signing_key.clone()),
                 );

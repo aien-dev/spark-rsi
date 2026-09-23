@@ -336,12 +336,12 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
     let result = RsiEngine::run_cycle(&config)
         .await
         .expect("run_cycle failed");
-    assert!(result.success);
+    assert!(!result.success);
     assert!(result.proposal.is_some());
-    assert!(result.generation.is_some());
+    assert!(result.generation.is_none());
     assert!(
         result.ledger_block.is_some(),
-        "Ledger block must be emitted upon promotion"
+        "The evaluation receipt is still recorded when promotion is refused"
     );
 
     // Verify ledger database exists and contains provenance records
@@ -349,7 +349,7 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
     let blocks = ledger.all_blocks().expect("Failed to query blocks");
     assert!(
         blocks.len() >= 2,
-        "Ledger must contain Genesis and Promotion blocks"
+        "Ledger must contain the genesis block and the evaluation receipt"
     );
 
     let audit = ledger

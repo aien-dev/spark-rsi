@@ -310,21 +310,20 @@ async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
         .await
         .expect("run_cycle failed");
 
-    assert!(result.success, "Cycle should succeed");
+    assert!(
+        !result.success,
+        "Cycle must not promote on a synthetic canary quota"
+    );
     assert!(
         result.proposal.is_some(),
         "Proposal should be generated for em dash unslop"
     );
     assert!(
-        result.generation.is_some(),
-        "Candidate promotion must execute through Host Supervisor"
+        result.generation.is_none(),
+        "Candidate must not become durable without measured observations"
     );
-
-    let gen = result.generation.unwrap();
-    assert!(gen.state == GenerationState::Durable || gen.state == GenerationState::CanaryActive);
-
-    // Verify atomic active symlink was created by HostSupervisor
-    let active_link = fs::read_link(rsi_root.join("active")).expect("Active symlink must exist");
-    assert!(active_link.to_string_lossy().contains(&gen.generation_id));
-    assert!(gen.installed_path.exists());
+    assert!(
+        fs::read_link(rsi_root.join("active")).is_err(),
+        "Active symlink must not point at an unmeasured candidate"
+    );
 }
