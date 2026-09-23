@@ -306,7 +306,10 @@ async fn test_production_loop_end_to_end_with_candidate() {
         .await
         .expect("cycle should execute");
 
-    assert!(result.success, "Production cycle must succeed");
+    assert!(
+        !result.success,
+        "Production cycle must refuse promotion without measured canary observations"
+    );
     assert!(
         result.proposal.is_some(),
         "Unslop candidate proposal must be generated"
@@ -333,23 +336,12 @@ async fn test_production_loop_end_to_end_with_candidate() {
     );
 
     assert!(
-        result.generation.is_some(),
-        "Supervisor generation info must be present"
+        result.generation.is_none(),
+        "A synthetic quota must not promote a generation"
     );
-    let gen = result.generation.unwrap();
-    assert_eq!(gen.state, spark_rsi::supervisor::GenerationState::Durable);
-    assert_eq!(gen.canary_transactions, 5);
-
     assert!(
-        result.ledger_block.is_some(),
-        "Ledger block must be present"
-    );
-    let blk = result.ledger_block.unwrap();
-    assert_eq!(blk.block_type, spark_rsi::ledger::BlockType::Promotion);
-
-    assert!(
-        result.ratification.is_some(),
-        "Ratification must be recorded"
+        result.ratification.is_none(),
+        "Ratification waits for a measured canary quota"
     );
 
     // Verify ledger audit report
@@ -362,6 +354,6 @@ async fn test_production_loop_end_to_end_with_candidate() {
     );
     assert!(
         audit.total_blocks >= 2,
-        "Ledger must have evaluation and promotion blocks"
+        "Ledger must record the refused promotion"
     );
 }

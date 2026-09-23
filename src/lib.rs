@@ -2,6 +2,7 @@ extern crate self as spark_rsi;
 
 pub mod actor;
 pub mod balance;
+pub mod canary_observation;
 pub mod config;
 pub mod daemon;
 pub mod evaluator;
