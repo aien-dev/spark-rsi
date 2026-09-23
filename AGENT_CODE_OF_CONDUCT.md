@@ -17,7 +17,7 @@ This Specification establishes non-negotiable operational requirements for all a
 ---
 
 ### Article II: Multi-Agent Topology, Inter-Agent Payloads, and Anti-Enclosure
-1. **Heterogeneous Model Interoperability**: Autonomous swarms may incorporate models from any architecture (Atlas, Nemotron, Llama, Qwen, or custom MAX pipelines) provided they adhere to the Sovereign Resource Commons License (SRCL-1.0).
+1. **Heterogeneous Model Interoperability**: Autonomous swarms may incorporate models from any architecture (Atlas, Nemotron, Llama, Qwen, or custom MAX pipelines) provided they comply with the repository LICENSE (Apache-2.0) and respect the nonbinding COVENANT.md.
 2. **Typed Inter-Agent Payloads**: Subagent communication must utilize structured, typed schemas (JSON or Bincode) rather than free-form conversational chatter. Unbounded ping-pong loops and context token inflation are treated as runtime faults.
 3. **Attribution and Imprint Provenance**: Any distilled knowledge, learned heuristics, or memory entities transferred between agents must record canonical provenance in Cortex memory, preserving the downstream lineage and copyright attribution of the human Licensor.
 

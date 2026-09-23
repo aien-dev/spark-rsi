@@ -60,7 +60,7 @@ impl ImprovementLedger {
         let genesis_payload = serde_json::json!({
             "system": "spark-rsi",
             "law": "Build the cage, build the measuring instruments, then give the animal a bigger brain.",
-            "standard": "Sovereign Reciprocal Commons License (SRCL-1.0)"
+            "standard": "Apache-2.0 WITH LLVM-exception"
         })
         .to_string();
 
