@@ -85,3 +85,11 @@ Commits made by AI agents must credit both the agent model and the supervising h
 Author: AIEN Atlas <aien@aienos.com>
 Co-authored-by: Drake Stapleton <drake@aien.org>
 ```
+
+Agent commits must also carry full identity trailers per the org-wide
+Agent Identity Standard (https://github.com/aien-dev/.github/blob/main/AGENT_IDENTITY.md):
+`Agent-Name`, `Agent-Model`, `Agent-Provider`, `Agent-Session`, and
+`Assisted-by: <name>:<model>`, so any problem can be traced to the agent,
+model, version, and session that produced it. Values come from the agent
+runtime and are never invented. Agents must never add `Signed-off-by`;
+DCO certification is human-only.
