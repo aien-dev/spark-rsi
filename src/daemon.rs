@@ -174,9 +174,32 @@ impl RsiEngine {
         let sandbox_base = Path::new(&config.sandbox_root);
 
         for mut candidate in candidates {
+            // Declared-target gate before anything is staged: normalized path,
+            // no `..`, inside the declared roots, not a root-of-trust file.
+            if let Err(e) = crate::diff_gate::check_declared_target(
+                &candidate.target_file,
+                &config.ratify_roots,
+            ) {
+                let _ = ledger.append_block(
+                    BlockType::Evaluation,
+                    format!("Declared target refused: {}", e),
+                    vec![],
+                );
+                continue;
+            }
+
             // Tier Governance: Check candidate tier and boundaries
             let tier = crate::meta::TierGovernance::classify_proposal(&candidate);
             if tier == crate::meta::CandidateTier::Tier2Engine {
+                if config.operator_key_hex.is_none() {
+                    // Engine changes need operator authorization; no key means no authorization.
+                    let _ = ledger.append_block(
+                        BlockType::Evaluation,
+                        "Tier 2 candidate refused: no operator key configured".to_string(),
+                        vec![],
+                    );
+                    continue;
+                }
                 if let Err(e) = crate::meta::TierGovernance::validate_tier2_candidate_boundaries(
                     &candidate.target_file,
                 ) {
@@ -499,11 +522,13 @@ impl RsiEngine {
                     maybe_ledger_block = Some(prom_blk);
                     maybe_generation = Some(gen_info);
 
-                    // 12. Ratify proposal, commit to git, and record in Cortex memory tied to ledger hash
+                    // 12. Ratify proposal onto a review branch + patch (never the default branch), and record in Cortex memory tied to ledger hash
                     let rat = Ratifier::ratify_proposal(
                         proposal,
                         maybe_invariants.as_ref().unwrap(),
                         repo_path,
+                        &config.ratify_roots,
+                        &Path::new(&config.rsi_root).join("patches"),
                         Some(&prom_hash),
                         &config.cortex_url,
                         &config.cortex_space,

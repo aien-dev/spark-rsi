@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/soak",
+  "layer": "src/soak",
+  "purpose": "Directory src/soak. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/soak. Purpose not yet described by a human.",
+      "files": [
+        "manifest.rs",
+        "mod.rs",
+        "runner.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

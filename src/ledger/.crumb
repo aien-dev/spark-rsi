@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/ledger",
+  "layer": "src/ledger",
+  "purpose": "Directory src/ledger. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/ledger. Purpose not yet described by a human.",
+      "files": [
+        "blob.rs",
+        "db.rs",
+        "merkle.rs",
+        "mod.rs",
+        "record.rs",
+        "schema.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

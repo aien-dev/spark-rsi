@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "name": "examples",
+  "layer": "examples",
+  "purpose": "Directory examples. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory examples. Purpose not yet described by a human.",
+      "files": [
+        "init_holdouts.rs",
+        "seed_ledger.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

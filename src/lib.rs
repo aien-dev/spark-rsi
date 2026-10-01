@@ -5,6 +5,7 @@ pub mod balance;
 pub mod canary_observation;
 pub mod config;
 pub mod daemon;
+pub mod diff_gate;
 pub mod evaluator;
 pub mod explain;
 pub mod graph;

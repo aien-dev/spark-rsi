@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/evaluator/layers",
+  "layer": "src/evaluator/layers",
+  "purpose": "Directory src/evaluator/layers. Purpose not yet described by a human.",
+  "above": {
+    "name": "src/evaluator",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/evaluator/layers. Purpose not yet described by a human.",
+      "files": [
+        "correctness.rs",
+        "longitudinal_replay.rs",
+        "mod.rs",
+        "performance.rs",
+        "resource_efficiency.rs",
+        "security.rs",
+        "style.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

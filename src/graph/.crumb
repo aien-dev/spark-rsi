@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/graph",
+  "layer": "src/graph",
+  "purpose": "Directory src/graph. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/graph. Purpose not yet described by a human.",
+      "files": [
+        "mod.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

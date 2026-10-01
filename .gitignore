@@ -4,3 +4,4 @@ Cargo.lock
 *.log
 mojo/*_bin
 .rsi/
+.crumb.local

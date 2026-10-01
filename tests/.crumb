@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "name": "tests",
+  "layer": "tests",
+  "purpose": "Directory tests. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory tests. Purpose not yet described by a human.",
+      "files": [
+        "integration_tests.rs",
+        "safety_envelope_tests.rs",
+        "test_adversarial_containment.rs",
+        "test_capability_graph_and_hypothesis.rs",
+        "test_cryptographic_improvement_ledger.rs",
+        "test_host_supervisor_ipc.rs",
+        "test_max_inference_and_diagnosis.rs",
+        "test_meta_improvement_governance.rs",
+        "test_no_synthetic_trust_inputs.rs",
+        "test_objective_evaluator.rs",
+        "test_ratifier_branch_only.rs",
+        "test_soak_run.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

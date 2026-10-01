@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "name": "analysis",
+  "layer": "analysis",
+  "purpose": "Directory analysis. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "below": [
+    {
+      "name": "notebooks",
+      "role": ""
+    }
+  ],
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory analysis. Purpose not yet described by a human.",
+      "files": []
+    },
+    "owner_lane": ""
+  }
+}

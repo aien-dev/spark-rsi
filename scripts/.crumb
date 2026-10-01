@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "name": "scripts",
+  "layer": "scripts",
+  "purpose": "Directory scripts. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory scripts. Purpose not yet described by a human.",
+      "files": [
+        "drive_aien_code.py",
+        "prompt_ipc.txt"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

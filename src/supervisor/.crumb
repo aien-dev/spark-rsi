@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/supervisor",
+  "layer": "src/supervisor",
+  "purpose": "Directory src/supervisor. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/supervisor. Purpose not yet described by a human.",
+      "files": [
+        "daemon.rs",
+        "ipc.rs",
+        "mod.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

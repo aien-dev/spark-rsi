@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "tools",
+  "layer": "tools",
+  "purpose": "Directory tools. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory tools. Purpose not yet described by a human.",
+      "files": [
+        "build_and_run_notebooks.py"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

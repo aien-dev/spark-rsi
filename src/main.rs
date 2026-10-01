@@ -364,6 +364,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 canary_target: 5000,
                 operator_key_hex: None,
                 non_inferiority_margin: None,
+                ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -392,6 +393,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 canary_target: 5000,
                 operator_key_hex: None,
                 non_inferiority_margin: None,
+                ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
             };
             RsiEngine::run_daemon(config).await?;
         }

@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src",
+  "layer": "src",
+  "purpose": "Directory src. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "below": [
+    {
+      "name": "actor",
+      "role": ""
+    },
+    {
+      "name": "bin",
+      "role": ""
+    },
+    {
+      "name": "evaluator",
+      "role": ""
+    },
+    {
+      "name": "graph",
+      "role": ""
+    },
+    {
+      "name": "isolation",
+      "role": ""
+    },
+    {
+      "name": "ledger",
+      "role": ""
+    },
+    {
+      "name": "meta",
+      "role": ""
+    },
+    {
+      "name": "propose",
+      "role": ""
+    },
+    {
+      "name": "soak",
+      "role": ""
+    },
+    {
+      "name": "supervisor",
+      "role": ""
+    }
+  ],
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src. Purpose not yet described by a human.",
+      "files": [
+        "balance.rs",
+        "canary_observation.rs",
+        "config.rs",
+        "daemon.rs",
+        "diff_gate.rs",
+        "lib.rs",
+        "main.rs",
+        "models.rs",
+        "observe.rs",
+        "ratify.rs",
+        "safety_envelope.rs",
+        "verifier.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

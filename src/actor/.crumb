@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/actor",
+  "layer": "src/actor",
+  "purpose": "Directory src/actor. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/actor. Purpose not yet described by a human.",
+      "files": [
+        "judge.rs",
+        "mod.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}
