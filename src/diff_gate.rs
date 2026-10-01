@@ -538,6 +538,40 @@ mod tests {
     }
 
     #[test]
+    fn real_diff_check_runs_root_of_trust_itself_not_only_via_security_layer() {
+        // A protected file inside a default root ("src"). Both the gate's own
+        // RootOfTrust call and the SecurityLayer must refuse it, independently.
+        // The SecurityLayer wraps its finding as "Root-of-trust violation: ...";
+        // the gate's direct call reports "SECURITY VIOLATION: ..." unwrapped.
+        // Removing the direct RootOfTrust call in check_real_diff fails this test.
+        let path = "src/isolation/container.rs";
+        assert!(within_roots(path, &roots()));
+        let e = vec![ChangedEntry {
+            old_mode: "100644".into(),
+            new_mode: "100644".into(),
+            status: 'M',
+            path: path.into(),
+        }];
+        let v = check_real_diff(&e, "", path, &roots());
+        let direct: Vec<&String> = v
+            .iter()
+            .filter(|m| m.starts_with("SECURITY VIOLATION:") && m.contains(path))
+            .collect();
+        assert_eq!(
+            direct.len(),
+            1,
+            "gate's own root-of-trust refusal missing: {:?}",
+            v
+        );
+        assert!(
+            v.iter()
+                .any(|m| m.starts_with("Root-of-trust violation:") && m.contains(path)),
+            "security layer refusal missing: {:?}",
+            v
+        );
+    }
+
+    #[test]
     fn branch_names_are_sanitized() {
         assert_eq!(review_branch_name("prop-abc").unwrap(), "rsi/prop-abc");
         assert!(review_branch_name("../main").is_err());
