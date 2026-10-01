@@ -175,7 +175,14 @@ pub fn real_diff(repo: &Path, base: &str, head: &str) -> Result<Vec<ChangedEntry
 /// Unified diff text of the real change, used for the content checks.
 pub fn real_patch_text(repo: &Path, base: &str, head: &str) -> Result<String, String> {
     let mut c = git(repo);
-    c.args(["diff", "--no-ext-diff", "--no-textconv", "--no-color", base, head]);
+    c.args([
+        "diff",
+        "--no-ext-diff",
+        "--no-textconv",
+        "--no-color",
+        base,
+        head,
+    ]);
     run(c, "git diff")
 }
 
@@ -221,7 +228,10 @@ pub fn check_real_diff(
             ));
         }
         if e.new_mode == "000000" || e.status == 'D' {
-            violations.push(format!("real diff deletes {:?}; deletions are refused", normalized));
+            violations.push(format!(
+                "real diff deletes {:?}; deletions are refused",
+                normalized
+            ));
         }
         real_paths.push(normalized);
     }
@@ -371,7 +381,12 @@ pub fn default_branch_names(repo: &Path) -> Vec<String> {
         }
     }
     let mut c = git(repo);
-    c.args(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]);
+    c.args([
+        "symbolic-ref",
+        "--quiet",
+        "--short",
+        "refs/remotes/origin/HEAD",
+    ]);
     if let Ok(h) = run(c, "origin default branch") {
         if let Some(b) = h.strip_prefix("origin/") {
             names.push(b.to_string());
@@ -471,7 +486,8 @@ mod tests {
 
     #[test]
     fn raw_diff_parser_reads_modes_and_paths() {
-        let raw = b":100644 120000 aaaa bbbb T\0docs/link\0:000000 100644 0000 cccc A\0docs/new.md\0";
+        let raw =
+            b":100644 120000 aaaa bbbb T\0docs/link\0:000000 100644 0000 cccc A\0docs/new.md\0";
         let e = parse_raw_diff(raw).unwrap();
         assert_eq!(e.len(), 2);
         assert_eq!(e[0].new_mode, "120000");

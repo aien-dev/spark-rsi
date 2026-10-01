@@ -185,7 +185,11 @@ async fn dotdot_target_cannot_reach_protected_file() {
         assert!(rec.branch.is_none());
     }
     assert_untouched(repo, &before);
-    assert_eq!(before.branches, snapshot(repo).branches, "a branch was created");
+    assert_eq!(
+        before.branches,
+        snapshot(repo).branches,
+        "a branch was created"
+    );
 }
 
 #[tokio::test]
@@ -215,7 +219,11 @@ async fn target_outside_declared_roots_refused() {
         let p = proposal("prop-out", target, "echo hi\n");
         let rec = ratify(repo, patches.path(), &p, &default_ratify_roots()).await;
         assert_eq!(rec.status, "Rejected", "{}", target);
-        assert!(rec.message.contains("outside the declared roots"), "{}", rec.message);
+        assert!(
+            rec.message.contains("outside the declared roots"),
+            "{}",
+            rec.message
+        );
     }
     assert_untouched(repo, &before);
 }
@@ -255,7 +263,11 @@ async fn secret_in_real_diff_refused() {
     let patches = tempfile::tempdir().unwrap();
     let before = snapshot(repo);
     let key = ["AKIA", "ABCDEFGHIJKLMNOP"].join("");
-    let p = proposal("prop-secret", "docs/guide.md", &format!("guide\nkey={}\n", key));
+    let p = proposal(
+        "prop-secret",
+        "docs/guide.md",
+        &format!("guide\nkey={}\n", key),
+    );
     let rec = ratify(repo, patches.path(), &p, &default_ratify_roots()).await;
     assert_eq!(rec.status, "Rejected");
     assert!(rec.message.contains("secret"), "{}", rec.message);

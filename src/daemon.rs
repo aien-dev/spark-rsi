@@ -176,9 +176,10 @@ impl RsiEngine {
         for mut candidate in candidates {
             // Declared-target gate before anything is staged: normalized path,
             // no `..`, inside the declared roots, not a root-of-trust file.
-            if let Err(e) =
-                crate::diff_gate::check_declared_target(&candidate.target_file, &config.ratify_roots)
-            {
+            if let Err(e) = crate::diff_gate::check_declared_target(
+                &candidate.target_file,
+                &config.ratify_roots,
+            ) {
                 let _ = ledger.append_block(
                     BlockType::Evaluation,
                     format!("Declared target refused: {}", e),
@@ -190,7 +191,7 @@ impl RsiEngine {
             // Tier Governance: Check candidate tier and boundaries
             let tier = crate::meta::TierGovernance::classify_proposal(&candidate);
             if tier == crate::meta::CandidateTier::Tier2Engine {
-            if config.operator_key_hex.is_none() {
+                if config.operator_key_hex.is_none() {
                     // Engine changes need operator authorization; no key means no authorization.
                     let _ = ledger.append_block(
                         BlockType::Evaluation,

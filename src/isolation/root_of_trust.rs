@@ -75,9 +75,8 @@ impl RootOfTrust {
     }
 
     pub fn assert_patch_permitted(target_file: &str, tier: u8) -> Result<(), String> {
-        let normalized = Self::normalize_strict(target_file).map_err(|e| {
-            format!("SECURITY VIOLATION: {}", e)
-        })?;
+        let normalized = Self::normalize_strict(target_file)
+            .map_err(|e| format!("SECURITY VIOLATION: {}", e))?;
         if Self::is_protected_path(&normalized) && tier < 2 {
             return Err(format!(
                 "SECURITY VIOLATION: Target path '{}' is a protected root-of-trust file. Required tier: >= 2, candidate tier: {}",
@@ -139,10 +138,16 @@ mod tests {
     fn test_dotdot_and_escape_forms_cannot_bypass_protection() {
         // Before the fix these normalized to themselves and were not protected.
         assert!(RootOfTrust::is_protected_path("src/../Cargo.toml"));
-        assert!(RootOfTrust::is_protected_path("docs/../.github/workflows/ci.yml"));
-        assert!(RootOfTrust::is_protected_path("src//isolation/container.rs"));
+        assert!(RootOfTrust::is_protected_path(
+            "docs/../.github/workflows/ci.yml"
+        ));
+        assert!(RootOfTrust::is_protected_path(
+            "src//isolation/container.rs"
+        ));
         assert!(RootOfTrust::is_protected_path("../outside.rs"));
-        assert!(RootOfTrust::is_protected_path("src\\isolation\\container.rs"));
+        assert!(RootOfTrust::is_protected_path(
+            "src\\isolation\\container.rs"
+        ));
         assert!(RootOfTrust::assert_patch_permitted("src/../Cargo.toml", 0).is_err());
         // Climbing out of the repository is refused even at tier 2.
         assert!(RootOfTrust::assert_patch_permitted("../../etc/passwd", 2).is_err());
