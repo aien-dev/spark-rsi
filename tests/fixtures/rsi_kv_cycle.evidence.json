@@ -1,0 +1,590 @@
+{
+  "format": "aien.explain.evidence-graph",
+  "version": 1,
+  "producer": "spark-rsi/explain",
+  "nodes": [
+    {
+      "id": "rsi:capability:kv_allocator",
+      "kind": 2,
+      "status": 0,
+      "statement": "'Unified LPDDR5x KV Allocator' (memory) has p95 latency 4200.0 us, error rate 8.00%, resident memory 32768 KiB",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "CapabilityNode",
+        "reference": "kv_allocator"
+      },
+      "parents": [],
+      "measurements": [
+        {
+          "name": "latency_p95_us",
+          "value": "4200.000",
+          "unit": "us"
+        },
+        {
+          "name": "error_rate",
+          "value": "0.080000",
+          "unit": "fraction"
+        },
+        {
+          "name": "memory_rss_kb",
+          "value": "32768",
+          "unit": "KiB"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "metric values for 'Unified LPDDR5x KV Allocator' were declared in the capability graph, not measured"
+      ]
+    },
+    {
+      "id": "rsi:capability:mojo_kernel",
+      "kind": 2,
+      "status": 0,
+      "statement": "'Mojo Blackwell GEMM Kernel' (compute) has p95 latency 1800.0 us, error rate 1.00%, resident memory 16384 KiB",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "CapabilityNode",
+        "reference": "mojo_kernel"
+      },
+      "parents": [],
+      "measurements": [
+        {
+          "name": "latency_p95_us",
+          "value": "1800.000",
+          "unit": "us"
+        },
+        {
+          "name": "error_rate",
+          "value": "0.010000",
+          "unit": "fraction"
+        },
+        {
+          "name": "memory_rss_kb",
+          "value": "16384",
+          "unit": "KiB"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "metric values for 'Mojo Blackwell GEMM Kernel' were declared in the capability graph, not measured"
+      ]
+    },
+    {
+      "id": "rsi:capability:req_gateway",
+      "kind": 2,
+      "status": 0,
+      "statement": "'Request Gateway' (network) has p95 latency 120.0 us, error rate 0.00%, resident memory 1024 KiB",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "CapabilityNode",
+        "reference": "req_gateway"
+      },
+      "parents": [],
+      "measurements": [
+        {
+          "name": "latency_p95_us",
+          "value": "120.000",
+          "unit": "us"
+        },
+        {
+          "name": "error_rate",
+          "value": "0.000000",
+          "unit": "fraction"
+        },
+        {
+          "name": "memory_rss_kb",
+          "value": "1024",
+          "unit": "KiB"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "metric values for 'Request Gateway' were declared in the capability graph, not measured"
+      ]
+    },
+    {
+      "id": "rsi:capability:sampler",
+      "kind": 2,
+      "status": 0,
+      "statement": "'Greedy Token Sampler' (inference) has p95 latency 150.0 us, error rate 0.00%, resident memory 1024 KiB",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "CapabilityNode",
+        "reference": "sampler"
+      },
+      "parents": [],
+      "measurements": [
+        {
+          "name": "latency_p95_us",
+          "value": "150.000",
+          "unit": "us"
+        },
+        {
+          "name": "error_rate",
+          "value": "0.000000",
+          "unit": "fraction"
+        },
+        {
+          "name": "memory_rss_kb",
+          "value": "1024",
+          "unit": "KiB"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "metric values for 'Greedy Token Sampler' were declared in the capability graph, not measured"
+      ]
+    },
+    {
+      "id": "rsi:capability:scheduler",
+      "kind": 2,
+      "status": 0,
+      "statement": "'Batch Scheduler' (scheduling) has p95 latency 340.0 us, error rate 0.00%, resident memory 2048 KiB",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "CapabilityNode",
+        "reference": "scheduler"
+      },
+      "parents": [],
+      "measurements": [
+        {
+          "name": "latency_p95_us",
+          "value": "340.000",
+          "unit": "us"
+        },
+        {
+          "name": "error_rate",
+          "value": "0.000000",
+          "unit": "fraction"
+        },
+        {
+          "name": "memory_rss_kb",
+          "value": "2048",
+          "unit": "KiB"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "metric values for 'Batch Scheduler' were declared in the capability graph, not measured"
+      ]
+    },
+    {
+      "id": "rsi:bottleneck:cycle-kv-0001",
+      "kind": 3,
+      "status": 3,
+      "statement": "The capability graph ranks 'Unified LPDDR5x KV Allocator' (memory) as bottleneck #1 of 5 (Centrality=0.333, LatencyRatio=3.18x, ErrorRate=8.0%)",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "BottleneckRank",
+        "reference": "kv_allocator"
+      },
+      "parents": [
+        {
+          "to": "rsi:capability:kv_allocator",
+          "relation": 1
+        },
+        {
+          "to": "rsi:capability:mojo_kernel",
+          "relation": 1
+        },
+        {
+          "to": "rsi:capability:req_gateway",
+          "relation": 1
+        },
+        {
+          "to": "rsi:capability:sampler",
+          "relation": 1
+        },
+        {
+          "to": "rsi:capability:scheduler",
+          "relation": 1
+        }
+      ],
+      "measurements": [
+        {
+          "name": "bottleneck_score",
+          "value": "1.4841",
+          "unit": ""
+        },
+        {
+          "name": "centrality",
+          "value": "0.3333",
+          "unit": ""
+        },
+        {
+          "name": "latency_p95_us",
+          "value": "4200.000",
+          "unit": "us"
+        },
+        {
+          "name": "error_rate",
+          "value": "0.080000",
+          "unit": "fraction"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "ranking computed by CapabilityGraph::rank_bottlenecks"
+      ]
+    },
+    {
+      "id": "rsi:alternative:cycle-kv-0001:mojo_kernel",
+      "kind": 13,
+      "status": 3,
+      "statement": "Alternative bottleneck candidate #2: 'Mojo Blackwell GEMM Kernel' (compute), score 0.6546",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "BottleneckRank",
+        "reference": "mojo_kernel"
+      },
+      "parents": [
+        {
+          "to": "rsi:bottleneck:cycle-kv-0001",
+          "relation": 5
+        }
+      ],
+      "measurements": [
+        {
+          "name": "bottleneck_score",
+          "value": "0.6546",
+          "unit": ""
+        }
+      ],
+      "missing": [],
+      "notes": []
+    },
+    {
+      "id": "rsi:alternative:cycle-kv-0001:scheduler",
+      "kind": 13,
+      "status": 3,
+      "statement": "Alternative bottleneck candidate #3: 'Batch Scheduler' (scheduling), score 0.2029",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "BottleneckRank",
+        "reference": "scheduler"
+      },
+      "parents": [
+        {
+          "to": "rsi:bottleneck:cycle-kv-0001",
+          "relation": 5
+        }
+      ],
+      "measurements": [
+        {
+          "name": "bottleneck_score",
+          "value": "0.2029",
+          "unit": ""
+        }
+      ],
+      "missing": [],
+      "notes": []
+    },
+    {
+      "id": "rsi:alternative:cycle-kv-0001:sampler",
+      "kind": 13,
+      "status": 3,
+      "statement": "Alternative bottleneck candidate #4: 'Greedy Token Sampler' (inference), score 0.0454",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "BottleneckRank",
+        "reference": "sampler"
+      },
+      "parents": [
+        {
+          "to": "rsi:bottleneck:cycle-kv-0001",
+          "relation": 5
+        }
+      ],
+      "measurements": [
+        {
+          "name": "bottleneck_score",
+          "value": "0.0454",
+          "unit": ""
+        }
+      ],
+      "missing": [],
+      "notes": []
+    },
+    {
+      "id": "rsi:hypothesis:hypo-kv-0001",
+      "kind": 5,
+      "status": 4,
+      "statement": "Suspected root cause: High latency on 'Unified LPDDR5x KV Allocator': Centrality=0.333, LatencyRatio=3.18x, ErrorRate=8.0%. Observed problem: System throughput limited by bottleneck node 'Unified LPDDR5x KV Allocator' (centrality=0.3333)",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "HypothesisContract",
+        "reference": "hypo-kv-0001"
+      },
+      "confidence_permille": 850,
+      "confidence_basis": "declared in the HypothesisContract, not measured",
+      "parents": [
+        {
+          "to": "rsi:bottleneck:cycle-kv-0001",
+          "relation": 6
+        }
+      ],
+      "measurements": [],
+      "missing": [
+        {
+          "expected": "a recorded reference from the hypothesis to the bottleneck ranking",
+          "reason": "linked only because the hypothesis text names 'Unified LPDDR5x KV Allocator' and its baseline equals that bottleneck's p95 latency"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "rsi:hypothesis:hypo-kv-0001:prediction",
+      "kind": 6,
+      "status": 4,
+      "statement": "Predicts latency_us improves by 15.0% from baseline 4200.000",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "HypothesisContract",
+        "reference": "hypo-kv-0001"
+      },
+      "parents": [
+        {
+          "to": "rsi:hypothesis:hypo-kv-0001",
+          "relation": 3
+        }
+      ],
+      "measurements": [
+        {
+          "name": "target_metric",
+          "value": "latency_us",
+          "unit": ""
+        },
+        {
+          "name": "baseline_value",
+          "value": "4200.000",
+          "unit": ""
+        },
+        {
+          "name": "predicted_delta_pct",
+          "value": "15.000",
+          "unit": "%"
+        }
+      ],
+      "missing": [],
+      "notes": []
+    },
+    {
+      "id": "rsi:hypothesis:hypo-kv-0001:falsification",
+      "kind": 7,
+      "status": 4,
+      "statement": "Refuted if this check fails: assert!(receipt.passed_all_hard_invariants). Protected metrics: p95_latency may degrade at most 1.0%; p99_latency may degrade at most 1.0%; max_rss_kb may degrade at most 2.0%; correctness may degrade at most 0.0%",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "HypothesisContract",
+        "reference": "hypo-kv-0001"
+      },
+      "parents": [
+        {
+          "to": "rsi:hypothesis:hypo-kv-0001",
+          "relation": 3
+        }
+      ],
+      "measurements": [
+        {
+          "name": "protected.p95_latency.max_degradation_pct",
+          "value": "1.000",
+          "unit": "%"
+        },
+        {
+          "name": "protected.p99_latency.max_degradation_pct",
+          "value": "1.000",
+          "unit": "%"
+        },
+        {
+          "name": "protected.max_rss_kb.max_degradation_pct",
+          "value": "2.000",
+          "unit": "%"
+        },
+        {
+          "name": "protected.correctness.max_degradation_pct",
+          "value": "0.000",
+          "unit": "%"
+        }
+      ],
+      "missing": [],
+      "notes": []
+    },
+    {
+      "id": "rsi:diagnostic:cycle-kv-0001",
+      "kind": 4,
+      "status": 3,
+      "statement": "Diagnosis for src/kv_allocator.rs: primary defect PerformanceRegression; Bottleneck identified at Unified LPDDR5x KV Allocator",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "DiagnosticContext",
+        "reference": "cycle-kv-0001"
+      },
+      "parents": [
+        {
+          "to": "rsi:hypothesis:hypo-kv-0001",
+          "relation": 1
+        }
+      ],
+      "measurements": [],
+      "missing": [],
+      "notes": [
+        "1 recalled lesson(s) from the outside memory service were left out: they are free text, not evidence"
+      ]
+    },
+    {
+      "id": "rsi:receipt:cycle-kv-0001:cand-kv-0001",
+      "kind": 8,
+      "status": 2,
+      "statement": "Evaluation of candidate cand-kv-0001 (parent parent): admitted=true, 2 evaluation layer result(s)",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "EvaluationReceipt",
+        "reference": "cand-kv-0001",
+        "digest": "c0cae9f3e257ef2f7b46f5cd3770f9fe1c21f8b6dfb2ee2e2449714b0c7e99d0"
+      },
+      "parents": [],
+      "measurements": [
+        {
+          "name": "layer.Correctness.passed",
+          "value": "true",
+          "unit": ""
+        },
+        {
+          "name": "layer.Correctness.score",
+          "value": "1.0000",
+          "unit": ""
+        },
+        {
+          "name": "layer.Performance.passed",
+          "value": "true",
+          "unit": ""
+        },
+        {
+          "name": "layer.Performance.score",
+          "value": "0.8200",
+          "unit": ""
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "receipt is unsigned"
+      ]
+    },
+    {
+      "id": "rsi:receipt:cycle-kv-0001:cand-kv-0001:summary",
+      "kind": 8,
+      "status": 0,
+      "statement": "The evaluator reports: hard invariants passed=true, statistical gates passed=true",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "EvaluationReceipt",
+        "reference": "cand-kv-0001"
+      },
+      "parents": [
+        {
+          "to": "rsi:receipt:cycle-kv-0001:cand-kv-0001",
+          "relation": 3
+        }
+      ],
+      "measurements": [
+        {
+          "name": "latency_delta_pct",
+          "value": "-17.500",
+          "unit": "%"
+        },
+        {
+          "name": "p_value",
+          "value": "0.004000",
+          "unit": ""
+        },
+        {
+          "name": "p95_ci_upper_degradation_pct",
+          "value": "-9.000",
+          "unit": "%"
+        },
+        {
+          "name": "p99_ci_upper_degradation_pct",
+          "value": "-4.000",
+          "unit": "%"
+        },
+        {
+          "name": "rss_growth_pct",
+          "value": "0.500",
+          "unit": "%"
+        }
+      ],
+      "missing": [],
+      "notes": [
+        "these fields are not covered by the receipt digest, so they are reported, not verified"
+      ]
+    },
+    {
+      "id": "rsi:ratification:cand-kv-0001",
+      "kind": 9,
+      "status": 1,
+      "statement": "Ratification record for proposal cand-kv-0001: status Ratified (test record)",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "RatificationRecord",
+        "reference": "cand-kv-0001"
+      },
+      "parents": [
+        {
+          "to": "rsi:receipt:cycle-kv-0001:cand-kv-0001",
+          "relation": 1
+        }
+      ],
+      "measurements": [],
+      "missing": [],
+      "notes": []
+    },
+    {
+      "id": "rsi:conclusion:cycle-kv-0001",
+      "kind": 12,
+      "status": 3,
+      "statement": "RSI proposes changing src/kv_allocator.rs to address PerformanceRegression (cycle cycle-kv-0001)",
+      "source": {
+        "system": "spark-rsi",
+        "artifact": "RsiCycle",
+        "reference": "cycle-kv-0001"
+      },
+      "parents": [
+        {
+          "to": "rsi:diagnostic:cycle-kv-0001",
+          "relation": 1
+        },
+        {
+          "to": "rsi:hypothesis:hypo-kv-0001:prediction",
+          "relation": 1
+        },
+        {
+          "to": "rsi:hypothesis:hypo-kv-0001:falsification",
+          "relation": 1
+        },
+        {
+          "to": "rsi:receipt:cycle-kv-0001:cand-kv-0001",
+          "relation": 1
+        },
+        {
+          "to": "rsi:receipt:cycle-kv-0001:cand-kv-0001:summary",
+          "relation": 1
+        },
+        {
+          "to": "rsi:ratification:cand-kv-0001",
+          "relation": 1
+        }
+      ],
+      "measurements": [],
+      "missing": [
+        {
+          "expected": "an artifact linking candidate cand-kv-0001 to hypothesis hypo-kv-0001",
+          "reason": "both belong to cycle cycle-kv-0001, but no RSI artifact records that the candidate was generated from this hypothesis, so the evaluation is not shown as testing it"
+        }
+      ],
+      "notes": [
+        "this explanation is observational; it does not authorize promotion or any change"
+      ]
+    }
+  ],
+  "truncated_at": []
+}
