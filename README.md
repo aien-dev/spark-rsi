@@ -37,7 +37,7 @@ Configuration is persisted locally to `~/.config/sovereign/operator.toml` and sh
 2. **Propose**: Autonomous generation of atomic improvement proposals in isolated sandbox worktrees (`/tmp/spark-rsi-sandbox/`).
 3. **Verify**: Strict validation enforcing the unslop standard, zero plaintext disk secrets, compilation (`cargo check`), and test suites (`cargo test`).
 4. **Balance**: Mojo-compiled SIMD tensor kernel evaluating Drive vs. Humanity balance vectors on Grace Blackwell GB10 hardware.
-5. **Ratify**: Applies verified patches, commits to git under your configured operator identity, and records lessons in Cortex memory.
+5. **Ratify**: Never commits to the target's default branch. Builds the candidate commit off to the side, runs the protected-file checks on the real git diff (path normalization; `..`, symlinks, submodules, deletions and anything outside the declared `ratify_roots` refused), then creates a review branch `rsi/<proposal id>` and a PR-ready patch under `<rsi_root>/patches/`. A human opens and merges the pull request.
 
 ---
 

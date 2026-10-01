@@ -80,6 +80,12 @@ pub struct BalanceVerdict {
 pub struct RatificationRecord {
     pub proposal_id: String,
     pub commit_hash: Option<String>,
+    /// Review branch holding the candidate commit. Never the default branch.
+    #[serde(default)]
+    pub branch: Option<String>,
+    /// PR-ready patch (git format-patch) of the candidate commit.
+    #[serde(default)]
+    pub patch_path: Option<String>,
     pub author: String,
     pub cortex_receipt_id: Option<String>,
     pub cortex_recorded: bool,
@@ -114,6 +120,9 @@ pub struct RsiConfig {
     pub operator_key_hex: Option<String>,
     #[serde(default)]
     pub non_inferiority_margin: Option<f64>,
+    /// Repository-relative roots a proposal may change. Anything else is refused.
+    #[serde(default = "crate::diff_gate::default_ratify_roots")]
+    pub ratify_roots: Vec<String>,
 }
 
 fn default_max_url() -> String {
@@ -150,6 +159,7 @@ impl Default for RsiConfig {
             canary_target: 5000,
             operator_key_hex: None,
             non_inferiority_margin: None,
+            ratify_roots: crate::diff_gate::default_ratify_roots(),
         }
     }
 }

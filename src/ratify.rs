@@ -1,19 +1,30 @@
 use crate::config::SovereignConfig;
+use crate::diff_gate;
 use crate::models::{ImprovementProposal, InvariantReport, RatificationRecord};
 use reqwest::Client;
 use serde_json::json;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 use uuid::Uuid;
 
 pub struct Ratifier;
 
 impl Ratifier {
+    /// Turns an admitted proposal into a review branch plus a PR-ready patch.
+    ///
+    /// The ratifier never commits to the target's default branch and never
+    /// touches its working tree or index. It builds the candidate commit with
+    /// a temporary index, runs every protected-file check on the REAL git diff
+    /// of that commit, and only if all checks pass creates `rsi/<proposal id>`
+    /// (create-only) and writes `<patch_dir>/<proposal id>.patch`. A human
+    /// opens and merges the pull request.
+    #[allow(clippy::too_many_arguments)]
     pub async fn ratify_proposal(
         proposal: &ImprovementProposal,
         invariants: &InvariantReport,
         target_repo: &Path,
+        ratify_roots: &[String],
+        patch_dir: &Path,
         ledger_block_hash: Option<&str>,
         cortex_url: &str,
         cortex_space: &str,
@@ -22,68 +33,75 @@ impl Ratifier {
         let config = SovereignConfig::load();
         let author_str = config.author_string();
 
-        if !invariants.passed {
-            return Ok(RatificationRecord {
-                proposal_id: proposal.id.clone(),
-                commit_hash: None,
-                author: author_str,
-                cortex_receipt_id: None,
-                cortex_recorded: false,
-                timestamp: now,
-                status: "Rejected".to_string(),
-                message: format!("Invariant checks failed: {:?}", invariants.notes),
-            });
-        }
-
-        // 1. Apply patch to target file in repository
-        let target_file_path = target_repo.join(&proposal.target_file);
-        if let Some(parent) = target_file_path.parent() {
-            let _ = fs::create_dir_all(parent);
-        }
-
-        fs::write(&target_file_path, &proposal.proposed_patch)
-            .map_err(|e| format!("Failed to apply patch to {:?}: {}", target_file_path, e))?;
-
-        // 2. Commit to git using dynamic operator profile
-        let commit_msg = format!("rsi: {} ({})", proposal.title, proposal.id);
-        let _ = Command::new("git")
-            .arg("-C")
-            .arg(target_repo)
-            .args(["add", &proposal.target_file])
-            .output();
-
-        let commit_out = Command::new("git")
-            .arg("-C")
-            .arg(target_repo)
-            .args([
-                "-c",
-                &format!("user.name={}", config.operator.name),
-                "-c",
-                &format!("user.email={}", config.operator.email),
-                "commit",
-                "-m",
-                &commit_msg,
-            ])
-            .output();
-
-        let commit_hash = match commit_out {
-            Ok(out) if out.status.success() => {
-                let rev = Command::new("git")
-                    .arg("-C")
-                    .arg(target_repo)
-                    .args(["rev-parse", "--short", "HEAD"])
-                    .output()
-                    .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-                    .ok();
-                rev
-            }
-            _ => None,
+        let rejected = |message: String| RatificationRecord {
+            proposal_id: proposal.id.clone(),
+            commit_hash: None,
+            branch: None,
+            patch_path: None,
+            author: author_str.clone(),
+            cortex_receipt_id: None,
+            cortex_recorded: false,
+            timestamp: now.clone(),
+            status: "Rejected".to_string(),
+            message,
         };
 
-        // 3. Record lesson in Cortex memory
+        if !invariants.passed {
+            return Ok(rejected(format!(
+                "Invariant checks failed: {:?}",
+                invariants.notes
+            )));
+        }
+
+        // 1. Declared target: normalized, inside the declared roots, not protected.
+        let target = match diff_gate::check_declared_target(&proposal.target_file, ratify_roots) {
+            Ok(t) => t,
+            Err(e) => return Ok(rejected(format!("Declared target refused: {}", e))),
+        };
+        let branch = match diff_gate::review_branch_name(&proposal.id) {
+            Ok(b) => b,
+            Err(e) => return Ok(rejected(e)),
+        };
+
+        // 2. Build the candidate commit off to the side. No branch moves.
+        let commit_msg = format!("rsi: {} ({})", proposal.title, proposal.id);
+        let staged = match diff_gate::stage_candidate_commit(
+            target_repo,
+            &target,
+            proposal.proposed_patch.as_bytes(),
+            &config.operator.name,
+            &config.operator.email,
+            &commit_msg,
+        ) {
+            Ok(s) => s,
+            Err(e) => return Ok(rejected(format!("Candidate commit refused: {}", e))),
+        };
+
+        // 3. Protected-file checks on the REAL diff, not the declared name.
+        let violations =
+            diff_gate::check_real_diff(&staged.entries, &staged.patch_text, &target, ratify_roots);
+        if !violations.is_empty() {
+            return Ok(rejected(format!(
+                "Real diff refused: {}",
+                violations.join("; ")
+            )));
+        }
+
+        // 4. Review branch (create-only, never a default branch) and patch file.
+        if let Err(e) = diff_gate::create_review_branch(target_repo, &branch, &staged.commit) {
+            return Ok(rejected(format!("Review branch refused: {}", e)));
+        }
+        let patch = diff_gate::format_patch(target_repo, &staged.commit)?;
+        fs::create_dir_all(patch_dir)
+            .map_err(|e| format!("Failed to create patch dir {:?}: {}", patch_dir, e))?;
+        let patch_path = patch_dir.join(format!("{}.patch", proposal.id));
+        fs::write(&patch_path, format!("{}\n", patch))
+            .map_err(|e| format!("Failed to write patch {:?}: {}", patch_path, e))?;
+
+        // 5. Record lesson in Cortex memory, tied to the review commit.
         let (cortex_receipt_id, cortex_recorded) = Self::record_cortex_lesson(
             proposal,
-            commit_hash.as_deref(),
+            Some(&staged.commit),
             ledger_block_hash,
             cortex_url,
             cortex_space,
@@ -92,15 +110,19 @@ impl Ratifier {
 
         Ok(RatificationRecord {
             proposal_id: proposal.id.clone(),
-            commit_hash,
-            author: author_str,
+            commit_hash: Some(staged.commit.clone()),
+            branch: Some(branch.clone()),
+            patch_path: Some(patch_path.display().to_string()),
+            author: author_str.clone(),
             cortex_receipt_id,
             cortex_recorded,
-            timestamp: now,
-            status: "Ratified".to_string(),
+            timestamp: now.clone(),
+            status: "ProposedForReview".to_string(),
             message: format!(
-                "Proposal '{}' ratified and committed to git.",
-                proposal.title
+                "Proposal '{}' is on review branch {} with patch {}. The default branch is unchanged; a human merges it.",
+                proposal.title,
+                branch,
+                patch_path.display()
             ),
         })
     }

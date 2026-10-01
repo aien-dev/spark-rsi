@@ -23,13 +23,46 @@ impl RootOfTrust {
         ".rsi/holdouts",
     ];
 
+    /// Lexical normalization: drops leading `/`, `.` and empty components and
+    /// resolves `..`. A path that climbs above the repository root, or holds a
+    /// backslash or NUL, comes back as `..` so callers fail closed.
     pub fn normalize_path(path: &str) -> String {
-        let p = path.trim_start_matches("./").trim_start_matches('/');
-        p.to_string()
+        match Self::normalize_strict(path) {
+            Ok(p) => p,
+            Err(_) => "..".to_string(),
+        }
+    }
+
+    /// Strict normalization. Refuses backslashes, NUL, and any `..` that climbs
+    /// above the repository root.
+    pub fn normalize_strict(path: &str) -> Result<String, String> {
+        if path.contains('\\') || path.contains('\0') {
+            return Err(format!("path {:?} contains a backslash or NUL", path));
+        }
+        let mut stack: Vec<&str> = Vec::new();
+        for comp in path.split('/') {
+            match comp {
+                "" | "." => {}
+                ".." => {
+                    if stack.pop().is_none() {
+                        return Err(format!("path {:?} climbs above the repository root", path));
+                    }
+                }
+                c => stack.push(c),
+            }
+        }
+        Ok(stack.join("/"))
     }
 
     pub fn is_protected_path(path: &str) -> bool {
-        let normalized = Self::normalize_path(path);
+        let normalized = match Self::normalize_strict(path) {
+            Ok(p) => p,
+            // Anything that cannot be normalized is treated as protected.
+            Err(_) => return true,
+        };
+        if normalized.is_empty() {
+            return true;
+        }
         let path_obj = Path::new(&normalized);
 
         for protected in Self::PROTECTED_PATHS {
@@ -42,7 +75,9 @@ impl RootOfTrust {
     }
 
     pub fn assert_patch_permitted(target_file: &str, tier: u8) -> Result<(), String> {
-        let normalized = Self::normalize_path(target_file);
+        let normalized = Self::normalize_strict(target_file).map_err(|e| {
+            format!("SECURITY VIOLATION: {}", e)
+        })?;
         if Self::is_protected_path(&normalized) && tier < 2 {
             return Err(format!(
                 "SECURITY VIOLATION: Target path '{}' is a protected root-of-trust file. Required tier: >= 2, candidate tier: {}",
@@ -98,6 +133,20 @@ mod tests {
         assert!(RootOfTrust::assert_patch_permitted("src/isolation/root_of_trust.rs", 0).is_err());
         assert!(RootOfTrust::assert_patch_permitted("src/isolation/root_of_trust.rs", 1).is_err());
         assert!(RootOfTrust::assert_patch_permitted("src/isolation/root_of_trust.rs", 2).is_ok());
+    }
+
+    #[test]
+    fn test_dotdot_and_escape_forms_cannot_bypass_protection() {
+        // Before the fix these normalized to themselves and were not protected.
+        assert!(RootOfTrust::is_protected_path("src/../Cargo.toml"));
+        assert!(RootOfTrust::is_protected_path("docs/../.github/workflows/ci.yml"));
+        assert!(RootOfTrust::is_protected_path("src//isolation/container.rs"));
+        assert!(RootOfTrust::is_protected_path("../outside.rs"));
+        assert!(RootOfTrust::is_protected_path("src\\isolation\\container.rs"));
+        assert!(RootOfTrust::assert_patch_permitted("src/../Cargo.toml", 0).is_err());
+        // Climbing out of the repository is refused even at tier 2.
+        assert!(RootOfTrust::assert_patch_permitted("../../etc/passwd", 2).is_err());
+        assert!(RootOfTrust::assert_patch_permitted("docs/../README.md", 0).is_ok());
     }
 
     #[test]
