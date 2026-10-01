@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/evaluator",
+  "layer": "src/evaluator",
+  "purpose": "Directory src/evaluator. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "below": [
+    {
+      "name": "layers",
+      "role": ""
+    }
+  ],
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/evaluator. Purpose not yet described by a human.",
+      "files": [
+        "metrics.rs",
+        "mod.rs",
+        "stats.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

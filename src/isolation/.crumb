@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/isolation",
+  "layer": "src/isolation",
+  "purpose": "Directory src/isolation. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/isolation. Purpose not yet described by a human.",
+      "files": [
+        "container.rs",
+        "manifest.rs",
+        "mod.rs",
+        "rollback.rs",
+        "root_of_trust.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/meta",
+  "layer": "src/meta",
+  "purpose": "Directory src/meta. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/meta. Purpose not yet described by a human.",
+      "files": [
+        "ab_fork.rs",
+        "benchmark_suite.rs",
+        "mod.rs",
+        "three_criteria.rs",
+        "tier.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

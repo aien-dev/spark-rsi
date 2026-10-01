@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "docs",
+  "layer": "docs",
+  "purpose": "Directory docs. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory docs. Purpose not yet described by a human.",
+      "files": [
+        "PHILOSOPHY.md"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0.0",
+  "name": "spark-rsi",
+  "layer": "root",
+  "purpose": "Repository root spark-rsi. Purpose not yet described by a human.",
+  "below": [
+    {
+      "name": "analysis",
+      "role": ""
+    },
+    {
+      "name": "docs",
+      "role": ""
+    },
+    {
+      "name": "examples",
+      "role": ""
+    },
+    {
+      "name": "mojo",
+      "role": ""
+    },
+    {
+      "name": "scripts",
+      "role": ""
+    },
+    {
+      "name": "src",
+      "role": ""
+    },
+    {
+      "name": "tests",
+      "role": ""
+    },
+    {
+      "name": "tools",
+      "role": ""
+    }
+  ],
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Repository root spark-rsi. Purpose not yet described by a human.",
+      "files": [
+        "AGENTS.md",
+        "AGENT_CODE_OF_CONDUCT.md",
+        "CONSTITUTION.md",
+        "CONTRIBUTING.md",
+        "COVENANT.md",
+        "Cargo.lock",
+        "Cargo.toml",
+        "LICENSE",
+        "README.md",
+        "SECURITY.md",
+        "agent.json",
+        "llms.txt"
+      ],
+      "git": {
+        "remote": "git@github.com:aien-dev/spark-rsi.git",
+        "branch": "hardening/LF-ratifier-branch-only",
+        "head": "d665db6"
+      }
+    },
+    "owner_lane": ""
+  }
+}

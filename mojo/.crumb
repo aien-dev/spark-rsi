@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "mojo",
+  "layer": "mojo",
+  "purpose": "Directory mojo. Purpose not yet described by a human.",
+  "above": {
+    "name": "spark-rsi",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory mojo. Purpose not yet described by a human.",
+      "files": [
+        "balance.mojo"
+      ]
+    },
+    "owner_lane": ""
+  }
+}

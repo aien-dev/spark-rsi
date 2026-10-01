@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "name": "src/bin",
+  "layer": "src/bin",
+  "purpose": "Directory src/bin. Purpose not yet described by a human.",
+  "above": {
+    "name": "src",
+    "path": ".."
+  },
+  "extensions": {
+    "seed": {
+      "purpose_auto": "Directory src/bin. Purpose not yet described by a human.",
+      "files": [
+        "supervisor.rs"
+      ]
+    },
+    "owner_lane": ""
+  }
+}
