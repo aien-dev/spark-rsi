@@ -121,6 +121,8 @@ fn ratification() -> RatificationRecord {
     RatificationRecord {
         proposal_id: "cand-kv-0001".into(),
         commit_hash: None,
+        branch: None,
+        patch_path: None,
         author: "test".into(),
         cortex_receipt_id: None,
         cortex_recorded: false,
