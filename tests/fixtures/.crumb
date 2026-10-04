@@ -1,0 +1,27 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [
+        {
+          "digest": "6b567c54ee577f3ec525578697a78868f0b14a7115fac081975e19dfb79bc2cd",
+          "last_commit": "d58dd0c",
+          "name": "dual",
+          "purpose": "Golden DUAL record encodings and C decoder statuses produced by omega dual/0a-records (commit f0"
+        }
+      ],
+      "children_root": "sha256:2b9f41620de56bd08cad85f51be8a9583263776129f19bb8f8412b2bd085f850",
+      "compiled_at": "2026-10-04T18:16:58Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:d1b0499983ee2182cd3f5232819266bb74afcf35908c4a6fb64a9dd073d228fa",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 2,
+      "generated_at_commit": "d58dd0c1c4c2d26bd9a49736ced0c6f07087bf2b",
+      "source_tree": "sha256:2876c463fae6899df1021fe0b5d0873cb8f7b4d67e8e56a4b6e36917c030c6cc"
+    }
+  },
+  "layer": "tests/fixtures",
+  "name": "fixtures",
+  "purpose": "Test fixtures: recorded evidence files and golden vectors used by integration tests.",
+  "schema_version": "1.0.0"
+}

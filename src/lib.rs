@@ -6,6 +6,7 @@ pub mod canary_observation;
 pub mod config;
 pub mod daemon;
 pub mod diff_gate;
+pub mod dual;
 pub mod evaluator;
 pub mod explain;
 pub mod graph;
@@ -24,6 +25,7 @@ pub use actor::{BlindJudge, HoldoutCase, HoldoutSuite, JudgeCli};
 pub use balance::BalanceKernel;
 pub use config::{EngineConfig, OperatorProfile, SovereignConfig};
 pub use daemon::RsiEngine;
+pub use dual::{ScarcityDiagnostic, UnavailableReason};
 pub use evaluator::{
     BootstrapEstimate, CorrectnessEvaluation, CorrectnessLayer, EvaluationReceipt, FastPrng,
     FishersExactResult, LatencyDistribution, LatencyTimer, LayerResult,

@@ -153,6 +153,9 @@ enum Commands {
         max_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
         max_model: String,
+        /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
+        #[arg(long)]
+        dual_price_vector_dir: Option<String>,
     },
     /// Run the continuous recursive self-improvement daemon loop
     Daemon {
@@ -168,6 +171,9 @@ enum Commands {
         max_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
         max_model: String,
+        /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
+        #[arg(long)]
+        dual_price_vector_dir: Option<String>,
     },
     /// Manage the append-only cryptographic improvement ledger
     Ledger {
@@ -347,6 +353,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             cortex_url,
             max_url,
             max_model,
+            dual_price_vector_dir,
         } => {
             let config = RsiConfig {
                 target_repo: path,
@@ -365,6 +372,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 operator_key_hex: None,
                 non_inferiority_margin: None,
                 ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
+                dual_price_vector_dir,
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -376,6 +384,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             cortex_url,
             max_url,
             max_model,
+            dual_price_vector_dir,
         } => {
             let config = RsiConfig {
                 target_repo: path,
@@ -394,6 +403,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 operator_key_hex: None,
                 non_inferiority_margin: None,
                 ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
+                dual_price_vector_dir,
             };
             RsiEngine::run_daemon(config).await?;
         }
