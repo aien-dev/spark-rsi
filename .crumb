@@ -50,7 +50,7 @@
         },
         {
           "digest": "517b2a4e971ac5df13edb5bf237be5f9516280eac23d379bbce562f853779c45",
-          "last_commit": "",
+          "last_commit": "53b071b",
           "name": "evidence",
           "purpose": "Evidence receipts for verified changes (commands, results, SHAs, verdicts)."
         },
@@ -74,13 +74,13 @@
         },
         {
           "digest": "06e9de9949066f54397c574911769ce91e595453a8bc7d06e8aeef3c00309816",
-          "last_commit": "d25d751",
+          "last_commit": "53b071b",
           "name": "src",
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
           "digest": "4200c52520ba10a0127c848dfb1d0e2811bb67410ee220a634e87fd8a7e36eba",
-          "last_commit": "f5f1ca2",
+          "last_commit": "53b071b",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
         },
@@ -98,7 +98,7 @@
       "evidence_files": 1,
       "evidence_root": "sha256:1e4c62b749ca92e017a2be0f8d9dd1d48936fa1c3e2f7d3780ce9c928397dd1f",
       "files": 99,
-      "generated_at_commit": "ffbdb839b5a1978d8cd7eec5c5830285d89723bc",
+      "generated_at_commit": "53b071b5274e93cf43fe7871bb2774f7435e72f2",
       "source_tree": "sha256:c0a65c36feb20a000baedecf09a36dc9f9c8e60ff1ec342956eebffc227cfe0e"
     },
     "owner_lane": "",

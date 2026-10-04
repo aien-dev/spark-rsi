@@ -62,7 +62,7 @@
         },
         {
           "digest": "2ca2e76cc9ef95064f24c4215dce6acdf6bef463fd2004dcbf36110d8bf1655e",
-          "last_commit": "",
+          "last_commit": "53b071b",
           "name": "dual",
           "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnost"
         },
@@ -122,7 +122,7 @@
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 58,
-      "generated_at_commit": "ffbdb839b5a1978d8cd7eec5c5830285d89723bc",
+      "generated_at_commit": "53b071b5274e93cf43fe7871bb2774f7435e72f2",
       "source_tree": "sha256:f70226153932bd33821d57404eee947e06677545258d0a92a890a49541480a5f"
     },
     "owner_lane": "",

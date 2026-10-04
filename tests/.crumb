@@ -8,7 +8,7 @@
       "children": [
         {
           "digest": "d1b0499983ee2182cd3f5232819266bb74afcf35908c4a6fb64a9dd073d228fa",
-          "last_commit": "a13b0dd",
+          "last_commit": "53b071b",
           "name": "fixtures",
           "purpose": "Test fixtures: recorded evidence files and golden vectors used by integration tests."
         }
@@ -20,7 +20,7 @@
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 16,
-      "generated_at_commit": "ffbdb839b5a1978d8cd7eec5c5830285d89723bc",
+      "generated_at_commit": "53b071b5274e93cf43fe7871bb2774f7435e72f2",
       "source_tree": "sha256:68ee5eef36ae042fe5dc43ba6a2eb16240eeb8e91edad7d6069f29a22a92c34b"
     },
     "owner_lane": "",
