@@ -1,19 +1,31 @@
 {
-  "schema_version": "1.0.0",
-  "name": "tools",
-  "layer": "tools",
-  "purpose": "Directory tools. Purpose not yet described by a human.",
   "above": {
     "name": "spark-rsi",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:f335f7e80072429f7bce42292bec8b2eb6a79d95e35f84e4cdf5eef833065952",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:284364c4306bbae408fca9634ca2b6ed61ba378dc7a7849ab07e4e23b4dea4f4"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory tools. Purpose not yet described by a human.",
       "files": [
         "build_and_run_notebooks.py"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory tools. Purpose not yet described by a human."
+    }
+  },
+  "layer": "tools",
+  "name": "tools",
+  "purpose": "Directory tools. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

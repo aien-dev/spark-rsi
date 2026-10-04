@@ -1,23 +1,35 @@
 {
-  "schema_version": "1.0.0",
-  "name": "src/meta",
-  "layer": "src/meta",
-  "purpose": "Directory src/meta. Purpose not yet described by a human.",
   "above": {
     "name": "src",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:93f3f010310a3c1cbda620ad8c8b9f11c6b20571f6145de1c3a4e66c98c9af99",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 5,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:3d8ddc3d317befcd73e0058963ac7d6827dc3e3c4589117f533106f5df5fe64a"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory src/meta. Purpose not yet described by a human.",
       "files": [
         "ab_fork.rs",
         "benchmark_suite.rs",
         "mod.rs",
         "three_criteria.rs",
         "tier.rs"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory src/meta. Purpose not yet described by a human."
+    }
+  },
+  "layer": "src/meta",
+  "name": "src/meta",
+  "purpose": "Directory src/meta. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

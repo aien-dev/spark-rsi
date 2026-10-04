@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Pure native Rust Recursive Self-Improvement (RSI) engine for autonomous AI agents on SparkOS",
   "repository": "https://github.com/aien-dev/spark-rsi",
-  "license": "Apache-2.0 WITH LLVM-exception",
+  "license": "AGPL-3.0-or-later",
   "architecture": [
     "x86_64",
     "aarch64-grace-blackwell"

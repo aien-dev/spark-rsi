@@ -1,15 +1,23 @@
 {
-  "schema_version": "1.0.0",
-  "name": "src/evaluator/layers",
-  "layer": "src/evaluator/layers",
-  "purpose": "Directory src/evaluator/layers. Purpose not yet described by a human.",
   "above": {
     "name": "src/evaluator",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:e12feb890c04bceafd3af883a63716b7a3f465aa2a2644ae1efce6fa3f55ddee",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 7,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:7f6d97c6b1c5eab7ae46776bdd42115c7934b78956b9d2c10c872d6591db5be4"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory src/evaluator/layers. Purpose not yet described by a human.",
       "files": [
         "correctness.rs",
         "longitudinal_replay.rs",
@@ -18,8 +26,12 @@
         "resource_efficiency.rs",
         "security.rs",
         "style.rs"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory src/evaluator/layers. Purpose not yet described by a human."
+    }
+  },
+  "layer": "src/evaluator/layers",
+  "name": "src/evaluator/layers",
+  "purpose": "Directory src/evaluator/layers. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }
