@@ -3,21 +3,21 @@
     "generated": {
       "children": [
         {
-          "digest": "6a9064c48b96de7390f626e527a92dacd7299298527d133af4cfc167cb9facee",
-          "last_commit": "d58dd0c",
+          "digest": "087039c80e40cfcff3cadd647c87ecf0e6fc504c1d539d5bc825bf0408196d1c",
+          "last_commit": "cc02e9b",
           "name": "dual",
           "purpose": "Evidence receipt and throwaway C golden-vector generator for the RSI DUAL diagnostic reader PR."
         }
       ],
-      "children_root": "sha256:ff9903fca380283822e6a5d45388766515fa2d198babafb5f9f18a5c035b9197",
-      "compiled_at": "2026-10-04T18:16:58Z",
+      "children_root": "sha256:6b2fb1e609c1e7cddf99648b7e2b25fc8fd2148115544a9a757193cf7c4c66db",
+      "compiled_at": "2026-10-04T18:18:43Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:517b2a4e971ac5df13edb5bf237be5f9516280eac23d379bbce562f853779c45",
-      "evidence_files": 1,
-      "evidence_root": "sha256:1e4c62b749ca92e017a2be0f8d9dd1d48936fa1c3e2f7d3780ce9c928397dd1f",
-      "files": 1,
-      "generated_at_commit": "d58dd0c1c4c2d26bd9a49736ced0c6f07087bf2b",
-      "source_tree": "sha256:26648bb0f1f8be45576d7f33d0f0975850b1882ee3a1317cc6bf0f43204cdae1"
+      "digest": "sha256:bb7da41083067ba0bbaebde75d3b6be9c8983df0e403be2c6202ee831edb9e95",
+      "evidence_files": 2,
+      "evidence_root": "sha256:48fe95a0bb2960c90820bb8970bcaac80bef5feb052f43722332c7adefc5a4bf",
+      "files": 2,
+      "generated_at_commit": "cc02e9b21ca23c8adbd79c619470287049e592a3",
+      "source_tree": "sha256:976fec88fb37736c99ecd0e80ec7e39f1b5e0cae7e7211f355e94d916221630d"
     }
   },
   "layer": "evidence",
