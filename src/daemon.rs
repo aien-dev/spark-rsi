@@ -1,5 +1,6 @@
 use crate::actor::judge::BlindJudge;
 use crate::balance::BalanceKernel;
+use crate::dual::ScarcityDiagnostic;
 use crate::evaluator::EvaluationReceipt;
 use crate::graph::{CapabilityGraph, CapabilityNode};
 use crate::isolation::BuildJail;
@@ -99,6 +100,14 @@ impl RsiEngine {
 
         let top_bottleneck = graph.top_bottleneck();
 
+        // 4b. DUAL scarcity telemetry (ADR 0031 section 7.5). Diagnostic only: read
+        // after ranking, never fed into rank_bottlenecks, hard invariants,
+        // admission, ratification or promotion. Unconfigured = Unavailable(Missing).
+        let scarcity = match config.dual_price_vector_dir.as_deref() {
+            Some(dir) => ScarcityDiagnostic::load_from_dir(Path::new(dir)),
+            None => ScarcityDiagnostic::default(),
+        };
+
         // 5. Bottleneck Hypothesis Contract & Cortex Recall
         let hypothesis = top_bottleneck.as_ref().map(|b| {
             HypothesisContract::new(
@@ -143,10 +152,20 @@ impl RsiEngine {
                 target_file,
                 &content,
                 DefectCategory::PerformanceRegression,
-                vec![format!(
-                    "Bottleneck identified at {:?}",
-                    top_bottleneck.as_ref().map(|b| &b.node_name)
-                )],
+                {
+                    let mut violations = vec![format!(
+                        "Bottleneck identified at {:?}",
+                        top_bottleneck.as_ref().map(|b| &b.node_name)
+                    )];
+                    // Rationale text only, and only when a price vector is configured.
+                    if config.dual_price_vector_dir.is_some() {
+                        violations.push(format!(
+                            "DUAL telemetry (diagnostic only, no authority): {}",
+                            scarcity.summary()
+                        ));
+                    }
+                    violations
+                },
                 past_lessons.clone(),
             );
             if let Some(h) = hypothesis.clone() {
@@ -562,6 +581,7 @@ impl RsiEngine {
             ratification: maybe_ratification,
             success,
             elapsed_ms,
+            scarcity,
         })
     }
 
@@ -583,6 +603,12 @@ impl RsiEngine {
                         res.proposal.is_some(),
                         res.receipt.as_ref().map(|r| r.admitted).unwrap_or(true)
                     );
+                    if config.dual_price_vector_dir.is_some() {
+                        tracing::info!(
+                            "DUAL scarcity telemetry (diagnostic only): {}",
+                            res.scarcity.summary()
+                        );
+                    }
                 }
                 Err(e) => {
                     tracing::error!("RSI cycle failed with error: {}", e);

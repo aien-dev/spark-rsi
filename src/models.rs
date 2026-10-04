@@ -123,6 +123,11 @@ pub struct RsiConfig {
     /// Repository-relative roots a proposal may change. Anything else is refused.
     #[serde(default = "crate::diff_gate::default_ratify_roots")]
     pub ratify_roots: Vec<String>,
+    /// Directory holding a DUAL price vector (`price_vector.bin`, `*.constraint.bin`,
+    /// optional `price_vector.sha256`). Read as diagnostic telemetry only (ADR 0031
+    /// section 7.5); it grants no authority and changes no gate. None = not configured.
+    #[serde(default)]
+    pub dual_price_vector_dir: Option<String>,
 }
 
 fn default_max_url() -> String {
@@ -160,6 +165,7 @@ impl Default for RsiConfig {
             operator_key_hex: None,
             non_inferiority_margin: None,
             ratify_roots: crate::diff_gate::default_ratify_roots(),
+            dual_price_vector_dir: None,
         }
     }
 }
@@ -177,4 +183,9 @@ pub struct RsiCycleResult {
     pub ratification: Option<RatificationRecord>,
     pub success: bool,
     pub elapsed_ms: f64,
+    /// DUAL scarcity telemetry (ADR 0031 section 7.5). Diagnostic only: it never
+    /// enters bottleneck ranking, hard invariants, admission, ratification or
+    /// promotion. Defaults to `Unavailable { Missing }` when not configured.
+    #[serde(default)]
+    pub scarcity: crate::dual::ScarcityDiagnostic,
 }

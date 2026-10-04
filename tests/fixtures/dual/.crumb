@@ -1,0 +1,20 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:41:13Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:6b567c54ee577f3ec525578697a78868f0b14a7115fac081975e19dfb79bc2cd",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "ffbdb839b5a1978d8cd7eec5c5830285d89723bc",
+      "source_tree": "sha256:b7cf56d7637f6ae4f3dd75dd22fd44906e0e33bb7b547232be49f57838ebe67f"
+    }
+  },
+  "layer": "tests/fixtures/dual",
+  "name": "dual",
+  "purpose": "Golden DUAL record encodings and C decoder statuses produced by omega dual/0a-records (commit f056b77f) for the src/dual reader tests.",
+  "schema_version": "1.0.0"
+}
