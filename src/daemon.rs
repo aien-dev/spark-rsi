@@ -100,7 +100,7 @@ impl RsiEngine {
 
         let top_bottleneck = graph.top_bottleneck();
 
-        // 4b. DUAL scarcity telemetry (ADR 0031 section 7.5). Diagnostic only: read
+        // 4b. DUAL scarcity reading (ADR 0031 section 7.5). Diagnostic only: read
         // after ranking, never fed into rank_bottlenecks, hard invariants,
         // admission, ratification or promotion. Unconfigured = Unavailable(Missing).
         let scarcity = match config.dual_price_vector_dir.as_deref() {
@@ -160,7 +160,7 @@ impl RsiEngine {
                     // Rationale text only, and only when a price vector is configured.
                     if config.dual_price_vector_dir.is_some() {
                         violations.push(format!(
-                            "DUAL telemetry (diagnostic only, no authority): {}",
+                            "DUAL scarcity reading (diagnostic only, no authority): {}",
                             scarcity.summary()
                         ));
                     }
@@ -605,7 +605,7 @@ impl RsiEngine {
                     );
                     if config.dual_price_vector_dir.is_some() {
                         tracing::info!(
-                            "DUAL scarcity telemetry (diagnostic only): {}",
+                            "DUAL scarcity reading (diagnostic only): {}",
                             res.scarcity.summary()
                         );
                     }

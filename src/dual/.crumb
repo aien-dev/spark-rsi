@@ -3,18 +3,18 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-10-04T18:16:58Z",
+      "compiled_at": "2026-10-04T18:25:32Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:2ca2e76cc9ef95064f24c4215dce6acdf6bef463fd2004dcbf36110d8bf1655e",
+      "digest": "sha256:4c66e2e1f75405fa6c3a2ec1f3638a19bbe2a103ddacdeeb5edfdd399666c37f",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 3,
-      "generated_at_commit": "d58dd0c1c4c2d26bd9a49736ced0c6f07087bf2b",
-      "source_tree": "sha256:26062e72625741f34f559f2faaf89adb76feb0c352efb28f3bc0cb7f051b7cdd"
+      "generated_at_commit": "5b2cb4957b9551a4a3781c13263ab5bc144809a1",
+      "source_tree": "sha256:6549e96012d65d44b390727f4daa05ac7c52dc95865d6ce32afd1efbbbbb2b98"
     }
   },
   "layer": "src/dual",
   "name": "dual",
-  "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnostic. Diagnostic telemetry only; never feeds rank_bottlenecks, is_hard_invariant, admission, ratification or promotion.",
+  "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnostic. Diagnostic signal only; never feeds rank_bottlenecks, is_hard_invariant, admission, ratification or promotion.",
   "schema_version": "1.0.0"
 }

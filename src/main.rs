@@ -153,7 +153,7 @@ enum Commands {
         max_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
         max_model: String,
-        /// Directory with a DUAL price vector, read as diagnostic telemetry only (ADR 0031 s7.5)
+        /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
         #[arg(long)]
         dual_price_vector_dir: Option<String>,
     },
@@ -171,7 +171,7 @@ enum Commands {
         max_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
         max_model: String,
-        /// Directory with a DUAL price vector, read as diagnostic telemetry only (ADR 0031 s7.5)
+        /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
         #[arg(long)]
         dual_price_vector_dir: Option<String>,
     },

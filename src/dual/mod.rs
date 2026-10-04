@@ -1,7 +1,7 @@
 //! DUAL constraint-pricing reader for RSI (ADR 0031 / ARCH-0031, section 7.5).
 //!
-//! Diagnostic only. RSI reads `DualPriceVector` records as scarcity
-//! telemetry and gains no authority from them:
+//! Diagnostic only. RSI reads `DualPriceVector` records as
+//! scarcity signals and gains no authority from them:
 //!
 //! - nothing here is consulted by `CapabilityGraph::rank_bottlenecks`, whose
 //!   fixed weights are unchanged;

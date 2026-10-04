@@ -61,7 +61,7 @@
           "purpose": "Directory src/bin. Purpose not yet described by a human."
         },
         {
-          "digest": "2ca2e76cc9ef95064f24c4215dce6acdf6bef463fd2004dcbf36110d8bf1655e",
+          "digest": "4c66e2e1f75405fa6c3a2ec1f3638a19bbe2a103ddacdeeb5edfdd399666c37f",
           "last_commit": "53b071b",
           "name": "dual",
           "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnost"
@@ -115,15 +115,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:e8d4f9c9b6861793c1f23792c27e540e1b1002df76f13d908432cb6e2b50aeca",
+      "children_root": "sha256:47e21e317340672d7a14d56e69796a9b06d028c21a7e1c8116efc29af28c7ed2",
       "compiled_at": "2026-10-04T18:41:13Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:06e9de9949066f54397c574911769ce91e595453a8bc7d06e8aeef3c00309816",
+      "digest": "sha256:afb292cfddbedbaf9979077a42b35661fab27a0cdceb2f9cdb9c16c5c99fbfc9",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 58,
-      "generated_at_commit": "53b071b5274e93cf43fe7871bb2774f7435e72f2",
-      "source_tree": "sha256:f70226153932bd33821d57404eee947e06677545258d0a92a890a49541480a5f"
+      "generated_at_commit": "e49fad9bee967eaff7bf3749fe53be9722f5ca7b",
+      "source_tree": "sha256:3e8a9425bcec763e04b64bce0553b31eb5fa68ed556c0c6389116d029c7998a8"
     },
     "owner_lane": "",
     "seed": {

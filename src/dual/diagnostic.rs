@@ -1,6 +1,6 @@
 //! Scarcity diagnostic for RSI (ADR 0031 section 7.5 and 10).
 //!
-//! RSI may read a verified `DualPriceVector` as telemetry: the resource with
+//! RSI may read a verified `DualPriceVector` as a scarcity signal: the resource with
 //! the largest FRESH, calibrated lambda is the dominant current scarcity.
 //! That is all this type says. It never feeds `rank_bottlenecks`, a layer's
 //! `is_hard_invariant`, admission, ratification or promotion. A missing,
@@ -55,7 +55,7 @@ pub enum FreshState {
     Fresh,
 }
 
-/// Diagnostic telemetry only. Two shapes, nothing else.
+/// Diagnostic reading only. Two shapes, nothing else.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum ScarcityDiagnostic {
@@ -129,7 +129,7 @@ impl ScarcityDiagnostic {
                 evidence_root
             ),
             ScarcityDiagnostic::Unavailable { reason, detail } => format!(
-                "scarcity telemetry unavailable: price is {} ({})",
+                "scarcity reading unavailable: price is {} ({})",
                 reason.name(),
                 detail
             ),

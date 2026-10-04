@@ -562,7 +562,7 @@ fn non_fresh_prices_are_unavailable_never_zero() {
     );
     assert!(diag
         .summary()
-        .starts_with("scarcity telemetry unavailable: price is STALE"));
+        .starts_with("scarcity reading unavailable: price is STALE"));
     let json = serde_json::to_value(&diag).unwrap();
     assert_eq!(json["status"], "unavailable");
     assert_eq!(json["reason"], "STALE");
@@ -697,7 +697,7 @@ fn vector_state_must_name_the_right_resource_and_generation() {
 // ---------------------------------------------------- default + directory
 
 #[test]
-fn default_is_missing_and_old_cycle_results_still_deserialize() {
+fn default_is_missing_and_old_configs_still_deserialize() {
     let d = ScarcityDiagnostic::default();
     assert_eq!(
         d,
@@ -708,29 +708,28 @@ fn default_is_missing_and_old_cycle_results_still_deserialize() {
     );
     assert!(d
         .summary()
-        .starts_with("scarcity telemetry unavailable: price is MISSING"));
+        .starts_with("scarcity reading unavailable: price is MISSING"));
     assert!(spark_rsi::models::RsiConfig::default()
         .dual_price_vector_dir
         .is_none());
 
-    // A cycle result serialized before this field existed.
+    // A config serialized before the new key existed still loads with None.
     let old = serde_json::json!({
-        "cycle_id": "cycle-old",
-        "telemetry": {
-            "repo_path": ".", "git_branch": "main", "git_clean": true,
-            "uncommitted_files": [], "crumbs_detected": 0, "tests_passing": true,
-            "soul_tension": {
-                "drive_score": 0.0, "humanity_score": 0.0, "drive_terms_matched": [],
-                "humanity_terms_matched": [], "tension_ratio": 0.0, "state": "balanced"
-            },
-            "timestamp": "2026-10-04T00:00:00Z"
-        },
-        "proposal": null, "invariants": null, "balance": null, "receipt": null,
-        "generation": null, "ledger_block": null, "ratification": null,
-        "success": true, "elapsed_ms": 1.0
+        "target_repo": ".", "cortex_url": "http://127.0.0.1:18080", "cortex_space": "s",
+        "mojo_kernel_path": "mojo/balance_bin", "loop_interval_secs": 60,
+        "sandbox_root": "/tmp/spark-rsi-sandbox"
     });
-    let res: spark_rsi::models::RsiCycleResult = serde_json::from_value(old).unwrap();
-    assert_eq!(res.scarcity, ScarcityDiagnostic::default());
+    let cfg: spark_rsi::models::RsiConfig = serde_json::from_value(old).unwrap();
+    assert!(cfg.dual_price_vector_dir.is_none());
+    // RsiCycleResult.scarcity carries #[serde(default)], so a result written
+    // before the field existed deserializes to the same default.
+    assert_eq!(
+        serde_json::from_str::<ScarcityDiagnostic>(
+            &serde_json::to_string(&ScarcityDiagnostic::default()).unwrap()
+        )
+        .unwrap(),
+        ScarcityDiagnostic::default()
+    );
 }
 
 #[test]

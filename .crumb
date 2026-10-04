@@ -49,7 +49,7 @@
           "purpose": "Directory docs. Purpose not yet described by a human."
         },
         {
-          "digest": "bb7da41083067ba0bbaebde75d3b6be9c8983df0e403be2c6202ee831edb9e95",
+          "digest": "53992aea8cbf3b64975864ef6cc0cb38f056b5b6e41d27eafa4aad634295723c",
           "last_commit": "3098a17",
           "name": "evidence",
           "purpose": "Evidence receipts for verified changes (commands, results, SHAs, verdicts)."
@@ -73,13 +73,13 @@
           "purpose": "Directory scripts. Purpose not yet described by a human."
         },
         {
-          "digest": "06e9de9949066f54397c574911769ce91e595453a8bc7d06e8aeef3c00309816",
+          "digest": "afb292cfddbedbaf9979077a42b35661fab27a0cdceb2f9cdb9c16c5c99fbfc9",
           "last_commit": "53b071b",
           "name": "src",
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
-          "digest": "4200c52520ba10a0127c848dfb1d0e2811bb67410ee220a634e87fd8a7e36eba",
+          "digest": "2f8a58d0ea4d754b348625acbc68776791ddd13bea3f11f79de68d8c8f8f0c86",
           "last_commit": "53b071b",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
@@ -91,15 +91,15 @@
           "purpose": "Directory tools. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:20bba3392e5cb0952367e3e39fb55bee4ceef9d4b01e6cc196a30a5e9f22c659",
+      "children_root": "sha256:763c067c503673228c6fe68c64616649b34b2d36564dc6cecf9b6efa904319d4",
       "compiled_at": "2026-10-04T18:41:13Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:b9962bb5988d8639f7755347f0c980eaa422b4db80e95f77804b134378479255",
+      "digest": "sha256:d14cfd5b4bc76847cb9ebf65432382bd64dd8ce5ec7502ca0807328a6cb890f9",
       "evidence_files": 2,
-      "evidence_root": "sha256:48fe95a0bb2960c90820bb8970bcaac80bef5feb052f43722332c7adefc5a4bf",
+      "evidence_root": "sha256:2af46c9e5c5f639d24acdfd75e5bbc6704616dd36c2d8d18ea4070421f048147",
       "files": 100,
-      "generated_at_commit": "3098a175262f418dcafde12ab2fc464eef1d76f7",
-      "source_tree": "sha256:b4017aa973481481acf024d4acfb70d83302824e4989ad12dd9290e0dd308b87"
+      "generated_at_commit": "e49fad9bee967eaff7bf3749fe53be9722f5ca7b",
+      "source_tree": "sha256:edc228271a788b929a0a2d81f408f892974a1808f979efdc09dadf53d2146736"
     },
     "owner_lane": "",
     "seed": {
