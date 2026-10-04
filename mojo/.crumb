@@ -1,19 +1,31 @@
 {
-  "schema_version": "1.0.0",
-  "name": "mojo",
-  "layer": "mojo",
-  "purpose": "Directory mojo. Purpose not yet described by a human.",
   "above": {
     "name": "spark-rsi",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:c65c4a841446f76af9dca31e0631e577d146bcb1cf72122356e43cdee8545143",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:5e0e3dd3a187be34445ba17fc8d77b4dea13b4129d9520a28307c1071d698580"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory mojo. Purpose not yet described by a human.",
       "files": [
         "balance.mojo"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory mojo. Purpose not yet described by a human."
+    }
+  },
+  "layer": "mojo",
+  "name": "mojo",
+  "purpose": "Directory mojo. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

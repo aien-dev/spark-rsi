@@ -1,15 +1,23 @@
 {
-  "schema_version": "1.0.0",
-  "name": "src/ledger",
-  "layer": "src/ledger",
-  "purpose": "Directory src/ledger. Purpose not yet described by a human.",
   "above": {
     "name": "src",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:0e6ddf895c1a822d2f891f0f8bf304d0f2b9863e8b0823aa10615323ff9c1f85",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 6,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:10d56958d506c3ddae1d79db94f5581b5aad8d14fa947bb5b197d3fc30e5e31f"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory src/ledger. Purpose not yet described by a human.",
       "files": [
         "blob.rs",
         "db.rs",
@@ -17,8 +25,12 @@
         "mod.rs",
         "record.rs",
         "schema.rs"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory src/ledger. Purpose not yet described by a human."
+    }
+  },
+  "layer": "src/ledger",
+  "name": "src/ledger",
+  "purpose": "Directory src/ledger. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

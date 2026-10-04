@@ -1,19 +1,31 @@
 {
-  "schema_version": "1.0.0",
-  "name": "src/graph",
-  "layer": "src/graph",
-  "purpose": "Directory src/graph. Purpose not yet described by a human.",
   "above": {
     "name": "src",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:cf457e03830140bb69fefc728a9560f3267693e75e58e35095885c1af2e9f50a",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:2bcda57a49b28e230e7b29d51b0ded2a7e64d009c578177d2a14e2259f59a710"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory src/graph. Purpose not yet described by a human.",
       "files": [
         "mod.rs"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory src/graph. Purpose not yet described by a human."
+    }
+  },
+  "layer": "src/graph",
+  "name": "src/graph",
+  "purpose": "Directory src/graph. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

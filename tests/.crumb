@@ -1,15 +1,23 @@
 {
-  "schema_version": "1.0.0",
-  "name": "tests",
-  "layer": "tests",
-  "purpose": "Directory tests. Purpose not yet described by a human.",
   "above": {
     "name": "spark-rsi",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:7f650d5395aeb477f53cfd742dcb0b651851a6961ae9809e472957dc4aa05951",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 14,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:f2d4f285e9492382447719d2bb91271d4134ca65723666eae498e3b30423b3e3"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory tests. Purpose not yet described by a human.",
       "files": [
         "integration_tests.rs",
         "safety_envelope_tests.rs",
@@ -23,8 +31,12 @@
         "test_objective_evaluator.rs",
         "test_ratifier_branch_only.rs",
         "test_soak_run.rs"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory tests. Purpose not yet described by a human."
+    }
+  },
+  "layer": "tests",
+  "name": "tests",
+  "purpose": "Directory tests. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

@@ -1,21 +1,33 @@
 {
-  "schema_version": "1.0.0",
-  "name": "src/soak",
-  "layer": "src/soak",
-  "purpose": "Directory src/soak. Purpose not yet described by a human.",
   "above": {
     "name": "src",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:4af5c0905f9cd05b6bb6cbcefc05d861513770f816ef2a6f962d05a60b516c98",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 3,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:30ac0c2444b8c96a4889f3a568f5eb8abe9003c2621499eedfd510c2af27425d"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory src/soak. Purpose not yet described by a human.",
       "files": [
         "manifest.rs",
         "mod.rs",
         "runner.rs"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory src/soak. Purpose not yet described by a human."
+    }
+  },
+  "layer": "src/soak",
+  "name": "src/soak",
+  "purpose": "Directory src/soak. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

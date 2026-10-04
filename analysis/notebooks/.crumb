@@ -1,20 +1,32 @@
 {
-  "schema_version": "1.0.0",
-  "name": "analysis/notebooks",
-  "layer": "analysis/notebooks",
-  "purpose": "Directory analysis/notebooks. Purpose not yet described by a human.",
   "above": {
     "name": "analysis",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:f7dfd5c050a74aa8d9d2f870d54e440d48f91b4d3904daeae49a76fdc25cbd96",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 2,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:a2c616a7c75433ee14919f0c6a442145f411e2ee53f5edbdcb5f0cd3f8654ddc"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory analysis/notebooks. Purpose not yet described by a human.",
       "files": [
         "evaluator_distributions.ipynb",
         "rsi_capability_tracker.ipynb"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory analysis/notebooks. Purpose not yet described by a human."
+    }
+  },
+  "layer": "analysis/notebooks",
+  "name": "analysis/notebooks",
+  "purpose": "Directory analysis/notebooks. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

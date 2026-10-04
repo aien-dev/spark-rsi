@@ -1,19 +1,31 @@
 {
-  "schema_version": "1.0.0",
-  "name": "docs",
-  "layer": "docs",
-  "purpose": "Directory docs. Purpose not yet described by a human.",
   "above": {
     "name": "spark-rsi",
     "path": ".."
   },
   "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:61588c4b8d72dcd139ed0865e0a0e8e4c2a2968bc4b50a327fe237dce278e6f8",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:103af42a8e8d92f428d8c5220b77b4549b8444034bfe5d85dd99d1ea52255da7"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Directory docs. Purpose not yet described by a human.",
       "files": [
         "PHILOSOPHY.md"
-      ]
-    },
-    "owner_lane": ""
-  }
+      ],
+      "purpose_auto": "Directory docs. Purpose not yet described by a human."
+    }
+  },
+  "layer": "docs",
+  "name": "docs",
+  "purpose": "Directory docs. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }

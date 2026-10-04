@@ -1,8 +1,4 @@
 {
-  "schema_version": "1.0.0",
-  "name": "spark-rsi",
-  "layer": "root",
-  "purpose": "Repository root spark-rsi. Purpose not yet described by a human.",
   "below": [
     {
       "name": "analysis",
@@ -38,8 +34,69 @@
     }
   ],
   "extensions": {
+    "generated": {
+      "children": [
+        {
+          "digest": "038cefb2985a39a5f018fc8788761476e54d557433a0c0be32cbd38c2926c55b",
+          "last_commit": "ca283ea",
+          "name": "analysis",
+          "purpose": "Directory analysis. Purpose not yet described by a human."
+        },
+        {
+          "digest": "61588c4b8d72dcd139ed0865e0a0e8e4c2a2968bc4b50a327fe237dce278e6f8",
+          "last_commit": "1ff03c9",
+          "name": "docs",
+          "purpose": "Directory docs. Purpose not yet described by a human."
+        },
+        {
+          "digest": "83a912b22ea53e6a6a7696a9fe68027008c6a4995073bd738525f1eee20f7760",
+          "last_commit": "5d46b21",
+          "name": "examples",
+          "purpose": "Directory examples. Purpose not yet described by a human."
+        },
+        {
+          "digest": "c65c4a841446f76af9dca31e0631e577d146bcb1cf72122356e43cdee8545143",
+          "last_commit": "6ac8ae9",
+          "name": "mojo",
+          "purpose": "Directory mojo. Purpose not yet described by a human."
+        },
+        {
+          "digest": "4b7fe492f3c01a231679c20cee405cf5a41d15bc6229aba5f6e3503987197655",
+          "last_commit": "657a3e6",
+          "name": "scripts",
+          "purpose": "Directory scripts. Purpose not yet described by a human."
+        },
+        {
+          "digest": "c9a5cafeae8b6165451a5cae561a96b1b27d9b41f98097cb542605bb895c98a9",
+          "last_commit": "d25d751",
+          "name": "src",
+          "purpose": "Directory src. Purpose not yet described by a human."
+        },
+        {
+          "digest": "7f650d5395aeb477f53cfd742dcb0b651851a6961ae9809e472957dc4aa05951",
+          "last_commit": "f5f1ca2",
+          "name": "tests",
+          "purpose": "Directory tests. Purpose not yet described by a human."
+        },
+        {
+          "digest": "f335f7e80072429f7bce42292bec8b2eb6a79d95e35f84e4cdf5eef833065952",
+          "last_commit": "ca283ea",
+          "name": "tools",
+          "purpose": "Directory tools. Purpose not yet described by a human."
+        }
+      ],
+      "children_root": "sha256:53fc7fb5bff0e3b99907a773ee9efdee7b57cabeabb8c0139cc7a492f5937583",
+      "compiled_at": "2026-10-04T18:13:51Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:d2b70152fb93a65a781b8edf431f341f0f0ed06fdcf96766e278f7bd2063d771",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 93,
+      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
+      "source_tree": "sha256:a833e1385615ace89772b86e0d158caab9524e3cb6a146d909faaf6524959bd9"
+    },
+    "owner_lane": "",
     "seed": {
-      "purpose_auto": "Repository root spark-rsi. Purpose not yet described by a human.",
       "files": [
         "AGENTS.md",
         "AGENT_CODE_OF_CONDUCT.md",
@@ -55,11 +112,15 @@
         "llms.txt"
       ],
       "git": {
-        "remote": "git@github.com:aien-dev/spark-rsi.git",
         "branch": "hardening/LF-ratifier-branch-only",
-        "head": "d665db6"
-      }
-    },
-    "owner_lane": ""
-  }
+        "head": "d665db6",
+        "remote": "git@github.com:aien-dev/spark-rsi.git"
+      },
+      "purpose_auto": "Repository root spark-rsi. Purpose not yet described by a human."
+    }
+  },
+  "layer": "root",
+  "name": "spark-rsi",
+  "purpose": "Repository root spark-rsi. Purpose not yet described by a human.",
+  "schema_version": "1.0.0"
 }
