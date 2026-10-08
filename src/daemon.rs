@@ -528,11 +528,19 @@ impl RsiEngine {
                     signing_key.verifying_key(),
                     config.judge_policy_file.as_deref(),
                     &crate::promotion_gate::PromotionSubject {
+                        // The parent this daemon handed its judge (a label, not a commit), so
+                        // only a receipt for this cycle's own tree can match.
+                        parent_id: "parent",
                         path: &proposal.target_file,
                         content_sha256: &candidate_digest,
-                        // Re-read the staged bytes right before the swap; unreadable never matches.
+                        // Re-read the generation the swap promotes, right before the swap;
+                        // unreadable never matches.
                         disk_sha256: &crate::actor::judge::sha256_file(
-                            &sandbox_dir.join(&proposal.target_file),
+                            &supervisor_daemon
+                                .supervisor
+                                .generations_root
+                                .join(&proposal.id)
+                                .join(&proposal.target_file),
                         )
                         .unwrap_or_else(|e| format!("unreadable: {}", e)),
                     },

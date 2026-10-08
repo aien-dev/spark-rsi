@@ -359,6 +359,8 @@ impl CandidateJailRunner {
             "--unshare-net".to_string(),
             "--unshare-uts".to_string(),
             "--die-with-parent".to_string(),
+            // The candidate never sees the judge's environment (a key passed by variable included).
+            "--clearenv".to_string(),
             "--ro-bind".to_string(),
             "/usr".to_string(),
             "/usr".to_string(),

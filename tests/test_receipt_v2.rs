@@ -6,7 +6,7 @@ use sha2::{Digest, Sha256};
 use spark_rsi::actor::judge::{
     strict_changed_paths, BlindJudge, EvaluationPolicy, HoldoutSuite, V2Request,
 };
-use spark_rsi::evaluator::layers::LayerResult;
+use spark_rsi::evaluator::layers::{CorrectnessLayer, LayerResult};
 use spark_rsi::evaluator::{EvaluationMetricsSummary, EvaluationReceipt, ReceiptBindingV2};
 use spark_rsi::promotion_gate::{check_v2_promotion, PromotionSubject};
 use std::fs;
@@ -336,7 +336,7 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
     let r = v2_receipt(&judge, &holdout, &policy_sha);
     let jk = pub_hex(&judge);
     let subject_sha = sha(README);
-    let subject = PromotionSubject::same("README.md", &subject_sha);
+    let subject = PromotionSubject::same("parent-v2", "README.md", &subject_sha);
 
     check_v2_promotion(
         &r,
@@ -388,7 +388,7 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &PromotionSubject::same("README.md", &sha(b"other bytes"))
+        &PromotionSubject::same("parent-v2", "README.md", &sha(b"other bytes"))
     )
     .is_err());
     // The receipt covers README.md; the change replaces another file with the same bytes.
@@ -397,7 +397,7 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &PromotionSubject::same("src/lib.rs", &subject_sha)
+        &PromotionSubject::same("parent-v2", "src/lib.rs", &subject_sha)
     )
     .unwrap_err()
     .contains("covers README.md"));
@@ -409,6 +409,7 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
         daemon.verifying_key(),
         Some(&policy_path),
         &PromotionSubject {
+            parent_id: "parent-v2",
             path: "README.md",
             content_sha256: &subject_sha,
             disk_sha256: &other,
@@ -416,6 +417,16 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
     )
     .unwrap_err()
     .contains("staged README.md"));
+    // The same bytes, judged against another parent: refused.
+    assert!(check_v2_promotion(
+        &r,
+        Some(&jk),
+        daemon.verifying_key(),
+        Some(&policy_path),
+        &PromotionSubject::same("another-parent", "README.md", &subject_sha)
+    )
+    .unwrap_err()
+    .contains("against parent parent-v2"));
     // The operator's policy file changes after the evaluation: refused.
     fs::write(
         &policy_path,
@@ -450,7 +461,7 @@ fn promotion_gate_refuses_below_threshold_and_v1() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &PromotionSubject::same("README.md", &sha(README))
+        &PromotionSubject::same("parent-v2", "README.md", &sha(README))
     )
     .unwrap_err()
     .contains("threshold"));
@@ -469,7 +480,7 @@ fn promotion_gate_refuses_below_threshold_and_v1() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &PromotionSubject::same("README.md", &sha(README))
+        &PromotionSubject::same("parent-v2", "README.md", &sha(README))
     )
     .unwrap_err()
     .contains("not sufficient"));
@@ -689,7 +700,7 @@ fn judge_signs_v2_bound_to_subject_policy_and_holdouts() {
         Some(&pub_hex(&key(7))),
         key(9).verifying_key(),
         Some(&policy_path),
-        &PromotionSubject::same("README.md", &sha(README)),
+        &PromotionSubject::same("par", "README.md", &sha(README)),
     )
     .unwrap();
 }
@@ -895,4 +906,70 @@ fn judge_build_cannot_read_files_outside_the_tree() {
         .unwrap_err();
     assert!(err.contains("candidate build failed"), "{}", err);
     assert!(err.contains("judge.key"), "{}", err);
+}
+
+/// The judge's own `cargo check` / `cargo test` on candidate source (the correctness layer) runs
+/// in the same sandbox as its build: a candidate that reads a file outside its tree (standing in
+/// for the judge's signing key) at compile time fails there, while the same tree builds outside
+/// the sandbox and a harmless tree passes inside it.
+#[test]
+fn judge_correctness_check_cannot_read_files_outside_the_tree() {
+    let probe = std::process::Command::new("bwrap")
+        .args([
+            "--unshare-user",
+            "--unshare-net",
+            "--ro-bind",
+            "/",
+            "/",
+            "true",
+        ])
+        .status();
+    if !probe.is_ok_and(|s| s.success()) {
+        eprintln!("SKIP: bubblewrap cannot create a user namespace on this host");
+        return;
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    let secret = tmp.path().join("judge.key");
+    fs::write(&secret, "not-for-candidates").unwrap();
+    let crate_toml =
+        "[package]\nname = \"probe\"\nversion = \"0.1.0\"\nedition = \"2021\"\n[workspace]\n";
+    let lock = "version = 4\n\n[[package]]\nname = \"probe\"\nversion = \"0.1.0\"\n";
+    let tree = |name: &str, lib: String| {
+        let t = tmp.path().join(name);
+        fs::create_dir_all(t.join("src")).unwrap();
+        fs::write(t.join("Cargo.toml"), crate_toml).unwrap();
+        fs::write(t.join("Cargo.lock"), lock).unwrap();
+        fs::write(t.join("src/lib.rs"), lib).unwrap();
+        t
+    };
+    let harmless = tree(
+        "harmless",
+        "pub fn f() -> u8 { 1 }\n#[test]\nfn t() { assert_eq!(f(), 1); }\n".into(),
+    );
+    let thief = tree(
+        "thief",
+        format!("pub const K: &str = include_str!({:?});\n", secret),
+    );
+
+    let plain = std::process::Command::new("cargo")
+        .args(["check", "--offline", "--locked", "-q"])
+        .env("CARGO_TARGET_DIR", tmp.path().join("plain-target"))
+        .current_dir(&thief)
+        .status()
+        .unwrap();
+    assert!(plain.success(), "control check outside the sandbox failed");
+
+    let ok = CorrectnessLayer::evaluate_repo(&harmless);
+    assert!(
+        ok.compilation_passed && ok.unit_tests_passed == 1 && ok.passed,
+        "{:?}",
+        ok
+    );
+    let refused = CorrectnessLayer::evaluate_repo(&thief);
+    assert!(!refused.compilation_passed, "{:?}", refused);
+    assert!(
+        refused.failures.iter().any(|f| f.contains("judge.key")),
+        "{:?}",
+        refused.failures
+    );
 }

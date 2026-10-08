@@ -89,7 +89,9 @@ the parent tree in anything other than the subject file. That comparison include
 skips only `.git` and the top-level `target` directory; symlinks and special files are refused.
 The program that runs the holdouts must come from the compared trees: a version 2 evaluation names its executable (`--executable`, never searched for), and either the judge builds both trees itself (`--build-release`) or the executable is a clean relative path outside `.git` and `target`, which the comparison skips. Only the root `.git` and `target` are skipped; a nested `.git` entry is refused.
 
-The judge builds (`--build-release`) inside bubblewrap: no network, the tree read-only, only a fresh target directory writable, the toolchain read-only, and nothing of the judge's home (where its key lives). Build scripts, proc macros and `include_bytes!` in candidate code run or read only inside that sandbox. There is no unsandboxed fallback. The holdouts run in the existing candidate jail.
+Everything the judge does with candidate source runs in one bubblewrap sandbox (`isolation::sandboxed_cargo`): the release build (`--build-release`) and the correctness layer's `cargo check` and `cargo test`. The sandbox has no network and a cleared environment, the tree read-only, only a fresh target directory writable, the toolchain read-only, and nothing of the judge's home (where its key lives). Build scripts, proc macros, `include_bytes!` and the candidate's own tests run or read only inside it, and all cargo runs are `--offline --locked`, so a tree without its `Cargo.lock` fails. There is no unsandboxed fallback. The holdouts run the built binary in the existing candidate jail, which also clears the environment; that jail keeps its older fallback of running with the network when the host cannot set up a network namespace (the binary still sees nothing of the judge's home).
+
+`parent_id` is the identity the caller passes (`--parent-id`, the commit the parent tree was checked out from); the judge signs it but does not derive it from the parent tree. The promotion gate and the INTERPLANE verifier (against the bundle's `source_pin.commit`) refuse a receipt whose parent is not the one the change applies on.
 
 After the run the judge re-hashes the subject and refuses to sign if it changed. A run below the
 pass ratio is recorded as not admitted.
@@ -103,14 +105,15 @@ requires all of:
   `verify_signature` but are never sufficient for a new promotion;
 - a valid signature under the operator-pinned judge key, which must differ from the promoter's
   own key;
-- `subject_path` equal to the file the change replaces, and `subject_sha256` equal both to the digest of the change's bytes and to the digest of the staged file read back right before the swap;
+- `parent_id` equal to the parent the caller applies the change on;
+- `subject_path` equal to the file the change replaces, and `subject_sha256` equal both to the digest of the change's bytes and to the digest of that file read back from the generation being promoted, right before the swap;
 - `policy_sha256` equal to the digest of the operator's policy file as it is now, and
   `holdout_set_sha256` equal to the digest that policy pins;
 - `admitted`, the subject listed in the policy's `allowed_targets`, and
   `holdouts_passed >= min_holdout_pass_ratio * holdouts_total` with a non-zero total.
 
 The daemon checks this right before its symlink swap and fails closed when
-`judge_public_key_hex` or `judge_policy_file` is not configured. The daemon's own cycle produces only a version 1 receipt from its in-process judge, so until an externally judged version 2 receipt is supplied to it, self-promotion by the spark-rsi daemon is refused every time. That is the intended direction: promotion of an RSI change goes through the operator's approved path (the INTERPLANE M5 slice), not through the proposer's own daemon.
+`judge_public_key_hex` or `judge_policy_file` is not configured. The daemon's own cycle produces only a version 1 receipt from its in-process judge, so until an externally judged version 2 receipt is supplied to it, self-promotion by the spark-rsi daemon is refused every time. (The daemon's parent is the label it hands its own judge, and it re-reads only the subject file of the staged generation; the judge's strict tree comparison is what rules out other changed files.) That is the intended direction: promotion of an RSI change goes through the operator's approved path (the INTERPLANE M5 slice), not through the proposer's own daemon.
 
 ## Key separation
 

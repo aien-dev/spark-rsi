@@ -13,6 +13,8 @@ use std::path::Path;
 /// The change about to be promoted: the one file it replaces, the digest of the bytes the change
 /// carries, and the digest of the bytes read back from the staged tree right before the swap.
 pub struct PromotionSubject<'a> {
+    /// The commit (or tree id) the change is applied on; the receipt must name it as its parent.
+    pub parent_id: &'a str,
     pub path: &'a str,
     pub content_sha256: &'a str,
     pub disk_sha256: &'a str,
@@ -20,8 +22,9 @@ pub struct PromotionSubject<'a> {
 
 impl<'a> PromotionSubject<'a> {
     /// A subject whose staged bytes were confirmed equal to the change's bytes.
-    pub fn same(path: &'a str, sha256: &'a str) -> Self {
+    pub fn same(parent_id: &'a str, path: &'a str, sha256: &'a str) -> Self {
         Self {
+            parent_id,
             path,
             content_sha256: sha256,
             disk_sha256: sha256,
@@ -72,6 +75,12 @@ pub fn check_v2_promotion(
         .binding
         .as_ref()
         .ok_or("version 2 receipt without binding")?;
+    if receipt.parent_id != subject.parent_id {
+        return Err(format!(
+            "receipt judged the change against parent {}, but it applies on {}",
+            receipt.parent_id, subject.parent_id
+        ));
+    }
     if b.subject_path != subject.path {
         return Err(format!(
             "receipt covers {}, but the change replaces {}",

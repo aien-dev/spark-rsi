@@ -49,8 +49,8 @@
     "generated": {
       "children": [
         {
-          "digest": "b1f8c1976c2c235fec6c821737fb7d7329953706e699136a083809c9437305e3",
-          "last_commit": "5030723",
+          "digest": "2762624de6ed27abda768a33d7dba0b2950d8e39a61327617b088f7772ecbf58",
+          "last_commit": "980f8aa",
           "name": "actor",
           "purpose": "Directory src/actor. Purpose not yet described by a human."
         },
@@ -67,7 +67,7 @@
           "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnost"
         },
         {
-          "digest": "b40ddcaa0e6c3553bc4edca318663f860a19e9c28ee7fe214bc6d62bf6ea63e3",
+          "digest": "187ecaeacbe33c1fc6ba5ae7eb4c4971a3f8aa06d964b310a98fe9663c75849b",
           "last_commit": "5030723",
           "name": "evaluator",
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
@@ -79,7 +79,7 @@
           "purpose": "Directory src/graph. Purpose not yet described by a human."
         },
         {
-          "digest": "460352c51895b7a1966523da1bb0501ce6f97c6c97884c530c0f3b2725c89837",
+          "digest": "87fcf1b5a03c2e204e9edc8a9468573829971d93ab104614add01ec4166d3a4b",
           "last_commit": "d25d751",
           "name": "isolation",
           "purpose": "Directory src/isolation. Purpose not yet described by a human."
@@ -115,15 +115,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:572d8351f9c78fe09f23726b037c0897dfd35c8f9f7e6e4b922bd454ad94118d",
-      "compiled_at": "2026-10-08T22:53:06Z",
+      "children_root": "sha256:47da563c950d233646e2c9b8c1835d90899469231988a363b9c1ef04d05a5b05",
+      "compiled_at": "2026-10-08T23:02:04Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:cf0ed60d3246df2e24eb3ae95d8a12592fb856889e380b3b3a9fa7ffb4214cf7",
+      "digest": "sha256:ed6735f8b8a6e34b809d59d920ffb9183eb113f0fad6b23d776108b2127fc2b8",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 59,
-      "generated_at_commit": "50307237fd979a6ce0fafc20f7aefbd78736e1b8",
-      "source_tree": "sha256:0d29d064299cde9aee1e4fb2d89dc4f2ec37d462e1e1fed53bd619e0b7123813"
+      "generated_at_commit": "980f8aacd590f52a9bb615c69800036af5df2d11",
+      "source_tree": "sha256:dbad9d965490012a6e21c4634831f0f8705085fa08342dd3fa4ae8f1a98e1e39"
     },
     "owner_lane": "",
     "seed": {

@@ -1,7 +1,7 @@
 use super::LayerResult;
+use crate::isolation::sandboxed_cargo;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CorrectnessEvaluation {
@@ -104,19 +104,17 @@ impl CorrectnessLayer {
         }
     }
 
+    /// `cargo check` and `cargo test` on candidate source, both inside the judge's sandbox
+    /// (`isolation::sandboxed_cargo`): candidate build scripts and tests never run with the
+    /// judge's files or environment in reach. Offline and `--locked`, so a tree without its
+    /// `Cargo.lock` fails rather than resolving fresh dependencies.
     pub fn evaluate_repo(repo_path: &Path) -> CorrectnessEvaluation {
         let mut failures = Vec::new();
         let target_dir =
             std::env::temp_dir().join(format!("rsi-target-{}", uuid::Uuid::new_v4().simple()));
-
-        let mut check_cmd = Command::new("cargo");
-        check_cmd
-            .arg("check")
-            .arg("--target-dir")
-            .arg(&target_dir)
-            .current_dir(repo_path);
-
-        let check_status = check_cmd.output();
+        let check_status = std::fs::create_dir_all(&target_dir).and_then(|()| {
+            sandboxed_cargo(repo_path, &target_dir, &["check", "--offline", "--locked"]).output()
+        });
 
         let compilation_passed = match check_status {
             Ok(out) => {
@@ -150,18 +148,20 @@ impl CorrectnessLayer {
             };
         }
 
-        let mut test_cmd = Command::new("cargo");
-        test_cmd
-            .arg("test")
-            .arg("--target-dir")
-            .arg(&target_dir)
-            .arg("--no-fail-fast")
-            .arg("--")
-            .arg("--test-threads=1")
-            .arg("--nocapture")
-            .current_dir(repo_path);
-
-        let test_output = test_cmd.output();
+        let test_output = sandboxed_cargo(
+            repo_path,
+            &target_dir,
+            &[
+                "test",
+                "--offline",
+                "--locked",
+                "--no-fail-fast",
+                "--",
+                "--test-threads=1",
+                "--nocapture",
+            ],
+        )
+        .output();
 
         let mut unit_passed = 0;
         let mut unit_failed = 0;
