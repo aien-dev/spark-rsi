@@ -167,6 +167,9 @@ impl CorrectnessLayer {
         let mut unit_failed = 0;
         let integ_passed = 0;
         let integ_failed = 0;
+        // The exit status decides; the parsed counts only describe. A tree whose tests do not build, or
+        // that prints its own "test result: ok" line, still fails here.
+        let mut tests_exited_ok = false;
 
         match test_output {
             Ok(out) => {
@@ -191,7 +194,8 @@ impl CorrectnessLayer {
                         }
                     }
                 }
-                if !out.status.success() {
+                tests_exited_ok = out.status.success();
+                if !tests_exited_ok {
                     failures.push("Cargo test returned non-zero status code".to_string());
                 }
             }
@@ -203,8 +207,11 @@ impl CorrectnessLayer {
 
         let _ = std::fs::remove_dir_all(&target_dir);
         let abi_stability_passed = true;
-        let passed =
-            compilation_passed && unit_failed == 0 && integ_failed == 0 && abi_stability_passed;
+        let passed = compilation_passed
+            && tests_exited_ok
+            && unit_failed == 0
+            && integ_failed == 0
+            && abi_stability_passed;
 
         CorrectnessEvaluation {
             compilation_passed,

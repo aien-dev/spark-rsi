@@ -779,6 +779,8 @@ pub fn compute_candidate_diff(
     if parent_path == candidate_path {
         if candidate_path.join(".git").exists() || Path::new(".git").exists() {
             let diff_out = Command::new("git")
+                // The tree is candidate-controlled: no fsmonitor or hook program from its .git/config.
+                .args(["-c", "core.fsmonitor=", "-c", "core.hooksPath=/dev/null"])
                 .arg("-C")
                 .arg(candidate_path)
                 .args(["diff", "HEAD"])
@@ -787,6 +789,8 @@ pub fn compute_candidate_diff(
                 patch_diff = String::from_utf8_lossy(&out.stdout).to_string();
             }
             let files_out = Command::new("git")
+                // The tree is candidate-controlled: no fsmonitor or hook program from its .git/config.
+                .args(["-c", "core.fsmonitor=", "-c", "core.hooksPath=/dev/null"])
                 .arg("-C")
                 .arg(candidate_path)
                 .args(["diff", "--name-only", "HEAD"])

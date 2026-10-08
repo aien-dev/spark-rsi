@@ -246,16 +246,9 @@ impl BuildJail {
         let args = self.build_bwrap_args(command);
         let mut cmd = Command::new("bwrap");
         cmd.args(&args);
-        match execute_with_timeout(cmd, self.limits.timeout_seconds) {
-            Ok((false, _stdout, stderr)) if stderr.contains("Failed RTM_NEWADDR") => {
-                let filtered: Vec<String> =
-                    args.into_iter().filter(|a| a != "--unshare-net").collect();
-                let mut retry = Command::new("bwrap");
-                retry.args(&filtered);
-                execute_with_timeout(retry, self.limits.timeout_seconds)
-            }
-            res => res,
-        }
+        // No retry without the network namespace: the jailed program controls its own stderr, so
+        // an error-string fallback would let it ask for the network.
+        execute_with_timeout(cmd, self.limits.timeout_seconds)
     }
 }
 
@@ -452,16 +445,9 @@ impl CandidateJailRunner {
         let args = self.build_bwrap_args(command_args);
         let mut cmd = Command::new("bwrap");
         cmd.args(&args);
-        match execute_with_timeout(cmd, self.limits.timeout_seconds) {
-            Ok((false, _stdout, stderr)) if stderr.contains("Failed RTM_NEWADDR") => {
-                let filtered: Vec<String> =
-                    args.into_iter().filter(|a| a != "--unshare-net").collect();
-                let mut retry = Command::new("bwrap");
-                retry.args(&filtered);
-                execute_with_timeout(retry, self.limits.timeout_seconds)
-            }
-            res => res,
-        }
+        // No retry without the network namespace: the jailed program controls its own stderr, so
+        // an error-string fallback would let it ask for the network.
+        execute_with_timeout(cmd, self.limits.timeout_seconds)
     }
 }
 

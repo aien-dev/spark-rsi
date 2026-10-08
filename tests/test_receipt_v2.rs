@@ -965,6 +965,17 @@ fn judge_correctness_check_cannot_read_files_outside_the_tree() {
         "{:?}",
         ok
     );
+    // Tests that do not even build report no failed count, but the exit status still fails them.
+    let broken = tree(
+        "broken",
+        "pub fn f() -> u8 { 1 }\n#[test]\nfn t() { let _x: u8 = \"no\"; }\n".into(),
+    );
+    let b = CorrectnessLayer::evaluate_repo(&broken);
+    assert!(
+        b.compilation_passed && b.unit_tests_failed == 0 && !b.passed,
+        "{:?}",
+        b
+    );
     let refused = CorrectnessLayer::evaluate_repo(&thief);
     assert!(!refused.compilation_passed, "{:?}", refused);
     assert!(
