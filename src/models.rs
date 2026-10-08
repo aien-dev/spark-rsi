@@ -128,6 +128,13 @@ pub struct RsiConfig {
     /// section 7.5); it grants no authority and changes no gate. None = not configured.
     #[serde(default)]
     pub dual_price_vector_dir: Option<String>,
+    /// SEC1 hex public key of the separate judge. Promotion requires a version 2 receipt signed
+    /// by this key; it must differ from the daemon's own key. None = promotion fails closed.
+    #[serde(default)]
+    pub judge_public_key_hex: Option<String>,
+    /// Operator-owned evaluation policy the judge receipt must be bound to. None = fails closed.
+    #[serde(default)]
+    pub judge_policy_file: Option<String>,
 }
 
 fn default_max_url() -> String {
@@ -166,6 +173,8 @@ impl Default for RsiConfig {
             non_inferiority_margin: None,
             ratify_roots: crate::diff_gate::default_ratify_roots(),
             dual_price_vector_dir: None,
+            judge_public_key_hex: None,
+            judge_policy_file: None,
         }
     }
 }

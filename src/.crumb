@@ -49,7 +49,7 @@
     "generated": {
       "children": [
         {
-          "digest": "77dc13f85f1d248f918e4bbade6e309957570ac5dd14bdf1e00ecd90f6e53bf3",
+          "digest": "12d7fd1eea97f1462cf51fe7bff06d4720d943696bb766f2898c1397e7e8e398",
           "last_commit": "4b0079d",
           "name": "actor",
           "purpose": "Directory src/actor. Purpose not yet described by a human."
@@ -62,12 +62,12 @@
         },
         {
           "digest": "4c66e2e1f75405fa6c3a2ec1f3638a19bbe2a103ddacdeeb5edfdd399666c37f",
-          "last_commit": "53b071b",
+          "last_commit": "e5aab9a",
           "name": "dual",
           "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnost"
         },
         {
-          "digest": "03c1ae5bcf2343805d2f3e6af636335c03ef4899c62af52e91669ce83a997233",
+          "digest": "b40ddcaa0e6c3553bc4edca318663f860a19e9c28ee7fe214bc6d62bf6ea63e3",
           "last_commit": "5d46b21",
           "name": "evaluator",
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
@@ -115,15 +115,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:47e21e317340672d7a14d56e69796a9b06d028c21a7e1c8116efc29af28c7ed2",
-      "compiled_at": "2026-10-04T18:41:13Z",
+      "children_root": "sha256:8e1dc4b1560c8a82588bf0102e615bf031e2101a262c843337a1b9ef9ca9015a",
+      "compiled_at": "2026-10-08T22:35:45Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:afb292cfddbedbaf9979077a42b35661fab27a0cdceb2f9cdb9c16c5c99fbfc9",
+      "digest": "sha256:bceaa3d500ef9fd26f9f54ed05bdfab62068ffb94b3fec9f5a4f2c8cd1f440ca",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 58,
-      "generated_at_commit": "e49fad9bee967eaff7bf3749fe53be9722f5ca7b",
-      "source_tree": "sha256:3e8a9425bcec763e04b64bce0553b31eb5fa68ed556c0c6389116d029c7998a8"
+      "files": 59,
+      "generated_at_commit": "e5aab9adbe440dca61e8c9fad4156d59aba7ad2b",
+      "source_tree": "sha256:834775cd3001e3699c732384a11b7e86999227b846cfd2413a390b3bc408138b"
     },
     "owner_lane": "",
     "seed": {

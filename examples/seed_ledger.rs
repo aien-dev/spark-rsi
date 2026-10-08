@@ -66,6 +66,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-001".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt1.save_to_file(&eval_out_dir.join("cycle-001.json"))?;
     let raw1 = serde_json::to_vec(&receipt1)?;
@@ -105,6 +107,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-002".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt2.save_to_file(&eval_out_dir.join("cycle-002.json"))?;
     let raw2 = serde_json::to_vec(&receipt2)?;
@@ -145,6 +149,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-003".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt3.save_to_file(&eval_out_dir.join("cycle-003.json"))?;
     let raw3 = serde_json::to_vec(&receipt3)?;
@@ -185,6 +191,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-004".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt4.save_to_file(&eval_out_dir.join("cycle-004.json"))?;
     let raw4 = serde_json::to_vec(&receipt4)?;
@@ -225,6 +233,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-005".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt5.save_to_file(&eval_out_dir.join("cycle-005.json"))?;
     let raw5 = serde_json::to_vec(&receipt5)?;
@@ -266,6 +276,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-006".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt6.save_to_file(&eval_out_dir.join("cycle-006.json"))?;
     let raw6 = serde_json::to_vec(&receipt6)?;
@@ -300,6 +312,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         receipt_digest: "digest-cycle-007".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
     receipt7.save_to_file(&eval_out_dir.join("cycle-007.json"))?;
     let raw7 = serde_json::to_vec(&receipt7)?;

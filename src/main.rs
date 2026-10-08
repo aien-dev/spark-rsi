@@ -340,6 +340,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 signing_key_file,
                 require_latency_improvement,
                 non_inferiority_margin_pct,
+                subject_path: None,
+                policy_file: None,
+                executable: None,
+                build_release: false,
+                public_key: false,
+                print_holdout_digest: false,
             };
             spark_rsi::actor::judge::run_judge_cli(judge_cli)?;
         }
@@ -373,6 +379,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 non_inferiority_margin: None,
                 ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
                 dual_price_vector_dir,
+                judge_public_key_hex: None,
+                judge_policy_file: None,
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -404,6 +412,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 non_inferiority_margin: None,
                 ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
                 dual_price_vector_dir,
+                judge_public_key_hex: None,
+                judge_policy_file: None,
             };
             RsiEngine::run_daemon(config).await?;
         }

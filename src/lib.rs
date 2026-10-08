@@ -15,6 +15,7 @@ pub mod ledger;
 pub mod meta;
 pub mod models;
 pub mod observe;
+pub mod promotion_gate;
 pub mod propose;
 pub mod ratify;
 pub mod soak;
