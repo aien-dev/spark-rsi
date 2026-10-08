@@ -42,7 +42,44 @@ pub struct EvaluationReceipt {
     pub metrics_summary: Option<EvaluationMetricsSummary>,
     pub receipt_digest: String,
     pub signature: Option<String>,
+    /// Receipt format. 1 (or absent, for records written before version 2) signs only the ids,
+    /// the admitted flag and the layer results. 2 also signs `binding`. See docs/RECEIPT-V2.md.
+    #[serde(default = "receipt_format_v1")]
+    pub format_version: u32,
+    /// Version 2 only: what exactly was evaluated, against which holdout set and policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binding: Option<ReceiptBindingV2>,
 }
+
+fn receipt_format_v1() -> u32 {
+    1
+}
+
+/// The identity a version 2 receipt signs, so a score cannot be paired with another change.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReceiptBindingV2 {
+    /// Path of the changed file, relative to the candidate root.
+    pub subject_path: String,
+    /// SHA-256 (hex) of the exact bytes of `subject_path` in the evaluated candidate.
+    pub subject_sha256: String,
+    /// Digest of the holdout directory (docs/RECEIPT-V2.md, "Holdout set digest").
+    pub holdout_set_sha256: String,
+    pub holdouts_total: u64,
+    pub holdouts_passed: u64,
+    /// SHA-256 (hex) of the exact policy file bytes the judge was given.
+    pub policy_sha256: String,
+    /// SHA-256 (hex) of the judge executable that produced the receipt.
+    pub evaluator_binary_sha256: String,
+}
+
+/// Length-prefixed field encoding for the version 2 digest: u64 little-endian length, then bytes.
+/// Writes one length-prefixed field (u64 little-endian length, then the bytes).
+pub fn put_field(h: &mut Sha256, bytes: &[u8]) {
+    h.update((bytes.len() as u64).to_le_bytes());
+    h.update(bytes);
+}
+
+pub const RECEIPT_V2_DOMAIN: &str = "spark-rsi.evaluation-receipt.v2";
 
 impl EvaluationReceipt {
     pub fn compute_digest(
@@ -82,15 +119,141 @@ impl EvaluationReceipt {
         serde_json::from_str(&content).map_err(|e| e.to_string())
     }
 
+    /// Recomputes the digest for the receipt's own format. A version 1 receipt that carries a
+    /// binding, a version 2 receipt without one, and unknown versions never verify.
     pub fn verify_digest(&self) -> bool {
-        let expected = Self::compute_digest(
+        match (self.format_version, &self.binding) {
+            (1, None) => {
+                let expected = Self::compute_digest(
+                    &self.cycle_id,
+                    &self.candidate_id,
+                    &self.parent_id,
+                    self.admitted,
+                    &self.layer_results,
+                );
+                self.receipt_digest == expected
+            }
+            (2, Some(_)) => self
+                .compute_digest_v2()
+                .is_ok_and(|d| d == self.receipt_digest),
+            _ => false,
+        }
+    }
+
+    /// Version 2 digest (docs/RECEIPT-V2.md): SHA-256 over length-prefixed fields in a fixed order.
+    pub fn compute_digest_v2(&self) -> Result<String, String> {
+        let b = self
+            .binding
+            .as_ref()
+            .ok_or("version 2 digest needs a binding")?;
+        let mut h = Sha256::new();
+        put_field(&mut h, RECEIPT_V2_DOMAIN.as_bytes());
+        for s in [
             &self.cycle_id,
             &self.candidate_id,
             &self.parent_id,
+            &self.evaluated_at,
+            &self.evaluator_version,
+            &b.evaluator_binary_sha256,
+            &b.subject_path,
+            &b.subject_sha256,
+            &b.holdout_set_sha256,
+            &b.policy_sha256,
+        ] {
+            put_field(&mut h, s.as_bytes());
+        }
+        put_field(&mut h, &b.holdouts_total.to_le_bytes());
+        put_field(&mut h, &b.holdouts_passed.to_le_bytes());
+        for flag in [
             self.admitted,
-            &self.layer_results,
-        );
-        self.receipt_digest == expected
+            self.passed_all_hard_invariants,
+            self.passed_statistical_gates,
+        ] {
+            put_field(&mut h, &[flag as u8]);
+        }
+        put_field(&mut h, &(self.layer_results.len() as u64).to_le_bytes());
+        for lr in &self.layer_results {
+            put_field(&mut h, lr.layer_name.as_bytes());
+            put_field(&mut h, &[lr.is_hard_invariant as u8]);
+            put_field(&mut h, &[lr.passed as u8]);
+            put_field(&mut h, &lr.score.to_bits().to_le_bytes());
+            put_field(&mut h, lr.summary.as_bytes());
+            put_field(&mut h, &(lr.violations.len() as u64).to_le_bytes());
+            for v in &lr.violations {
+                put_field(&mut h, v.as_bytes());
+            }
+        }
+        match &self.metrics_summary {
+            None => put_field(&mut h, &[0u8]),
+            Some(m) => {
+                put_field(&mut h, &[1u8]);
+                for x in [
+                    m.latency_delta_pct,
+                    m.p_value,
+                    m.p95_ci_upper_degradation_pct,
+                    m.p99_ci_upper_degradation_pct,
+                    m.rss_growth_pct,
+                ] {
+                    put_field(&mut h, &x.to_bits().to_le_bytes());
+                }
+                put_field(&mut h, &m.candidate_resident_mb.to_le_bytes());
+            }
+        }
+        Ok(hex::encode(h.finalize()))
+    }
+
+    /// Turns this receipt into version 2 with `binding`, recomputes the digest and signs it.
+    pub fn bind_and_sign_v2(
+        &mut self,
+        binding: ReceiptBindingV2,
+        signing_key: &SigningKey,
+    ) -> Result<(), String> {
+        self.format_version = 2;
+        self.binding = Some(binding);
+        self.receipt_digest = self.compute_digest_v2()?;
+        self.sign(signing_key);
+        Ok(())
+    }
+
+    /// The promotion check: version 2 only, valid signature under the judge's key, and the
+    /// signed identity equal to what the caller is about to promote. Version 1 receipts stay
+    /// verifiable with `verify_signature` for history but are never enough here.
+    pub fn verify_for_promotion(
+        &self,
+        judge_key: &VerifyingKey,
+        subject_sha256: &str,
+        policy_sha256: &str,
+        holdout_set_sha256: &str,
+    ) -> Result<(), String> {
+        if self.format_version != 2 {
+            return Err(format!(
+                "receipt format {} is not sufficient for promotion (version 2 required)",
+                self.format_version
+            ));
+        }
+        if !self.verify_signature(judge_key) {
+            return Err("receipt signature or digest does not verify under the judge key".into());
+        }
+        let b = self
+            .binding
+            .as_ref()
+            .ok_or("version 2 receipt without binding")?;
+        if b.subject_sha256 != subject_sha256 {
+            return Err(format!(
+                "receipt subject {} is not the change being promoted ({})",
+                b.subject_sha256, subject_sha256
+            ));
+        }
+        if b.policy_sha256 != policy_sha256 {
+            return Err("receipt policy digest differs from the pinned policy".into());
+        }
+        if b.holdout_set_sha256 != holdout_set_sha256 {
+            return Err("receipt holdout set differs from the pinned holdout set".into());
+        }
+        if !self.admitted {
+            return Err("judge did not admit the candidate".into());
+        }
+        Ok(())
     }
 
     pub fn sign(&mut self, signing_key: &SigningKey) {
@@ -184,6 +347,8 @@ impl ObjectiveEvaluator {
             metrics_summary,
             receipt_digest,
             signature: None,
+            format_version: 1,
+            binding: None,
         }
     }
 }

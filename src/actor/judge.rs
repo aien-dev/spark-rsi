@@ -1,13 +1,15 @@
 use clap::Parser;
 use p256::ecdsa::SigningKey;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use spark_rsi::evaluator::layers::{
     CorrectnessLayer, DefectTestResult, LongitudinalReplayLayer, PerformanceLayer,
     ResourceEfficiencyLayer, SecurityLayer, StyleLayer,
 };
 use spark_rsi::evaluator::metrics::{LatencyTimer, RusageMetrics, StatmMetrics};
-use spark_rsi::evaluator::{EvaluationReceipt, ObjectiveEvaluator};
+use spark_rsi::evaluator::{put_field, EvaluationReceipt, ObjectiveEvaluator, ReceiptBindingV2};
 use spark_rsi::isolation::CandidateJailRunner;
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -50,6 +52,119 @@ pub struct JudgeCli {
 
     #[arg(long)]
     pub require_latency_improvement: bool,
+
+    /// Version 2: the one file (relative to the candidate tree) whose exact bytes the receipt binds.
+    /// Requires --policy-file. Without it the judge emits a version 1 receipt.
+    #[arg(long, requires = "policy_file")]
+    pub subject_path: Option<String>,
+
+    /// Version 2: the evaluation policy (pins the holdout set digest, threshold and targets).
+    #[arg(long, requires = "subject_path")]
+    pub policy_file: Option<String>,
+
+    /// Executable to run for holdouts and benchmarks, relative to each tree (or, with
+    /// --build-release, the binary name under the judge's own build directory).
+    #[arg(long)]
+    pub executable: Option<String>,
+
+    /// Build parent and candidate with `cargo build --release --offline --locked` into a fresh
+    /// judge-owned target directory instead of trusting any binary already in the trees.
+    #[arg(long, requires = "executable")]
+    pub build_release: bool,
+
+    /// Print the SEC1 hex public key for the configured signing key and exit.
+    #[arg(long)]
+    pub public_key: bool,
+
+    /// Load --holdouts-dir strictly, print its holdout-set digest and exit (for pinning it in a
+    /// policy file).
+    #[arg(long)]
+    pub print_holdout_digest: bool,
+}
+
+/// Domain prefix of the holdout-set digest (docs/RECEIPT-V2.md).
+pub const HOLDOUT_SET_DOMAIN: &str = "spark-rsi.holdout-set.v1";
+
+/// Operator-owned evaluation policy for version 2 receipts. The judge refuses to evaluate when the
+/// holdout directory does not hash to `holdout_set_sha256`, when the subject is not an allowed
+/// target, or when the subject falls under a protected path.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct EvaluationPolicy {
+    pub policy_id: String,
+    pub holdout_set_sha256: String,
+    pub min_holdout_pass_ratio: f64,
+    pub require_admitted: bool,
+    pub allowed_targets: Vec<String>,
+    pub protected_paths: Vec<String>,
+    /// Latency non-inferiority margin in percent for this evaluation. Absent = the judge's
+    /// configured margin. Part of the policy bytes, so the signed `policy_sha256` covers it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_inferiority_margin_pct: Option<f64>,
+}
+
+impl EvaluationPolicy {
+    /// Loads the policy and returns it with the SHA-256 of its exact file bytes.
+    pub fn load(path: &Path) -> Result<(Self, String), String> {
+        let bytes =
+            fs::read(path).map_err(|e| format!("cannot read policy file {:?}: {}", path, e))?;
+        let policy: Self = serde_json::from_slice(&bytes)
+            .map_err(|e| format!("policy file {:?} is invalid: {}", path, e))?;
+        if !policy.require_admitted {
+            return Err(
+                "policy require_admitted must be true; promotion never skips admission".into(),
+            );
+        }
+        if !(policy.min_holdout_pass_ratio > 0.0 && policy.min_holdout_pass_ratio <= 1.0) {
+            return Err("policy min_holdout_pass_ratio must be in (0, 1]".into());
+        }
+        if policy.holdout_set_sha256.len() != 64 || hex::decode(&policy.holdout_set_sha256).is_err()
+        {
+            return Err("policy holdout_set_sha256 must be 64 hex characters".into());
+        }
+        if policy
+            .non_inferiority_margin_pct
+            .is_some_and(|m| !(m.is_finite() && m >= 0.0))
+        {
+            return Err(
+                "policy non_inferiority_margin_pct must be a finite non-negative number".into(),
+            );
+        }
+        if policy.allowed_targets.is_empty() {
+            return Err("policy allowed_targets must name at least one file".into());
+        }
+        // Paths are compared as strings: an unclean entry (`./src`, `/`, `src/../x`) would
+        // silently protect or allow nothing it appears to.
+        if let Some(p) = policy
+            .allowed_targets
+            .iter()
+            .chain(&policy.protected_paths)
+            .find(|p| !is_clean_relative(p.trim_end_matches('/')))
+        {
+            return Err(format!("policy path {:?} is not a clean relative path", p));
+        }
+        Ok((policy, hex::encode(Sha256::digest(&bytes))))
+    }
+}
+
+/// What a version 2 evaluation binds: the subject file and the policy it was judged under.
+#[derive(Debug, Clone)]
+pub struct V2Request {
+    pub subject_path: String,
+    pub policy: EvaluationPolicy,
+    pub policy_sha256: String,
+}
+
+/// A relative path with no `..`, no root and no empty components.
+fn is_clean_relative(p: &str) -> bool {
+    !p.is_empty()
+        && !p.starts_with('/')
+        && p.split('/').all(|c| !c.is_empty() && c != "." && c != "..")
+}
+
+fn path_is_under(path: &str, prefix: &str) -> bool {
+    let prefix = prefix.trim_end_matches('/');
+    path == prefix || path.starts_with(&format!("{}/", prefix))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -115,36 +230,83 @@ impl HoldoutSuite {
     }
 
     pub fn load_from_dir(dir: &Path) -> Result<Vec<Self>, String> {
-        if !dir.exists() {
+        Self::load_strict(dir).map(|(suites, _)| suites)
+    }
+
+    /// Loads every holdout suite and returns them with the holdout-set digest. Fails closed on
+    /// anything other than regular `.json` files, on a file that does not parse, on an empty
+    /// suite or case field, and on duplicate case ids. Nothing is skipped silently.
+    pub fn load_strict(dir: &Path) -> Result<(Vec<Self>, String), String> {
+        if !dir.is_dir() {
             return Err(format!(
                 "Holdouts directory does not exist: {:?}. Production evaluation fails closed.",
                 dir
             ));
         }
-
-        let mut suites = Vec::new();
         let entries = fs::read_dir(dir)
             .map_err(|e| format!("Failed to read holdouts directory {:?}: {}", dir, e))?;
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(suite) = serde_json::from_str::<HoldoutSuite>(&content) {
-                        suites.push(suite);
-                    }
-                }
+        let mut names = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("Failed to read holdouts directory: {}", e))?;
+            let name = entry
+                .file_name()
+                .into_string()
+                .map_err(|n| format!("holdout entry {:?} has a non-UTF-8 name", n))?;
+            let kind = entry
+                .file_type()
+                .map_err(|e| format!("cannot stat holdout entry {}: {}", name, e))?;
+            if !kind.is_file() || !name.ends_with(".json") {
+                return Err(format!(
+                    "unexpected holdout entry {:?}: only regular .json files are allowed. Production evaluation fails closed.",
+                    name
+                ));
             }
+            names.push(name);
         }
-
-        if suites.is_empty() {
+        if names.is_empty() {
             return Err(format!(
                 "No valid holdout suites found in {:?}. Production evaluation fails closed.",
                 dir
             ));
         }
+        names.sort();
 
-        Ok(suites)
+        let mut h = Sha256::new();
+        put_field(&mut h, HOLDOUT_SET_DOMAIN.as_bytes());
+        put_field(&mut h, &(names.len() as u64).to_le_bytes());
+        let mut suites = Vec::new();
+        let mut ids = BTreeSet::new();
+        for name in &names {
+            let bytes = fs::read(dir.join(name))
+                .map_err(|e| format!("cannot read holdout file {}: {}", name, e))?;
+            let suite: HoldoutSuite = serde_json::from_slice(&bytes).map_err(|e| {
+                format!(
+                    "holdout file {} is corrupt: {}. Production evaluation fails closed.",
+                    name, e
+                )
+            })?;
+            if suite.cases.is_empty() {
+                return Err(format!(
+                    "holdout file {} has no cases (incomplete suite)",
+                    name
+                ));
+            }
+            for case in &suite.cases {
+                if case.id.is_empty() || case.expected_output.is_empty() {
+                    return Err(format!(
+                        "holdout file {} has an incomplete case (empty id or expected output)",
+                        name
+                    ));
+                }
+                if !ids.insert(case.id.clone()) {
+                    return Err(format!("duplicate holdout case id {}", case.id));
+                }
+            }
+            put_field(&mut h, name.as_bytes());
+            put_field(&mut h, &Sha256::digest(&bytes));
+            suites.push(suite);
+        }
+        Ok((suites, hex::encode(h.finalize())))
     }
 
     pub fn save_to_dir(&self, dir: &Path) -> Result<(), String> {
@@ -167,6 +329,12 @@ pub struct BlindJudge {
     /// Non-code proposals (markdown sanitization) cannot change build or ABI behavior,
     /// and the sandbox cannot resolve sibling path dependencies for a rebuild.
     pub require_build_verification: bool,
+    /// Executable to run, relative to each tree (or the binary name under the judge build dir).
+    pub executable: Option<PathBuf>,
+    /// Build both trees into a fresh judge-owned target directory before evaluating.
+    pub build_release: bool,
+    /// When set, the judge binds and signs a version 2 receipt.
+    pub v2: Option<V2Request>,
 }
 
 impl BlindJudge {
@@ -178,6 +346,9 @@ impl BlindJudge {
             require_latency_improvement: false,
             non_inferiority_margin_pct: 5.0,
             require_build_verification: true,
+            executable: None,
+            build_release: false,
+            v2: None,
         }
     }
 
@@ -196,6 +367,17 @@ impl BlindJudge {
         self
     }
 
+    pub fn with_executable(mut self, exe: PathBuf, build_release: bool) -> Self {
+        self.executable = Some(exe);
+        self.build_release = build_release;
+        self
+    }
+
+    pub fn with_v2(mut self, req: V2Request) -> Self {
+        self.v2 = Some(req);
+        self
+    }
+
     pub fn evaluate_cycle(
         &self,
         cycle_id: &str,
@@ -210,19 +392,23 @@ impl BlindJudge {
         })?;
 
         // 1. Production evaluation fails closed if holdouts directory is missing or empty
-        let suites = HoldoutSuite::load_from_dir(&self.holdouts_dir)?;
+        let (suites, holdout_set_sha256) = HoldoutSuite::load_strict(&self.holdouts_dir)?;
+
+        // 1b. Version 2 preflight: pinned holdout set, allowed subject, nothing else changed.
+        let subject_sha256_before = match &self.v2 {
+            Some(req) => {
+                Some(self.v2_preflight(req, &holdout_set_sha256, parent_path, candidate_path)?)
+            }
+            None => None,
+        };
 
         let mut total_holdouts: usize = 0;
         let mut passed_holdouts = 0;
         let mut holdout_violations = Vec::new();
 
         // 2. Candidate binary must exist; production evaluation fails closed if not built
-        let candidate_bin = find_executable(candidate_path).ok_or_else(|| {
-            format!(
-                "Candidate executable not found at {:?}. Candidates must be compiled before evaluation.",
-                candidate_path
-            )
-        })?;
+        let (parent_bin, candidate_bin) =
+            self.resolve_binaries(cycle_id, parent_path, candidate_path)?;
 
         // 3. Execute actual holdout cases strictly through Bubblewrap jail
         let jail_runner = CandidateJailRunner::new(&candidate_bin);
@@ -277,7 +463,7 @@ impl BlindJudge {
 
         // 5. Paired-workload benchmark execution for latency & resource metrics
         let (parent_latencies, candidate_latencies, parent_rusage, candidate_rusage) =
-            run_paired_benchmarks(parent_path, candidate_path, 20)?;
+            run_paired_benchmarks_bins(&parent_bin, &candidate_bin, 20)?;
 
         let performance = PerformanceLayer::evaluate_latencies_with_policy(
             &parent_latencies,
@@ -323,13 +509,243 @@ impl BlindJudge {
         );
 
         // 6. Sign receipt with authorized cryptographic key
-        receipt.sign(signing_key);
+        match (&self.v2, subject_sha256_before) {
+            (Some(req), Some(subject_sha256)) => {
+                // The subject must still be the bytes that were checked before the run.
+                let after = sha256_file(&candidate_path.join(&req.subject_path))?;
+                if after != subject_sha256 {
+                    return Err("subject file changed during evaluation; refusing to sign".into());
+                }
+                let total = total_holdouts as u64;
+                let passed = passed_holdouts as u64;
+                if total == 0
+                    || (passed as f64) < req.policy.min_holdout_pass_ratio * (total as f64)
+                {
+                    receipt.admitted = false;
+                }
+                let exe = std::env::current_exe()
+                    .map_err(|e| format!("cannot locate the judge binary: {}", e))?;
+                let binding = ReceiptBindingV2 {
+                    subject_path: req.subject_path.clone(),
+                    subject_sha256,
+                    holdout_set_sha256: holdout_set_sha256.clone(),
+                    holdouts_total: total,
+                    holdouts_passed: passed,
+                    policy_sha256: req.policy_sha256.clone(),
+                    evaluator_binary_sha256: sha256_file(&exe)?,
+                };
+                receipt.bind_and_sign_v2(binding, signing_key)?;
+            }
+            _ => receipt.sign(signing_key),
+        }
 
         let out_path = self.output_dir.join(format!("{}.json", cycle_id));
         receipt.save_to_file(&out_path)?;
 
         Ok(receipt)
     }
+
+    /// Checks everything a version 2 receipt will claim before any candidate code runs, and
+    /// returns the SHA-256 of the subject bytes.
+    fn v2_preflight(
+        &self,
+        req: &V2Request,
+        holdout_set_sha256: &str,
+        parent_path: &Path,
+        candidate_path: &Path,
+    ) -> Result<String, String> {
+        if holdout_set_sha256 != req.policy.holdout_set_sha256 {
+            return Err(format!(
+                "holdout set digest {} does not match the policy's pinned {}; refusing to evaluate",
+                holdout_set_sha256, req.policy.holdout_set_sha256
+            ));
+        }
+        let subject = req.subject_path.as_str();
+        if !is_clean_relative(subject) {
+            return Err(format!(
+                "subject path {:?} is not a clean relative path",
+                subject
+            ));
+        }
+        if !req.policy.allowed_targets.iter().any(|t| t == subject) {
+            return Err(format!(
+                "subject {} is not an allowed target in the policy",
+                subject
+            ));
+        }
+        if let Some(p) = req
+            .policy
+            .protected_paths
+            .iter()
+            .find(|p| path_is_under(subject, p))
+        {
+            return Err(format!("subject {} is under protected path {}", subject, p));
+        }
+        // The program that runs must come from the compared trees: built here, or a named file
+        // outside the directories the comparison skips. Never searched for.
+        match (&self.executable, self.build_release) {
+            (None, _) => return Err(
+                "a version 2 evaluation names its executable; refusing to search the trees for one"
+                    .into(),
+            ),
+            (Some(exe), false) => {
+                let e = exe.to_str().unwrap_or("");
+                if !is_clean_relative(e)
+                    || path_is_under(e, "target")
+                    || e.split('/').any(|c| c == ".git")
+                {
+                    return Err(format!(
+                        "without a judge build the executable {:?} must be a clean relative path the tree comparison covers (not under target or .git)",
+                        exe
+                    ));
+                }
+            }
+            (Some(_), true) => {}
+        }
+        let changed = strict_changed_paths(parent_path, candidate_path)?;
+        if changed != [subject.to_string()] {
+            return Err(format!(
+                "candidate must differ from parent in exactly the subject {}; differs in {:?}",
+                subject, changed
+            ));
+        }
+        sha256_file(&candidate_path.join(subject))
+    }
+
+    /// Finds (or, with `build_release`, builds) the parent and candidate executables.
+    fn resolve_binaries(
+        &self,
+        cycle_id: &str,
+        parent_path: &Path,
+        candidate_path: &Path,
+    ) -> Result<(PathBuf, PathBuf), String> {
+        let Some(exe) = &self.executable else {
+            let parent = find_executable(parent_path).ok_or_else(|| {
+                format!(
+                    "Parent executable binary not found in {:?}. Paired benchmarks require compiled binaries.",
+                    parent_path
+                )
+            })?;
+            let candidate = find_executable(candidate_path).ok_or_else(|| {
+                format!(
+                    "Candidate executable not found at {:?}. Candidates must be compiled before evaluation.",
+                    candidate_path
+                )
+            })?;
+            return Ok((parent, candidate));
+        };
+        if !self.build_release {
+            let pick = |base: &Path| -> Result<PathBuf, String> {
+                let p = base.join(exe);
+                if p.is_file() {
+                    Ok(p)
+                } else {
+                    Err(format!("executable {:?} not found", p))
+                }
+            };
+            return Ok((pick(parent_path)?, pick(candidate_path)?));
+        }
+        // Absolute: cargo runs inside each tree, so a relative target dir would land in the tree.
+        let build_root = std::path::absolute(&self.output_dir)
+            .map_err(|e| format!("cannot resolve output dir {:?}: {}", self.output_dir, e))?
+            .join(format!("build-{}", cycle_id));
+        if build_root.exists() {
+            fs::remove_dir_all(&build_root)
+                .map_err(|e| format!("cannot clear build dir {:?}: {}", build_root, e))?;
+        }
+        let build = |tree: &Path, side: &str| -> Result<PathBuf, String> {
+            let target = build_root.join(side);
+            fs::create_dir_all(&target)
+                .map_err(|e| format!("cannot create build dir {:?}: {}", target, e))?;
+            let out = sandboxed_cargo_build(tree, &target)
+                .output()
+                .map_err(|e| format!("cannot start the sandboxed build for {}: {}", side, e))?;
+            if !out.status.success() {
+                return Err(format!(
+                    "{} build failed: {}",
+                    side,
+                    String::from_utf8_lossy(&out.stderr)
+                ));
+            }
+            let bin = target.join("release").join(exe);
+            if bin.is_file() {
+                Ok(bin)
+            } else {
+                Err(format!("{} build produced no {:?}", side, bin))
+            }
+        };
+        Ok((
+            build(parent_path, "parent")?,
+            build(candidate_path, "candidate")?,
+        ))
+    }
+}
+
+/// `cargo build --release --offline --locked` for `tree` in the judge's sandbox
+/// (`isolation::sandboxed_cargo`).
+fn sandboxed_cargo_build(tree: &Path, target: &Path) -> Command {
+    spark_rsi::isolation::sandboxed_cargo(
+        tree,
+        target,
+        &["build", "--release", "--offline", "--locked"],
+    )
+}
+
+pub fn sha256_file(path: &Path) -> Result<String, String> {
+    let bytes = fs::read(path).map_err(|e| format!("cannot read {:?}: {}", path, e))?;
+    Ok(hex::encode(Sha256::digest(&bytes)))
+}
+
+/// Every path that differs between the two trees (added, removed or changed bytes), sorted.
+/// Unlike `compute_candidate_diff` this includes dotfiles; it skips only `.git` and a top-level
+/// `target`. Symlinks and other special files are refused.
+pub fn strict_changed_paths(parent: &Path, candidate: &Path) -> Result<Vec<String>, String> {
+    fn walk(base: &Path, dir: &Path, acc: &mut BTreeSet<String>) -> Result<(), String> {
+        for entry in fs::read_dir(dir).map_err(|e| format!("cannot read {:?}: {}", dir, e))? {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let path = entry.path();
+            let rel = path
+                .strip_prefix(base)
+                .map_err(|e| e.to_string())?
+                .to_str()
+                .ok_or_else(|| format!("non-UTF-8 path {:?}", path))?
+                .to_string();
+            let name = entry.file_name();
+            if dir == base && (name == ".git" || name == "target") {
+                continue;
+            }
+            // Only the root .git and target are skipped; a nested one would hide a change.
+            if name == ".git" {
+                return Err(format!("refusing nested .git entry {:?} in tree", rel));
+            }
+            let kind = entry.file_type().map_err(|e| e.to_string())?;
+            if kind.is_dir() {
+                walk(base, &path, acc)?;
+            } else if kind.is_file() {
+                acc.insert(rel);
+            } else {
+                return Err(format!(
+                    "refusing special file or symlink {:?} in tree",
+                    rel
+                ));
+            }
+        }
+        Ok(())
+    }
+    let (mut p, mut c) = (BTreeSet::new(), BTreeSet::new());
+    walk(parent, parent, &mut p)?;
+    walk(candidate, candidate, &mut c)?;
+    let mut changed = Vec::new();
+    for rel in p.union(&c) {
+        let same = p.contains(rel)
+            && c.contains(rel)
+            && fs::read(parent.join(rel)).map_err(|e| e.to_string())?
+                == fs::read(candidate.join(rel)).map_err(|e| e.to_string())?;
+        if !same {
+            changed.push(rel.clone());
+        }
+    }
+    Ok(changed)
 }
 
 pub fn find_executable(base: &Path) -> Option<PathBuf> {
@@ -363,6 +779,8 @@ pub fn compute_candidate_diff(
     if parent_path == candidate_path {
         if candidate_path.join(".git").exists() || Path::new(".git").exists() {
             let diff_out = Command::new("git")
+                // The tree is candidate-controlled: no fsmonitor or hook program from its .git/config.
+                .args(["-c", "core.fsmonitor=", "-c", "core.hooksPath=/dev/null"])
                 .arg("-C")
                 .arg(candidate_path)
                 .args(["diff", "HEAD"])
@@ -371,6 +789,8 @@ pub fn compute_candidate_diff(
                 patch_diff = String::from_utf8_lossy(&out.stdout).to_string();
             }
             let files_out = Command::new("git")
+                // The tree is candidate-controlled: no fsmonitor or hook program from its .git/config.
+                .args(["-c", "core.fsmonitor=", "-c", "core.hooksPath=/dev/null"])
                 .arg("-C")
                 .arg(candidate_path)
                 .args(["diff", "--name-only", "HEAD"])
@@ -508,9 +928,16 @@ pub fn run_paired_benchmarks(
             candidate_path
         )
     })?;
+    run_paired_benchmarks_bins(&parent_bin, &candidate_bin, iterations)
+}
 
-    let parent_runner = CandidateJailRunner::new(&parent_bin);
-    let candidate_runner = CandidateJailRunner::new(&candidate_bin);
+pub fn run_paired_benchmarks_bins(
+    parent_bin: &Path,
+    candidate_bin: &Path,
+    iterations: usize,
+) -> Result<(Vec<f64>, Vec<f64>, RusageMetrics, RusageMetrics), String> {
+    let parent_runner = CandidateJailRunner::new(parent_bin);
+    let candidate_runner = CandidateJailRunner::new(candidate_bin);
 
     // Execute warm-up runs outside the measurement window to prime page caches and namespaces
     for w in 0..2 {
@@ -628,6 +1055,11 @@ pub fn run_paired_benchmarks(
 }
 
 pub fn run_judge_cli(cli: JudgeCli) -> Result<EvaluationReceipt, Box<dyn std::error::Error>> {
+    if cli.print_holdout_digest {
+        let (_, digest) = HoldoutSuite::load_strict(Path::new(&cli.holdouts_dir))?;
+        println!("{}", digest);
+        std::process::exit(0);
+    }
     let mut judge = BlindJudge::new(
         PathBuf::from(&cli.holdouts_dir),
         PathBuf::from(&cli.output_dir),
@@ -649,8 +1081,31 @@ pub fn run_judge_cli(cli: JudgeCli) -> Result<EvaluationReceipt, Box<dyn std::er
         None
     };
 
+    if cli.public_key {
+        let key = key_opt.ok_or("--public-key needs a signing key")?;
+        println!(
+            "{}",
+            hex::encode(key.verifying_key().to_sec1_point(false).as_bytes())
+        );
+        std::process::exit(0);
+    }
+
     if let Some(key) = key_opt {
         judge = judge.with_signing_key(key);
+    }
+    if let Some(exe) = &cli.executable {
+        judge = judge.with_executable(PathBuf::from(exe), cli.build_release);
+    }
+    if let (Some(subject), Some(policy_file)) = (&cli.subject_path, &cli.policy_file) {
+        let (policy, policy_sha256) = EvaluationPolicy::load(Path::new(policy_file))?;
+        if let Some(m) = policy.non_inferiority_margin_pct {
+            judge = judge.with_non_inferiority_margin(m);
+        }
+        judge = judge.with_v2(V2Request {
+            subject_path: subject.clone(),
+            policy,
+            policy_sha256,
+        });
     }
 
     let receipt = judge.evaluate_cycle(

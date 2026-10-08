@@ -114,6 +114,8 @@ fn receipt() -> EvaluationReceipt {
         }),
         receipt_digest: digest,
         signature: None,
+        format_version: 1,
+        binding: None,
     }
 }
 

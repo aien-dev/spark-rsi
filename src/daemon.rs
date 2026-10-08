@@ -522,6 +522,37 @@ impl RsiEngine {
                         &config.cortex_space,
                     )
                     .await;
+                } else if let Err(e) = crate::promotion_gate::check_v2_promotion(
+                    maybe_receipt.as_ref().unwrap(),
+                    config.judge_public_key_hex.as_deref(),
+                    signing_key.verifying_key(),
+                    config.judge_policy_file.as_deref(),
+                    &crate::promotion_gate::PromotionSubject {
+                        // The parent this daemon handed its judge (a label, not a commit), so
+                        // only a receipt for this cycle's own tree can match.
+                        parent_id: "parent",
+                        path: &proposal.target_file,
+                        content_sha256: &candidate_digest,
+                        // Re-read the generation the swap promotes, right before the swap;
+                        // unreadable never matches.
+                        disk_sha256: &crate::actor::judge::sha256_file(
+                            &supervisor_daemon
+                                .supervisor
+                                .generations_root
+                                .join(&proposal.id)
+                                .join(&proposal.target_file),
+                        )
+                        .unwrap_or_else(|e| format!("unreadable: {}", e)),
+                    },
+                ) {
+                    // No promotion without a version 2 receipt from the separate judge that
+                    // binds this exact change. Version 1 receipts are history, never authority.
+                    success = false;
+                    supervisor_daemon
+                        .trigger_instant_rollback(&active_link)
+                        .await?;
+                    let _ = ledger
+                        .append_rollback(&proposal.id, &format!("Promotion gate refused: {}", e));
                 } else {
                     // Canary probation passed and envelope admitted. Promote to Durable and record in ledger
                     supervisor_daemon

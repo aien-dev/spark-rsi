@@ -13,21 +13,21 @@
     "generated": {
       "children": [
         {
-          "digest": "e12feb890c04bceafd3af883a63716b7a3f465aa2a2644ae1efce6fa3f55ddee",
-          "last_commit": "5d46b21",
+          "digest": "5941cf401fcd392220c189d42636f133ceb806b5257bff92da18fac103a309bc",
+          "last_commit": "2e5ce1d",
           "name": "layers",
           "purpose": "Directory src/evaluator/layers. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:60cba36bf69bcb4f269ee4b9b335113bbe65d14d86cc5cf785fd25e682f4ca06",
-      "compiled_at": "2026-10-04T18:13:51Z",
+      "children_root": "sha256:784ea5e2ec4f2a30d63f20a227a1cc29430f37954694046c09b74a1c63ffd431",
+      "compiled_at": "2026-10-08T23:18:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:03c1ae5bcf2343805d2f3e6af636335c03ef4899c62af52e91669ce83a997233",
+      "digest": "sha256:964e17bf7cb59452d73df91bd8be378691da59bb4c0ac6e37fceee393b63e7f8",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 10,
-      "generated_at_commit": "f5f1ca2247057c40c7f93b71b60508c1f400271b",
-      "source_tree": "sha256:baeb973d3da1c6202ca12a3612631cb0a52964b74543e9819acf08950bac3f2d"
+      "generated_at_commit": "2e5ce1d8c5821dae425274f721ba9ee3dcdf2d03",
+      "source_tree": "sha256:0295911594958fda81d3ed1bb82b1afba3c1d35ddb5727ad96acba0fcb2ddd2d"
     },
     "owner_lane": "",
     "seed": {

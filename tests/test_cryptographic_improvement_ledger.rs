@@ -155,6 +155,8 @@ fn test_content_addressed_blob_store_and_tamper_detection() {
         }),
         receipt_digest: "digest-test-01".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
 
     let block = ledger

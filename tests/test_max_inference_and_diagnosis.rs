@@ -79,6 +79,8 @@ fn test_diagnostic_context_from_failing_receipt() {
         metrics_summary: None,
         receipt_digest: "abcd1234".to_string(),
         signature: None,
+        format_version: 1,
+        binding: None,
     };
 
     let target_file = "src/example.rs";

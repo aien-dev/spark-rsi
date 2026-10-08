@@ -49,8 +49,8 @@
     "generated": {
       "children": [
         {
-          "digest": "77dc13f85f1d248f918e4bbade6e309957570ac5dd14bdf1e00ecd90f6e53bf3",
-          "last_commit": "4b0079d",
+          "digest": "5e2119d5d6a2624a6f770803fe288355a5aa949677e9a60170cdde61b274e9d6",
+          "last_commit": "2e5ce1d",
           "name": "actor",
           "purpose": "Directory src/actor. Purpose not yet described by a human."
         },
@@ -62,13 +62,13 @@
         },
         {
           "digest": "4c66e2e1f75405fa6c3a2ec1f3638a19bbe2a103ddacdeeb5edfdd399666c37f",
-          "last_commit": "53b071b",
+          "last_commit": "e5aab9a",
           "name": "dual",
           "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnost"
         },
         {
-          "digest": "03c1ae5bcf2343805d2f3e6af636335c03ef4899c62af52e91669ce83a997233",
-          "last_commit": "5d46b21",
+          "digest": "964e17bf7cb59452d73df91bd8be378691da59bb4c0ac6e37fceee393b63e7f8",
+          "last_commit": "2e5ce1d",
           "name": "evaluator",
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
         },
@@ -79,8 +79,8 @@
           "purpose": "Directory src/graph. Purpose not yet described by a human."
         },
         {
-          "digest": "460352c51895b7a1966523da1bb0501ce6f97c6c97884c530c0f3b2725c89837",
-          "last_commit": "d25d751",
+          "digest": "35a987bf8e546fb4a15a8c0567a7749e512486420583ac6522810d6b0b3747d6",
+          "last_commit": "2e5ce1d",
           "name": "isolation",
           "purpose": "Directory src/isolation. Purpose not yet described by a human."
         },
@@ -115,15 +115,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:47e21e317340672d7a14d56e69796a9b06d028c21a7e1c8116efc29af28c7ed2",
-      "compiled_at": "2026-10-04T18:41:13Z",
+      "children_root": "sha256:42b10c29bfe624e483d3114c02c42d729298cc209c1e4390ae605870c02cebc4",
+      "compiled_at": "2026-10-08T23:18:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:afb292cfddbedbaf9979077a42b35661fab27a0cdceb2f9cdb9c16c5c99fbfc9",
+      "digest": "sha256:96358e727b0711c1b3247bd5a20546edc6902b00a49615147f4b531d631e0823",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 58,
-      "generated_at_commit": "e49fad9bee967eaff7bf3749fe53be9722f5ca7b",
-      "source_tree": "sha256:3e8a9425bcec763e04b64bce0553b31eb5fa68ed556c0c6389116d029c7998a8"
+      "files": 60,
+      "generated_at_commit": "2e5ce1d8c5821dae425274f721ba9ee3dcdf2d03",
+      "source_tree": "sha256:13b6583a4f0508f9963b9ba549608802cf95ec0db92a766fbb0b95000a24269c"
     },
     "owner_lane": "",
     "seed": {
