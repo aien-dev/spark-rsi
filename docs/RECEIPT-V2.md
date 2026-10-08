@@ -21,7 +21,7 @@ The receipt keeps every version 1 field and adds:
 | `binding.holdout_set_sha256` | Digest of the whole holdout directory (below). |
 | `binding.holdouts_total` / `holdouts_passed` | Holdout counts from this run. |
 | `binding.policy_sha256` | SHA-256 of the exact policy file bytes. |
-| `binding.evaluator_binary_sha256` | SHA-256 of the running judge executable. |
+| `binding.evaluator_binary_sha256` | SHA-256 of the running judge executable (the evaluator, not the candidate program). |
 
 ## Digest
 
@@ -78,7 +78,7 @@ The operator's policy file (JSON, unknown fields refused):
 }
 ```
 
-`require_admitted` must be `true`; `min_holdout_pass_ratio` must be in (0, 1]. An optional
+`require_admitted` must be `true`; `min_holdout_pass_ratio` must be in (0, 1]; `allowed_targets` must name at least one file; every path in `allowed_targets` and `protected_paths` must be a clean relative path (no `.`, `..`, empty or leading `/` component), because paths are compared as strings. A ratio below 1 is recorded faithfully, but each failed holdout also fails the replay layer, so in practice any failed holdout keeps the change from being admitted. An optional
 `non_inferiority_margin_pct` sets the latency margin for this evaluation; being part of the policy
 bytes, it is covered by the signed `policy_sha256`.
 
@@ -87,6 +87,10 @@ the policy's `holdout_set_sha256`, when the subject is not a clean relative path
 `allowed_targets` or lies under a `protected_paths` entry, or when the candidate tree differs from
 the parent tree in anything other than the subject file. That comparison includes dotfiles and
 skips only `.git` and the top-level `target` directory; symlinks and special files are refused.
+The program that runs the holdouts must come from the compared trees: a version 2 evaluation names its executable (`--executable`, never searched for), and either the judge builds both trees itself (`--build-release`) or the executable is a clean relative path outside `.git` and `target`, which the comparison skips. Only the root `.git` and `target` are skipped; a nested `.git` entry is refused.
+
+The judge builds (`--build-release`) inside bubblewrap: no network, the tree read-only, only a fresh target directory writable, the toolchain read-only, and nothing of the judge's home (where its key lives). Build scripts, proc macros and `include_bytes!` in candidate code run or read only inside that sandbox. There is no unsandboxed fallback. The holdouts run in the existing candidate jail.
+
 After the run the judge re-hashes the subject and refuses to sign if it changed. A run below the
 pass ratio is recorded as not admitted.
 
@@ -99,14 +103,14 @@ requires all of:
   `verify_signature` but are never sufficient for a new promotion;
 - a valid signature under the operator-pinned judge key, which must differ from the promoter's
   own key;
-- `subject_sha256` equal to the digest of the change being promoted;
+- `subject_path` equal to the file the change replaces, and `subject_sha256` equal both to the digest of the change's bytes and to the digest of the staged file read back right before the swap;
 - `policy_sha256` equal to the digest of the operator's policy file as it is now, and
   `holdout_set_sha256` equal to the digest that policy pins;
 - `admitted`, the subject listed in the policy's `allowed_targets`, and
   `holdouts_passed >= min_holdout_pass_ratio * holdouts_total` with a non-zero total.
 
 The daemon checks this right before its symlink swap and fails closed when
-`judge_public_key_hex` or `judge_policy_file` is not configured.
+`judge_public_key_hex` or `judge_policy_file` is not configured. The daemon's own cycle produces only a version 1 receipt from its in-process judge, so until an externally judged version 2 receipt is supplied to it, self-promotion by the spark-rsi daemon is refused every time. That is the intended direction: promotion of an RSI change goes through the operator's approved path (the INTERPLANE M5 slice), not through the proposer's own daemon.
 
 ## Key separation
 

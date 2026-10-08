@@ -8,7 +8,7 @@ use spark_rsi::actor::judge::{
 };
 use spark_rsi::evaluator::layers::LayerResult;
 use spark_rsi::evaluator::{EvaluationMetricsSummary, EvaluationReceipt, ReceiptBindingV2};
-use spark_rsi::promotion_gate::check_v2_promotion;
+use spark_rsi::promotion_gate::{check_v2_promotion, PromotionSubject};
 use std::fs;
 use std::path::Path;
 
@@ -335,7 +335,8 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
     let (policy_path, policy_sha) = write_policy(tmp.path(), &holdout);
     let r = v2_receipt(&judge, &holdout, &policy_sha);
     let jk = pub_hex(&judge);
-    let subject = sha(README);
+    let subject_sha = sha(README);
+    let subject = PromotionSubject::same("README.md", &subject_sha);
 
     check_v2_promotion(
         &r,
@@ -387,9 +388,34 @@ fn promotion_gate_accepts_bound_receipt_and_refuses_everything_else() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &sha(b"other bytes")
+        &PromotionSubject::same("README.md", &sha(b"other bytes"))
     )
     .is_err());
+    // The receipt covers README.md; the change replaces another file with the same bytes.
+    assert!(check_v2_promotion(
+        &r,
+        Some(&jk),
+        daemon.verifying_key(),
+        Some(&policy_path),
+        &PromotionSubject::same("src/lib.rs", &subject_sha)
+    )
+    .unwrap_err()
+    .contains("covers README.md"));
+    // The staged bytes on disk differ from the change's bytes.
+    let other = sha(b"staged bytes");
+    assert!(check_v2_promotion(
+        &r,
+        Some(&jk),
+        daemon.verifying_key(),
+        Some(&policy_path),
+        &PromotionSubject {
+            path: "README.md",
+            content_sha256: &subject_sha,
+            disk_sha256: &other,
+        }
+    )
+    .unwrap_err()
+    .contains("staged README.md"));
     // The operator's policy file changes after the evaluation: refused.
     fs::write(
         &policy_path,
@@ -424,7 +450,7 @@ fn promotion_gate_refuses_below_threshold_and_v1() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &sha(README)
+        &PromotionSubject::same("README.md", &sha(README))
     )
     .unwrap_err()
     .contains("threshold"));
@@ -443,7 +469,7 @@ fn promotion_gate_refuses_below_threshold_and_v1() {
         Some(&jk),
         daemon.verifying_key(),
         Some(&policy_path),
-        &sha(README)
+        &PromotionSubject::same("README.md", &sha(README))
     )
     .unwrap_err()
     .contains("not sufficient"));
@@ -663,7 +689,7 @@ fn judge_signs_v2_bound_to_subject_policy_and_holdouts() {
         Some(&pub_hex(&key(7))),
         key(9).verifying_key(),
         Some(&policy_path),
-        &sha(README),
+        &PromotionSubject::same("README.md", &sha(README)),
     )
     .unwrap();
 }
@@ -745,4 +771,128 @@ fn strict_diff_sees_dotfiles_and_skips_only_git_and_target() {
         strict_changed_paths(&t.parent, &t.candidate).unwrap().len(),
         2
     );
+}
+
+#[test]
+fn strict_diff_refuses_nested_git_entries() {
+    let t = trees();
+    fs::create_dir_all(t.candidate.join("src")).unwrap();
+    fs::write(t.candidate.join("src/.git"), "gitdir: elsewhere").unwrap();
+    let err = strict_changed_paths(&t.parent, &t.candidate).unwrap_err();
+    assert!(err.contains("nested .git"), "{}", err);
+}
+
+#[test]
+fn judge_refuses_an_executable_the_tree_comparison_cannot_cover() {
+    let t = trees();
+    let (_, holdout_digest) = HoldoutSuite::load_strict(&t.holdouts).unwrap();
+    // A prebuilt program under the skipped target directory.
+    for tree in [&t.parent, &t.candidate] {
+        fs::create_dir_all(tree.join("target/release")).unwrap();
+        fs::copy(
+            tree.join("bin/spark-rsi"),
+            tree.join("target/release/spark-rsi"),
+        )
+        .unwrap();
+    }
+    let (judge, _, _) = v2_judge(&t, &holdout_digest, "README.md");
+    let judge = judge.with_executable("target/release/spark-rsi".into(), false);
+    let err = judge
+        .evaluate_cycle("c", "cand", "par", &t.candidate, &t.parent)
+        .unwrap_err();
+    assert!(err.contains("tree comparison covers"), "{}", err);
+    // No named executable: the judge never searches the trees for one.
+    let (mut judge, _, _) = v2_judge(&t, &holdout_digest, "README.md");
+    judge.executable = None;
+    let err = judge
+        .evaluate_cycle("c", "cand", "par", &t.candidate, &t.parent)
+        .unwrap_err();
+    assert!(err.contains("names its executable"), "{}", err);
+}
+
+#[test]
+fn policy_paths_must_be_clean() {
+    let tmp = tempfile::tempdir().unwrap();
+    let digest = sha(b"holdouts");
+    for (field, value) in [
+        ("protected_paths", serde_json::json!(["./src"])),
+        ("protected_paths", serde_json::json!(["/"])),
+        ("protected_paths", serde_json::json!([""])),
+        ("allowed_targets", serde_json::json!(["../README.md"])),
+        ("allowed_targets", serde_json::json!([])),
+    ] {
+        let mut p: serde_json::Value = serde_json::from_str(&policy_json(&digest)).unwrap();
+        p[field] = value.clone();
+        let path = tmp.path().join("p.json");
+        fs::write(&path, p.to_string()).unwrap();
+        assert!(
+            EvaluationPolicy::load(&path).is_err(),
+            "{} = {} must be refused",
+            field,
+            value
+        );
+    }
+}
+
+/// The judge builds candidate code inside a sandbox: a file outside the tree (standing in for the
+/// judge's signing key) cannot be read at build time, so `include_str!` of it fails the build.
+#[test]
+fn judge_build_cannot_read_files_outside_the_tree() {
+    let probe = std::process::Command::new("bwrap")
+        .args([
+            "--unshare-user",
+            "--unshare-net",
+            "--ro-bind",
+            "/",
+            "/",
+            "true",
+        ])
+        .status();
+    if !probe.is_ok_and(|s| s.success()) {
+        eprintln!("SKIP: bubblewrap cannot create a user namespace on this host");
+        return;
+    }
+    let tmp = tempfile::tempdir().unwrap();
+    let secret = tmp.path().join("judge.key");
+    fs::write(&secret, "not-for-candidates").unwrap();
+    let crate_toml =
+        "[package]\nname = \"probe\"\nversion = \"0.1.0\"\nedition = \"2021\"\n[workspace]\n";
+    let lock = "version = 4\n\n[[package]]\nname = \"probe\"\nversion = \"0.1.0\"\n";
+    let parent = tmp.path().join("parent");
+    let candidate = tmp.path().join("candidate");
+    for (tree, main) in [
+        (&parent, "fn main() {}\n".to_string()),
+        (
+            &candidate,
+            format!(
+                "const K: &str = include_str!({:?});\nfn main() {{ println!(\"{{}}\", K); }}\n",
+                secret
+            ),
+        ),
+    ] {
+        fs::create_dir_all(tree.join("src")).unwrap();
+        fs::write(tree.join("Cargo.toml"), crate_toml).unwrap();
+        fs::write(tree.join("Cargo.lock"), lock).unwrap();
+        fs::write(tree.join("src/main.rs"), main).unwrap();
+    }
+    // Outside the sandbox the candidate builds (the include works), so the refusal below is the
+    // sandbox and not a broken fixture.
+    let plain = std::process::Command::new("cargo")
+        .args(["build", "--release", "--offline", "--locked", "-q"])
+        .env("CARGO_TARGET_DIR", tmp.path().join("plain-target"))
+        .current_dir(&candidate)
+        .status()
+        .unwrap();
+    assert!(plain.success(), "control build outside the sandbox failed");
+
+    let holdouts = holdout_dir(tmp.path());
+    let mut judge = BlindJudge::new(holdouts, tmp.path().join("out"))
+        .with_signing_key(key(7))
+        .with_executable("probe".into(), true);
+    judge.require_build_verification = false;
+    let err = judge
+        .evaluate_cycle("c", "cand", "par", &candidate, &parent)
+        .unwrap_err();
+    assert!(err.contains("candidate build failed"), "{}", err);
+    assert!(err.contains("judge.key"), "{}", err);
 }

@@ -10,7 +10,26 @@ use crate::evaluator::EvaluationReceipt;
 use p256::ecdsa::VerifyingKey;
 use std::path::Path;
 
-/// Checks `receipt` before promoting the change whose bytes hash to `subject_sha256`.
+/// The change about to be promoted: the one file it replaces, the digest of the bytes the change
+/// carries, and the digest of the bytes read back from the staged tree right before the swap.
+pub struct PromotionSubject<'a> {
+    pub path: &'a str,
+    pub content_sha256: &'a str,
+    pub disk_sha256: &'a str,
+}
+
+impl<'a> PromotionSubject<'a> {
+    /// A subject whose staged bytes were confirmed equal to the change's bytes.
+    pub fn same(path: &'a str, sha256: &'a str) -> Self {
+        Self {
+            path,
+            content_sha256: sha256,
+            disk_sha256: sha256,
+        }
+    }
+}
+
+/// Checks `receipt` before promoting `subject`.
 ///
 /// `judge_public_key_hex` is the operator-pinned SEC1 hex key of the judge. `own_key` is the
 /// promoting process's own key: a receipt the promoter could have signed itself is refused.
@@ -21,8 +40,14 @@ pub fn check_v2_promotion(
     judge_public_key_hex: Option<&str>,
     own_key: &VerifyingKey,
     judge_policy_file: Option<&str>,
-    subject_sha256: &str,
+    subject: &PromotionSubject,
 ) -> Result<(), String> {
+    if subject.content_sha256 != subject.disk_sha256 {
+        return Err(format!(
+            "staged {} hashes to {}, not the change's {}; refusing to promote",
+            subject.path, subject.disk_sha256, subject.content_sha256
+        ));
+    }
     let key_hex = judge_public_key_hex
         .ok_or("no pinned judge public key (judge_public_key_hex); promotion fails closed")?;
     let key_bytes =
@@ -39,7 +64,7 @@ pub fn check_v2_promotion(
     let (policy, policy_sha256) = EvaluationPolicy::load(Path::new(policy_file))?;
     receipt.verify_for_promotion(
         &judge_key,
-        subject_sha256,
+        subject.content_sha256,
         &policy_sha256,
         &policy.holdout_set_sha256,
     )?;
@@ -47,6 +72,12 @@ pub fn check_v2_promotion(
         .binding
         .as_ref()
         .ok_or("version 2 receipt without binding")?;
+    if b.subject_path != subject.path {
+        return Err(format!(
+            "receipt covers {}, but the change replaces {}",
+            b.subject_path, subject.path
+        ));
+    }
     if !policy.allowed_targets.contains(&b.subject_path) {
         return Err(format!(
             "receipt subject {} is not an allowed target in the pinned policy",

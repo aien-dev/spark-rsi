@@ -130,6 +130,19 @@ impl EvaluationPolicy {
                 "policy non_inferiority_margin_pct must be a finite non-negative number".into(),
             );
         }
+        if policy.allowed_targets.is_empty() {
+            return Err("policy allowed_targets must name at least one file".into());
+        }
+        // Paths are compared as strings: an unclean entry (`./src`, `/`, `src/../x`) would
+        // silently protect or allow nothing it appears to.
+        if let Some(p) = policy
+            .allowed_targets
+            .iter()
+            .chain(&policy.protected_paths)
+            .find(|p| !is_clean_relative(p.trim_end_matches('/')))
+        {
+            return Err(format!("policy path {:?} is not a clean relative path", p));
+        }
         Ok((policy, hex::encode(Sha256::digest(&bytes))))
     }
 }
@@ -568,6 +581,27 @@ impl BlindJudge {
         {
             return Err(format!("subject {} is under protected path {}", subject, p));
         }
+        // The program that runs must come from the compared trees: built here, or a named file
+        // outside the directories the comparison skips. Never searched for.
+        match (&self.executable, self.build_release) {
+            (None, _) => return Err(
+                "a version 2 evaluation names its executable; refusing to search the trees for one"
+                    .into(),
+            ),
+            (Some(exe), false) => {
+                let e = exe.to_str().unwrap_or("");
+                if !is_clean_relative(e)
+                    || path_is_under(e, "target")
+                    || e.split('/').any(|c| c == ".git")
+                {
+                    return Err(format!(
+                        "without a judge build the executable {:?} must be a clean relative path the tree comparison covers (not under target or .git)",
+                        exe
+                    ));
+                }
+            }
+            (Some(_), true) => {}
+        }
         let changed = strict_changed_paths(parent_path, candidate_path)?;
         if changed != [subject.to_string()] {
             return Err(format!(
@@ -621,12 +655,11 @@ impl BlindJudge {
         }
         let build = |tree: &Path, side: &str| -> Result<PathBuf, String> {
             let target = build_root.join(side);
-            let out = Command::new("cargo")
-                .args(["build", "--release", "--offline", "--locked"])
-                .env("CARGO_TARGET_DIR", &target)
-                .current_dir(tree)
+            fs::create_dir_all(&target)
+                .map_err(|e| format!("cannot create build dir {:?}: {}", target, e))?;
+            let out = sandboxed_cargo_build(tree, &target)
                 .output()
-                .map_err(|e| format!("cannot start cargo for {}: {}", side, e))?;
+                .map_err(|e| format!("cannot start the sandboxed build for {}: {}", side, e))?;
             if !out.status.success() {
                 return Err(format!(
                     "{} build failed: {}",
@@ -646,6 +679,89 @@ impl BlindJudge {
             build(candidate_path, "candidate")?,
         ))
     }
+}
+
+/// `cargo build --release --offline --locked` for `tree` inside bubblewrap: no network, no view
+/// of the judge's home (where its signing key lives), the tree read-only at `/src`, only `target`
+/// writable (at `/target`), and the toolchain read-only. Build scripts, proc macros and
+/// `include_bytes!` in candidate code run or read here, so they cannot reach the key. There is
+/// no fallback: if the sandbox cannot start, the build fails and nothing is signed.
+fn sandboxed_cargo_build(tree: &Path, target: &Path) -> Command {
+    let env_dir = |var: &str, default: &str| -> Option<PathBuf> {
+        std::env::var_os(var)
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(default)))
+            .filter(|p| p.is_dir())
+    };
+    // Never expose the judge's home (or a directory holding it) inside the sandbox.
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    let safe = |d: &PathBuf| home.as_ref().is_none_or(|h| !h.starts_with(d));
+    let rustup_home = env_dir("RUSTUP_HOME", ".rustup").filter(safe);
+    let cargo_home = env_dir("CARGO_HOME", ".cargo").filter(safe);
+    let path = std::env::var("PATH").unwrap_or_else(|_| "/usr/bin:/bin".into());
+    let cargo_dir = path
+        .split(':')
+        .map(PathBuf::from)
+        .find(|d| d.join("cargo").is_file())
+        .filter(safe);
+    let mut cmd = Command::new("bwrap");
+    cmd.args([
+        "--unshare-user",
+        "--unshare-ipc",
+        "--unshare-pid",
+        "--unshare-net",
+        "--unshare-uts",
+        "--die-with-parent",
+        "--clearenv",
+        "--proc",
+        "/proc",
+        "--dev",
+        "/dev",
+        "--tmpfs",
+        "/tmp",
+    ]);
+    for sys in ["/usr", "/lib", "/lib64", "/bin", "/etc"] {
+        if Path::new(sys).exists() {
+            cmd.args(["--ro-bind", sys, sys]);
+        }
+    }
+    let mut path_in = vec!["/usr/bin".to_string(), "/bin".to_string()];
+    for d in [&rustup_home, &cargo_home, &cargo_dir]
+        .into_iter()
+        .flatten()
+    {
+        cmd.arg("--ro-bind").arg(d).arg(d);
+    }
+    if let Some(d) = &cargo_dir {
+        path_in.insert(0, d.display().to_string());
+    }
+    if let Some(d) = &rustup_home {
+        cmd.arg("--setenv").arg("RUSTUP_HOME").arg(d);
+    }
+    if let Some(d) = &cargo_home {
+        cmd.arg("--setenv").arg("CARGO_HOME").arg(d);
+    }
+    cmd.arg("--ro-bind").arg(tree).arg("/src");
+    cmd.arg("--bind").arg(target).arg("/target");
+    cmd.args(["--setenv", "PATH", &path_in.join(":")]);
+    cmd.args([
+        "--setenv",
+        "HOME",
+        "/tmp",
+        "--setenv",
+        "CARGO_TARGET_DIR",
+        "/target",
+    ]);
+    cmd.args([
+        "--chdir",
+        "/src",
+        "cargo",
+        "build",
+        "--release",
+        "--offline",
+        "--locked",
+    ]);
+    cmd
 }
 
 pub fn sha256_file(path: &Path) -> Result<String, String> {
@@ -668,8 +784,12 @@ pub fn strict_changed_paths(parent: &Path, candidate: &Path) -> Result<Vec<Strin
                 .ok_or_else(|| format!("non-UTF-8 path {:?}", path))?
                 .to_string();
             let name = entry.file_name();
-            if name == ".git" || (dir == base && name == "target") {
+            if dir == base && (name == ".git" || name == "target") {
                 continue;
+            }
+            // Only the root .git and target are skipped; a nested one would hide a change.
+            if name == ".git" {
+                return Err(format!("refusing nested .git entry {:?} in tree", rel));
             }
             let kind = entry.file_type().map_err(|e| e.to_string())?;
             if kind.is_dir() {
