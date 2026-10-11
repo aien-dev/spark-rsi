@@ -1162,9 +1162,17 @@ prefetch_global_l2(next_k);
             .map(|o| o.status.success())
             .unwrap_or(false)
             || std::path::Path::new("/usr/local/cuda/bin/nvcc").exists();
-        let gpu_available = std::path::Path::new("/dev/nvidia0").exists();
+        // The device nodes can exist yet be closed to this process (a sandbox with a closed device
+        // policy, or a user outside the video group). Only a device we can open counts as a GPU.
+        let gpu_available = ["/dev/nvidiactl", "/dev/nvidia0"].iter().all(|p| {
+            fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(p)
+                .is_ok()
+        });
         if !nvcc_available || !gpu_available {
-            eprintln!("Skipping CUDA autotune test: nvcc or NVIDIA GPU device (/dev/nvidia0) is not available");
+            eprintln!("Skipping CUDA autotune test: nvcc or an openable NVIDIA GPU device (/dev/nvidiactl, /dev/nvidia0) is not available");
             return;
         }
         let _ = std::process::Command::new("sudo")
