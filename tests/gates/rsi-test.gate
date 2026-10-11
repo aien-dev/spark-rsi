@@ -1,0 +1,26 @@
+# tests/gates/rsi-test.gate
+# Mirrors hosted: ci.yml 'Pre-populate Build Jail Target Cache' + 'Run Tests': release build into /tmp/spark-rsi-target, then cargo test --locked --verbose -- --test-threads=1 (hosted job 223 s total)
+# The hosted runner relaxes AppArmor user namespaces and makes bwrap setuid first (root steps); the local state is recorded as observations.
+gate: RSI-TEST
+manifest_version: 2
+owner: spark-rsi
+requires:
+  - host
+inputs:
+  - Cargo.toml
+  - Cargo.lock
+  - src/
+  - tests/
+  - examples/
+  - tools/
+  - tests/gates/
+run:
+  exec: tests/gates/run.sh
+  args: ["test"]
+expects:
+  exit: 0
+  observe: ["prepopulate_rc == 0"]
+  verdict: PASS
+timeout: 40m
+exactness: EXACT
+cache_scope: machine

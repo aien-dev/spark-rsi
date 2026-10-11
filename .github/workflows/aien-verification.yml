@@ -1,0 +1,178 @@
+# AIEN Verification: the GitHub thin gate (ADR 0033 Decision 11, inventory contract C5).
+#
+# PHASE 2 DRAFT (2026-10-11, lane REPOS). This workflow is NOT a required check yet. It runs
+# beside the existing hosted workflows so that, for N >= 3 commits, the hosted verdict and the
+# locally signed bundle verdict can be compared (advisor amendment A7). Nothing here changes
+# the repository's required contexts; that switch is phase 3 and needs Drake's agreement.
+#
+# What it does: checkout; read the trust anchors from the BASE ref (origin/main), never from
+# the head under test (amendment A1); crumb verify; fetch <repo>/<sha>/bundle.json from
+# aien-dev/aien-receipts; verify the bundle signature and content with the pinned aien-test
+# build; run the repository's portable smoke set (gates whose requires is only "portable").
+#
+# PHASE 3 FLIPS (marked "PHASE3" below): a missing bundle becomes NOT_RUN (status pending with
+# a retry window) instead of a neutral note, and a trust-surface change becomes a failure
+# unless the operator ran it by hand (BLOCKED_OPERATOR).
+name: AIEN Verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: AIEN Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      REPO_SLUG: aien-dev/spark-rsi
+      AIEN_TEST_PIN: c26f4d7ac3156088469b27462390f5b08ef4f436
+      RECEIPTS_RAW: https://raw.githubusercontent.com/aien-dev/aien-receipts/main
+    steps:
+      - name: Checkout the head under test
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve the commit under test and the base ref
+        id: ids
+        run: |
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            sha="${{ github.event.pull_request.head.sha }}"
+          else
+            sha="${{ github.sha }}"
+          fi
+          git fetch -q origin main
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "base=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+          echo "commit under test: $sha"
+          echo "base (trust anchors): $(git rev-parse origin/main)"
+
+      - name: "Trust anchors from the base ref (A1: never from the head under test)"
+        id: anchors
+        run: |
+          mkdir -p "$RUNNER_TEMP/anchors"
+          base="${{ steps.ids.outputs.base }}"
+          if git show "$base:.aien/verify.pub" > "$RUNNER_TEMP/anchors/verify.pub" 2>/dev/null; then
+            echo "enrolled=true" >> "$GITHUB_OUTPUT"
+            git show "$base:.aien/always" > "$RUNNER_TEMP/anchors/always" 2>/dev/null || : > "$RUNNER_TEMP/anchors/always"
+            git show "$base:.aien/unmapped-ok" > "$RUNNER_TEMP/anchors/unmapped-ok" 2>/dev/null || : > "$RUNNER_TEMP/anchors/unmapped-ok"
+            echo "verify.pub (base): $(cat "$RUNNER_TEMP/anchors/verify.pub")"
+          else
+            echo "enrolled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::.aien/verify.pub is not on the base ref yet: this repository is not enrolled. Phase 2: neutral."
+          fi
+          # Trust-surface changes are run by the operator by hand (A1): BLOCKED_OPERATOR.
+          changed=$(git diff --name-only "$base...${{ steps.ids.outputs.sha }}" -- .aien tests/gates .github/workflows .forgejo tools/aien-test || true)
+          if [ -n "$changed" ]; then
+            echo "blocked=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::BLOCKED_OPERATOR: this head changes the trust surface:"; echo "$changed"
+            # PHASE3: fail here unless an operator attestation for this sha is present.
+          else
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout the pinned crumb tool source (aien-architecture @ 7fe8e26ef9df92c4dca90153874f04928cf78d5e)
+        uses: actions/checkout@v4
+        with:
+          repository: aien-dev/aien-architecture
+          ref: 7fe8e26ef9df92c4dca90153874f04928cf78d5e
+          path: .crumb-tool-src
+
+      - name: Build the crumb tool, then remove its source from this tree
+        run: |
+          make -C .crumb-tool-src/tools/crumb crumb
+          mkdir -p "$RUNNER_TEMP/bin" && cp .crumb-tool-src/tools/crumb/crumb "$RUNNER_TEMP/bin/crumb"
+          rm -rf .crumb-tool-src
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Crumbs must be exactly what the compiler produces now (stays GitHub-hosted, D11)
+        run: crumb verify .
+
+      - name: Install Stable Rust Toolchain (for the pinned aien-test build and the smoke set)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Checkout the pinned aien-test source (aien-sovereign-core @ ${{ env.AIEN_TEST_PIN }})
+        uses: actions/checkout@v4
+        with:
+          repository: aien-dev/aien-sovereign-core
+          ref: ${{ env.AIEN_TEST_PIN }}
+          path: .aien-test-src
+
+      - name: Cache the pinned aien-test build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .aien-test-src/target
+          key: aien-test-${{ runner.os }}-${{ env.AIEN_TEST_PIN }}
+
+      - name: Build aien-test from the pin (never from the tree under test), then remove the source
+        run: |
+          cargo build --release -p aien-test --manifest-path .aien-test-src/Cargo.toml
+          cp .aien-test-src/target/release/aien-test "$RUNNER_TEMP/bin/aien-test" 2>/dev/null || { mkdir -p "$RUNNER_TEMP/bin"; cp .aien-test-src/target/release/aien-test "$RUNNER_TEMP/bin/aien-test"; }
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          rm -rf .aien-test-src
+          git status --porcelain --untracked-files=normal
+
+      - name: Fetch the signed verification bundle for this commit
+        id: bundle
+        run: |
+          url="$RECEIPTS_RAW/spark-rsi/${{ steps.ids.outputs.sha }}/bundle.json"
+          echo "bundle url: $url"
+          if curl -fsSL "$url" -o "$RUNNER_TEMP/bundle.json"; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::bundle not published yet for ${{ steps.ids.outputs.sha }} (phase 2: neutral)."
+            # PHASE3: exit 2 here (NOT_RUN, status pending with a retry window) instead of a neutral note.
+          fi
+
+      - name: Verify the bundle with the base-ref public key
+        if: steps.bundle.outputs.present == 'true' && steps.anchors.outputs.enrolled == 'true'
+        run: |
+          required=$(grep -v '^#' "$RUNNER_TEMP/anchors/always" | grep -v '^$' | paste -sd, -)
+          set +e
+          aien-test verify-bundle "$RUNNER_TEMP/bundle.json" \
+            --repo "github.com/$REPO_SLUG" \
+            --commit "${{ steps.ids.outputs.sha }}" \
+            --pubkey "$RUNNER_TEMP/anchors/verify.pub" \
+            ${required:+--require "$required"}
+          rc=$?
+          set -e
+          echo "verify-bundle exit $rc (0 PASS, 1 FAIL, 2 NOT_RUN, 3 REJECTED)"
+          [ "$rc" = 0 ] || exit "$rc"
+
+      - name: Portable smoke set (gates whose requires is only portable, named at the base ref)
+        if: steps.anchors.outputs.enrolled == 'true' && steps.anchors.outputs.blocked == 'false'
+        run: |
+          base="${{ steps.ids.outputs.base }}"
+          names=$(for f in $(git ls-tree -r --name-only "$base" -- tests/gates | grep '\.gate$'); do
+            git show "$base:$f" | awk '
+              /^gate:/ {g=$2}
+              /^requires:/ {inr=1; next}
+              inr && /^  - / { if ($2 != "portable") other=1; next }
+              /^[a-z]/ {inr=0}
+              END { if (g != "" && !other) print g }'
+          done)
+          echo "portable smoke set: $(echo $names)"
+          mkdir -p "$RUNNER_TEMP/evidence"
+          fail=0
+          for g in $names; do
+            echo "::group::$g"
+            if timeout 600 aien-test run "$g" --evidence-dir "$RUNNER_TEMP/evidence"; then echo "$g: PASS"; else echo "::error::$g: not PASS"; fail=1; fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: "Not enrolled or blocked: nothing to verify in this phase"
+        if: steps.anchors.outputs.enrolled != 'true' || steps.anchors.outputs.blocked == 'true'
+        run: |
+          echo "AIEN Verification: neutral (enrolled=${{ steps.anchors.outputs.enrolled }}, blocked=${{ steps.anchors.outputs.blocked }}). PHASE3 turns this into a failure."
