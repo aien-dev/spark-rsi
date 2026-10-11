@@ -10,6 +10,10 @@
 # aien-dev/aien-receipts; verify the bundle signature and content with the pinned aien-test
 # build; run the repository's portable smoke set (gates whose requires is only "portable").
 #
+# GitHub-hosted compute: this workflow compiles only the two pinned verifier tools (the crumb
+# checker, and aien-test once the repository is enrolled). It never builds or tests this
+# repository's own code; the portable smoke set is text scans and format checks only.
+#
 # PHASE 3 FLIPS (marked "PHASE3" below): a missing bundle becomes NOT_RUN (status pending with
 # a retry window) instead of a neutral note, and a trust-surface change becomes a failure
 # unless the operator ran it by hand (BLOCKED_OPERATOR).
@@ -94,11 +98,13 @@ jobs:
         run: crumb verify .
 
       - name: Install Stable Rust Toolchain (for the pinned aien-test build and the smoke set)
+        if: steps.anchors.outputs.enrolled == 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
       - name: Checkout the pinned aien-test source (aien-sovereign-core @ ${{ env.AIEN_TEST_PIN }})
+        if: steps.anchors.outputs.enrolled == 'true'
         uses: actions/checkout@v4
         with:
           repository: aien-dev/aien-sovereign-core
@@ -106,6 +112,7 @@ jobs:
           path: .aien-test-src
 
       - name: Cache the pinned aien-test build
+        if: steps.anchors.outputs.enrolled == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -115,6 +122,7 @@ jobs:
           key: aien-test-${{ runner.os }}-${{ env.AIEN_TEST_PIN }}
 
       - name: Build aien-test from the pin (never from the tree under test), then remove the source
+        if: steps.anchors.outputs.enrolled == 'true'
         run: |
           cargo build --release -p aien-test --manifest-path .aien-test-src/Cargo.toml
           cp .aien-test-src/target/release/aien-test "$RUNNER_TEMP/bin/aien-test" 2>/dev/null || { mkdir -p "$RUNNER_TEMP/bin"; cp .aien-test-src/target/release/aien-test "$RUNNER_TEMP/bin/aien-test"; }
