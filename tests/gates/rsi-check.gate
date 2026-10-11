@@ -1,0 +1,23 @@
+# tests/gates/rsi-check.gate
+# Mirrors hosted: ci.yml 'Cargo Check': cargo check --locked --all-targets (sibling ../aien-protocols at main)
+gate: RSI-CHECK
+manifest_version: 2
+owner: spark-rsi
+requires:
+  - host
+inputs:
+  - Cargo.toml
+  - Cargo.lock
+  - src/
+  - tests/
+  - examples/
+  - tests/gates/
+run:
+  exec: tests/gates/run.sh
+  args: ["check"]
+expects:
+  exit: 0
+  verdict: PASS
+timeout: 20m
+exactness: EXACT
+cache_scope: machine
