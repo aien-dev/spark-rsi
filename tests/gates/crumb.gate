@@ -1,4 +1,4 @@
-# tests/gates/crumb-verify.gate
+# tests/gates/crumb.gate
 # Mirrors hosted: crumb verify . (ADR 0033 D11; always-run). Inputs cannot list every nested .crumb (literal paths only), so never cached.
 gate: CRUMB-VERIFY
 manifest_version: 2
