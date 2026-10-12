@@ -1,0 +1,11 @@
+{
+  "total_blocks": 5,
+  "total_blobs": 1,
+  "latest_sequence": 4,
+  "latest_block_hash": "d918acbe2f32f5f2425f434eac814b116d2abe7e39604c9b3163cd0833511e3a",
+  "merkle_root": "96213e88df2bb208b3440e79c5bd7753b7184434b3bc45594a03dc17c182b4e0",
+  "checkpoint_verified": true,
+  "signature_verified": true,
+  "chain_valid": true,
+  "audit_timestamp_utc": "2026-10-12T22:53:07.902077276+00:00"
+}

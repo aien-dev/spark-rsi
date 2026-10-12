@@ -198,3 +198,21 @@ exact revision and tests executed.
   later gates. Zero observations, self-reports only, duplicates, replays, wrong outputs, mismatched candidate
   digests, corrupted logs, timeouts and unauthenticated connections cannot qualify. Fail-closed behaviour is never
   weakened.
+
+## Delivery status (2026-10-12)
+
+All six steps are implemented on the integration branch `feat/evidence-driven-rsi-cut`
+(pull request #44, stacked on the plan pull request #38):
+
+| Step | Delivery | Ticket |
+|---|---|---|
+| 1 Contract foundation | `src/canary/`, `docs/CANARY-CONTRACT.md`, golden tests (b13ea46) | #39 |
+| 2 M1 Measurement | `src/measure/`, measured graph, exploratory hypotheses (PR #45) | #40 |
+| 3 and 4 Supervisor hardening, M2 execution | `src/supervisor/canary_exec.rs`, `fixtures/canary-target` (PR #46) | #41 |
+| 5 M2 Admission | identity chain, executor and quota wired into `run_cycle` (PR #47) | #42 |
+| 6 Qualification | `examples/canary_qualification.rs`, `evidence/rsi-cut-2026-10-12/REPORT.md` | #43 |
+
+The qualification report states what the fixture run qualifies and the remaining production
+limitations. The one that matters most: the promotion gate refuses every candidate until the
+separate judge is wired in (#35), so nothing becomes durable in this cut. That is fail closed by
+design.

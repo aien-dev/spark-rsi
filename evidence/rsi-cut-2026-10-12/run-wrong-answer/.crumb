@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-12T22:54:52Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:7513ef17041fcb8c482672cfd354dbc3f0304eb932d77d52a691de7edb158000",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 0,
+      "generated_at_commit": "52d831249eb2d0960d6b21093bdcb9cadb7bd260",
+      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "name": "run-wrong-answer",
+  "purpose": "Wrong-answer fixture run: WrongResult on request 3, early revert, quota refused, nothing durable.",
+  "schema_version": "1.0.0"
+}

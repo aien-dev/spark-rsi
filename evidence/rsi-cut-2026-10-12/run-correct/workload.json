@@ -1,0 +1,17 @@
+{
+  "workload_version": 1,
+  "workload_id": "fixture-v1",
+  "protocol_version": 1,
+  "requests": [
+    {"request_id": "req-001", "input": "ping", "expected_output": "pong", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-002", "input": "add 1 2", "expected_output": "3", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-003", "input": "echo hello", "expected_output": "echo hello", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-004", "input": "add 40 2", "expected_output": "42", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-005", "input": "ping", "expected_output": "pong", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-006", "input": "add 100 -1", "expected_output": "99", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-007", "input": "canary", "expected_output": "canary", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-008", "input": "add 7 8", "expected_output": "15", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-009", "input": "ping", "expected_output": "pong", "deadline_ms": 2000, "nondeterminism": "exact"},
+    {"request_id": "req-010", "input": "add 0 0", "expected_output": "0", "deadline_ms": 2000, "nondeterminism": "exact"}
+  ]
+}

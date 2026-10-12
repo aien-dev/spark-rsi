@@ -1,0 +1,11 @@
+{
+  "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+  "engine_executable": "/home/drakestapleton/workspace/rsi-cut/spark-rsi/target/release/spark-rsi",
+  "finished_at": "2026-10-12T22:53:07.901615006+00:00",
+  "fixture_mode": "wrong_answer",
+  "host": "Linux spark-b87b 7.0.0-1019-nvidia #19~24.04.2-Ubuntu SMP PREEMPT_DYNAMIC Sun Sep  6 18:35:11 UTC 2 aarch64 aarch64 aarch64 GNU/Linux",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "spark_rsi_branch": "feat/evidence-driven-rsi-cut",
+  "spark_rsi_revision": "52d831249eb2d0960d6b21093bdcb9cadb7bd260",
+  "started_at": "2026-10-12T22:53:03.553299607+00:00"
+}
