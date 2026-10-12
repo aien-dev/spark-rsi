@@ -5,12 +5,12 @@
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "compiled_at": "2026-10-12T22:54:52Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:7513ef17041fcb8c482672cfd354dbc3f0304eb932d77d52a691de7edb158000",
-      "evidence_files": 0,
-      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 0,
-      "generated_at_commit": "52d831249eb2d0960d6b21093bdcb9cadb7bd260",
-      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "digest": "sha256:897dc1aa235604168374ac032c365267b2f1aaf4aa95ad843e6297d520bf7f8f",
+      "evidence_files": 12,
+      "evidence_root": "sha256:0df01f77708e4fb38de69ac2edfc11270afc843c8e850879ec18daab127d76ed",
+      "files": 12,
+      "generated_at_commit": "721d512366f91dc9fdf8f719c36930f9e4e548ef",
+      "source_tree": "sha256:85056de9347f51cf8e7ef1d319e4618df30d8e7d91a4cb7564e8aacd0760dc66"
     }
   },
   "name": "run-wrong-answer",
