@@ -61,8 +61,8 @@
           "purpose": "Directory src/bin. Purpose not yet described by a human."
         },
         {
-          "digest": "07bde66bf5bf9ea9e398d3c9b7c8cb5bafba7da00f94694458c967ed98a8dba1",
-          "last_commit": "",
+          "digest": "47138fa1c3d2b38c846faa4998d99169ff913e1fca5d5ecc1d44b26e3bf795a9",
+          "last_commit": "b13ea46",
           "name": "canary",
           "purpose": "Supervisor-driven canary contract (plan 2026-10-12 step 1): adapter manifest, pinned workload, v"
         },
@@ -79,8 +79,8 @@
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
         },
         {
-          "digest": "cf457e03830140bb69fefc728a9560f3267693e75e58e35095885c1af2e9f50a",
-          "last_commit": "5d46b21",
+          "digest": "eb3a5f0b7203ba982b9fa0f7825a02921c2adc49c73abcd21145609b1a1a8da6",
+          "last_commit": "c464d10",
           "name": "graph",
           "purpose": "Directory src/graph. Purpose not yet described by a human."
         },
@@ -97,14 +97,20 @@
           "purpose": "Directory src/ledger. Purpose not yet described by a human."
         },
         {
+          "digest": "33725439da850a222029d1090305e1692c7098af06fb7707ba8799a8c373fb84",
+          "last_commit": "c464d10",
+          "name": "measure",
+          "purpose": "M1 Measurement: stage samples, sample log, compatibility filtering, percentile statistics, claim"
+        },
+        {
           "digest": "93f3f010310a3c1cbda620ad8c8b9f11c6b20571f6145de1c3a4e66c98c9af99",
           "last_commit": "5d46b21",
           "name": "meta",
           "purpose": "Directory src/meta. Purpose not yet described by a human."
         },
         {
-          "digest": "d736784a98d89f820c791c91044d4d78d53c070ca2061cad8550c142d16943b5",
-          "last_commit": "f74a7db",
+          "digest": "2787d4e51f830933e8b7fba886623e1d188195b69f9526afda54fe6f0ac8a8b2",
+          "last_commit": "91ca36e",
           "name": "propose",
           "purpose": "Directory src/propose. Purpose not yet described by a human."
         },
@@ -116,20 +122,20 @@
         },
         {
           "digest": "3cd1ef9d31f99abf31ac09f4ea529257b9b2bc7c8c28dfc189e2ed2cc3e1f8d0",
-          "last_commit": "5d46b21",
+          "last_commit": "b13ea46",
           "name": "supervisor",
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:078258f52c3ec4a05eeff375a76ec778862f1331a119fdc1a2e3104ef0db51d6",
-      "compiled_at": "2026-10-12T22:07:42Z",
+      "children_root": "sha256:e01a21f45791c3a6378f50ac69f7a7e4dbb5163229898e98ac5cacbfbe33ff68",
+      "compiled_at": "2026-10-12T22:19:12Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:ae6f860aa81b44e2e77c057f138f686c537d64ee32168d11df7561860fcac14f",
+      "digest": "sha256:800c6449b6f3428753d3f1305e6ab14c49b0898dcd1ec28dc2546425d006ac63",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 60,
-      "generated_at_commit": "b156140da1fef6a1d89709e82d049d9c52ac6d9b",
-      "source_tree": "sha256:732a60145af408d688742706dd278269bd384699078eca832f05f8a0a5dbd131"
+      "files": 73,
+      "generated_at_commit": "6121a3ace90a6ffd862bceaf9db7fed3727d764e",
+      "source_tree": "sha256:8657126792e22c8b7f57f70c12d435624803455a79751075c69ed1c6e8893d65"
     },
     "owner_lane": "",
     "seed": {
