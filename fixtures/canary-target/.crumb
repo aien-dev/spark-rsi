@@ -3,21 +3,21 @@
     "generated": {
       "children": [
         {
-          "digest": "eb169f2629ca2e981722ecdee95ab3de6aeaa5f405fff84a838bf6adb5840313",
-          "last_commit": "",
+          "digest": "4e9f3f1c55d10fb3c8948e92d59a642abbd0dca0fe7dc5dac4676e00db72f8eb",
+          "last_commit": "e801134",
           "name": "src",
           "purpose": "Source of the canary-target worker: handshake, HMAC, request answering and the misbehaviour mode"
         }
       ],
-      "children_root": "sha256:7a29bc37c2fc5e059bc9362096cf05f9cf0ef644f9e2c69ec9bf483139e3f560",
-      "compiled_at": "2026-10-12T22:18:59Z",
+      "children_root": "sha256:0c7af8b272da6de309a104cddd413bf732587528a96e888d224b38dbab5e9dce",
+      "compiled_at": "2026-10-12T22:19:19Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:f0b0c001bf3f86ba9abc8bb5d5604be9478dbc110fa7ffe1dbda61a7d388c89f",
+      "digest": "sha256:28b69a51704d91510b3b0630665c7ea1501e08266a592ad9e650739e86569005",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 0,
-      "generated_at_commit": "c7051f67155bc852ea27648834712a133b61aa84",
-      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "files": 7,
+      "generated_at_commit": "e8011341c78459642f0da20208e934a8b82c93d5",
+      "source_tree": "sha256:257c49a59375ee125e6e09078e574f5bde90e715f05be29bd62c56a821cbed0c"
     }
   },
   "name": "canary-target",

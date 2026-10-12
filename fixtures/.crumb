@@ -3,21 +3,21 @@
     "generated": {
       "children": [
         {
-          "digest": "f0b0c001bf3f86ba9abc8bb5d5604be9478dbc110fa7ffe1dbda61a7d388c89f",
-          "last_commit": "",
+          "digest": "28b69a51704d91510b3b0630665c7ea1501e08266a592ad9e650739e86569005",
+          "last_commit": "e801134",
           "name": "canary-target",
           "purpose": "First canary target: a standalone worker speaking the canary wire protocol, with scripted misbeh"
         }
       ],
-      "children_root": "sha256:3a49b4e5d638b97329ccbb199c32c4a028792f28e92e6b5613471171d9244448",
-      "compiled_at": "2026-10-12T22:18:59Z",
+      "children_root": "sha256:fcaf127fc02ea6bc680924574281ed339bb15a6d86a01571a99a2ea1bf7d1d19",
+      "compiled_at": "2026-10-12T22:19:19Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:0418143b229d64ccc994a58a84e0f65a6056d34d61c102a57f55bc2e0c0817e1",
+      "digest": "sha256:006585ce999529dfad9292b8508eb40e26c08f661ab0a49a423e11664e23027d",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 0,
-      "generated_at_commit": "c7051f67155bc852ea27648834712a133b61aa84",
-      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "files": 7,
+      "generated_at_commit": "e8011341c78459642f0da20208e934a8b82c93d5",
+      "source_tree": "sha256:257c49a59375ee125e6e09078e574f5bde90e715f05be29bd62c56a821cbed0c"
     }
   },
   "name": "fixtures",

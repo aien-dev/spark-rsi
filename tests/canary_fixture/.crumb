@@ -3,14 +3,14 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-10-12T22:18:59Z",
+      "compiled_at": "2026-10-12T22:19:19Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:cd18c9635a4e012588841e0837820878c32be306392c9a4cd2fad5d9b4c8eaf7",
+      "digest": "sha256:4160704abcd199e68ce44caaccc197728ce09e313a9e30d6984ef14fc6e3ffb7",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 0,
-      "generated_at_commit": "c7051f67155bc852ea27648834712a133b61aa84",
-      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "files": 1,
+      "generated_at_commit": "e8011341c78459642f0da20208e934a8b82c93d5",
+      "source_tree": "sha256:5652a2fad5b8e4515457c5fa86963f397fc8c8087bfc8822e187995ea4ca1f8b"
     }
   },
   "name": "canary-fixture",

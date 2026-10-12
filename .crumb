@@ -61,8 +61,8 @@
           "purpose": "Directory examples. Purpose not yet described by a human."
         },
         {
-          "digest": "0418143b229d64ccc994a58a84e0f65a6056d34d61c102a57f55bc2e0c0817e1",
-          "last_commit": "",
+          "digest": "006585ce999529dfad9292b8508eb40e26c08f661ab0a49a423e11664e23027d",
+          "last_commit": "e801134",
           "name": "fixtures",
           "purpose": "Fixture crates that qualify the canary execution pipeline"
         },
@@ -79,14 +79,14 @@
           "purpose": "Directory scripts. Purpose not yet described by a human."
         },
         {
-          "digest": "397f2c8e05df96165edb3747841afab59957482d6991be351178504d99e428c0",
-          "last_commit": "c7051f6",
+          "digest": "3555d5a87f912fd5eb2f6b850dfdc03902de98a8c35f8c4db0bc16bc18b627fd",
+          "last_commit": "e801134",
           "name": "src",
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
-          "digest": "bb9a860660d4b70bd78f7f7bd0efa0a8a20ab52fa61ad7d85e5b91efab0265cd",
-          "last_commit": "c7051f6",
+          "digest": "fd9ae59be1f3197b608ce7e00c7ee6b3331d1e6a2186306b647b6bcea78e3fbc",
+          "last_commit": "e801134",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
         },
@@ -97,15 +97,15 @@
           "purpose": "Directory tools. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:9d9d156672ed6bf7ca24c2b43fc9cf1436a34fed7d8fb0f1345ae935d0fee3f9",
-      "compiled_at": "2026-10-12T22:18:59Z",
+      "children_root": "sha256:30acc88ccbff40a66bfe92ffe54bed47ec3df180b87a3d975796da5899a817ff",
+      "compiled_at": "2026-10-12T22:19:19Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:ee77fb409415524f0033840f22d3c12371c98e35451f75cd1a1b8fdd3974ce47",
+      "digest": "sha256:c098b176b80a1b6f828412fa6e5be2eb05a4bb85cb4f0b47acb0b0540b3857d6",
       "evidence_files": 2,
       "evidence_root": "sha256:2af46c9e5c5f639d24acdfd75e5bbc6704616dd36c2d8d18ea4070421f048147",
-      "files": 126,
-      "generated_at_commit": "c7051f67155bc852ea27648834712a133b61aa84",
-      "source_tree": "sha256:19fdac0a0c85c3072cf0395ed72efa8221aa3827c47c7666f9cb20340726e6a9"
+      "files": 136,
+      "generated_at_commit": "e8011341c78459642f0da20208e934a8b82c93d5",
+      "source_tree": "sha256:7fe545546d1dc9829bf9370be7fc4633d0afbb39b5b32ddea56d5199159805cb"
     },
     "owner_lane": "",
     "seed": {
