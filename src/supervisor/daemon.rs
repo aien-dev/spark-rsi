@@ -100,9 +100,7 @@ impl SupervisorDaemon {
     ) -> Result<Option<SupervisorMessage>, String> {
         match msg {
             WorkerMessage::Ready {
-                generation_id,
-                pid,
-                auth_token: _,
+                generation_id, pid, ..
             } => {
                 // Fresh challenge-response HMAC handshake
                 let nonce = format!("challenge-{}", uuid::Uuid::new_v4().simple());
@@ -276,6 +274,10 @@ impl SupervisorDaemon {
 
             WorkerMessage::Pong => Ok(None),
             WorkerMessage::AuthResponse { .. } => Ok(None),
+            // Execute results are consumed by the supervisor-driven request loop that issued
+            // the request (plan step 4). This legacy message loop never issued one, so a
+            // result here is unsolicited and creates nothing.
+            WorkerMessage::ExecuteResult { .. } => Ok(None),
         }
     }
 

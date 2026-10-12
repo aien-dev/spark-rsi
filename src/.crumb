@@ -61,6 +61,12 @@
           "purpose": "Directory src/bin. Purpose not yet described by a human."
         },
         {
+          "digest": "07bde66bf5bf9ea9e398d3c9b7c8cb5bafba7da00f94694458c967ed98a8dba1",
+          "last_commit": "",
+          "name": "canary",
+          "purpose": "Supervisor-driven canary contract (plan 2026-10-12 step 1): adapter manifest, pinned workload, v"
+        },
+        {
           "digest": "4c66e2e1f75405fa6c3a2ec1f3638a19bbe2a103ddacdeeb5edfdd399666c37f",
           "last_commit": "e5aab9a",
           "name": "dual",
@@ -98,7 +104,7 @@
         },
         {
           "digest": "d736784a98d89f820c791c91044d4d78d53c070ca2061cad8550c142d16943b5",
-          "last_commit": "d553b4f",
+          "last_commit": "f74a7db",
           "name": "propose",
           "purpose": "Directory src/propose. Purpose not yet described by a human."
         },
@@ -109,21 +115,21 @@
           "purpose": "Directory src/soak. Purpose not yet described by a human."
         },
         {
-          "digest": "629019ef3fbde203b0682072f05dc8ec87f72025f39d3f4c084870bf02ba225c",
+          "digest": "3cd1ef9d31f99abf31ac09f4ea529257b9b2bc7c8c28dfc189e2ed2cc3e1f8d0",
           "last_commit": "5d46b21",
           "name": "supervisor",
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:035dda31bbd03cd874d12048a374ff3ff1002d4dce7b1993cd57c472f7dcb738",
-      "compiled_at": "2026-10-11T19:38:25Z",
+      "children_root": "sha256:078258f52c3ec4a05eeff375a76ec778862f1331a119fdc1a2e3104ef0db51d6",
+      "compiled_at": "2026-10-12T22:07:42Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:82b6beb1b425327c8a36676aa8691d9771f6c68f80e6362e01da204de559e3b2",
+      "digest": "sha256:ae6f860aa81b44e2e77c057f138f686c537d64ee32168d11df7561860fcac14f",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 60,
-      "generated_at_commit": "d553b4ff8a407409e49eeb53facb6335278bf740",
-      "source_tree": "sha256:fa1b2578d99393df42b3171764ed4e6b2f1c1f6b2059ed54a9177ba2ca49ba8b"
+      "generated_at_commit": "b156140da1fef6a1d89709e82d049d9c52ac6d9b",
+      "source_tree": "sha256:732a60145af408d688742706dd278269bd384699078eca832f05f8a0a5dbd131"
     },
     "owner_lane": "",
     "seed": {

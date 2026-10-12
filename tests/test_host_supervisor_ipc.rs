@@ -347,6 +347,7 @@ async fn test_unauthenticated_worker_rejected_closed() {
             generation_id: "gen-002".to_string(),
             pid: 12345,
             auth_token: String::new(),
+            protocol_version: spark_rsi::canary::CANARY_PROTOCOL_VERSION,
         })
         .await
         .unwrap();

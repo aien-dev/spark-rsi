@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-12T22:07:42Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:07bde66bf5bf9ea9e398d3c9b7c8cb5bafba7da00f94694458c967ed98a8dba1",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 0,
+      "generated_at_commit": "b156140da1fef6a1d89709e82d049d9c52ac6d9b",
+      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "name": "canary",
+  "purpose": "Supervisor-driven canary contract (plan 2026-10-12 step 1): adapter manifest, pinned workload, version 2 observations, sealed observation log, candidate identity chain and the quota hand-off.",
+  "schema_version": "1.0.0"
+}
