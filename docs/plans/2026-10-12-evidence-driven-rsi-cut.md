@@ -12,6 +12,13 @@ itself, must compare the answer against independently defined expectations, and 
 observation. Only the existing admission and promotion authorities act on that evidence. Tests that let a worker
 self-report success into production admission are defects and must be rewritten.
 
+**Every accepted canary observation must be demonstrably tied to the exact executable that was built,
+independently checked by the supervisor, and admitted through one authoritative promotion path.**
+
+Fixture qualification and production safety qualification are different things. Ten verified fixture requests
+prove the canary mechanism works. They do not establish that every existing safety evaluator is ready to authorize
+production changes; see the safety-envelope defect below.
+
 ## Scope
 
 In scope, this cut only:
@@ -44,7 +51,18 @@ interoperability (M5), REA investigation adapter (M6, filed as a mind-map idea).
 - `HostSupervisor::record_canary_transaction` and `process_worker_message` both grant `Durable` on a counter.
 - Handling `Ready` switches `active.sock` to the candidate before any admission decision.
 - `rank_bottlenecks` sorts by score with no tie-break; non-finite scores compare as equal.
-- To verify during step 1: whether `wait_for_readiness` accepts a failed handshake on any path.
+- `wait_for_readiness` returns success on any socket connection, even with no PONG or READY reply at all.
+- `record_canary_transaction` treats a failed memory-budget read as within budget (`unwrap_or(true)`).
+- `stage_canary` only copies the candidate directory; nothing compiles, launches or drives an executable.
+- The candidate digest passed to the quota validator is the hash of `proposal.proposed_patch`, not of the
+  evaluated tree or the executable launched.
+- `admit_production_quota` checks only non-empty id and status, candidate digest match, the `Measured` label and
+  duplicate consistency. It does not check that the status is a verified success.
+- `CanarySafetyEnvelope` runs its probes through `DeterministicReferenceBackend` on the production call path, so its
+  signed result is a reference evaluation, not independently established production safety.
+- The hypothesis contract is built from the graph's `latency_p95_us`, so a cold-start cycle can claim a measured
+  latency target from invented numbers.
+- Every winning proposal, whatever its kind, is sent into the canary path.
 
 ## Decisions
 
@@ -74,7 +92,12 @@ interoperability (M5), REA investigation adapter (M6, filed as a mind-map idea).
   with at least 20 valid compatible samples; otherwise p95 is marked unavailable. One percentile algorithm,
   golden-tested. Zero never means missing: unavailable is an explicit state, with backward-compatible graph output.
 - **Cold start**: rank on graph topology (betweenness centrality) only; latency and error terms are marked
-  unavailable in the explanation. No "measured improvement" hypothesis may be generated from missing data.
+  unavailable in the explanation. No "measured improvement" hypothesis may be generated from missing data: the
+  hypothesis contract carries a numeric latency target only when the stage's latency is measured, otherwise it is
+  an exploratory hypothesis with no performance claim.
+- **Canary applicability** is policy-controlled by proposal kind and claim: executable production changes always
+  go through canary admission; documentation and other non-executable changes may be exempted by explicit policy,
+  never by default. Exemption never weakens the gates for anything that reaches production.
 - **Claims**: a proposal of kind `Optimization`, or any proposal when `require_latency_improvement` is on, needs a
   measured diagnosis before promotion. Other kinds proceed on structural ranking.
 - **Ordering**: score descending, then stage id ascending. Non-finite measurements are rejected before scoring.
@@ -89,8 +112,14 @@ interoperability (M5), REA investigation adapter (M6, filed as a mind-map idea).
   enum. Worker `CanaryReport` self-reports become diagnostics only.
 - **Workload**: a digest-pinned canary manifest under the RSI state directory with requests, expected outcomes,
   deadlines and permitted nondeterminism. The candidate cannot rewrite it or set its own passing criteria.
-- **Observation** binds: generation id, issued request id, request digest, workload digest, candidate artifact
-  digest, observed result digest, supervisor-measured elapsed time, supervisor timestamp, status, provenance.
+- **Candidate identity** is a bound chain: source patch digest, evaluated tree digest, built executable digest,
+  generation id. The supervisor launches only the executable whose digest is in that chain, and every observation
+  carries the executable digest. The quota validator compares against the executable digest, not the patch digest.
+- **Readiness** means a valid versioned READY reply on the authenticated generation socket within the deadline.
+  A bare connection, silence or an unknown reply is not ready.
+- **Observation** binds: generation id, issued request id, request digest, workload digest, candidate executable
+  digest, observed result digest, supervisor-measured elapsed time, supervisor timestamp, verified status,
+  provenance.
 - **Observation id**: domain-separated hash of (generation id, request id, request digest). Duplicates collide by
   construction; the store refuses known ids; conflicting records for one id are a verification failure.
   The supervisor tracks issued requests; an unsolicited response creates nothing. Incomplete requests after a
@@ -107,8 +136,15 @@ interoperability (M5), REA investigation adapter (M6, filed as a mind-map idea).
 - The quota validator (`admit_production_quota`) is the single authority on evidence sufficiency.
   `record_canary_transaction` and `process_worker_message` stop granting `Durable`.
 - Sequence: Collect -> Seal -> Verify -> Quota admission -> Safety envelope -> Judge / promotion gate -> Durable.
+- The quota validator additionally requires each observation's verified status to be a supervisor-confirmed success
+  with a result digest matching the workload's expected outcome. Only observations from the new execution protocol
+  are eligible; the old `CanaryReport` path cannot produce one.
 - Early safety reverts on a failed or slow request remain in the supervisor.
-- A failed resource read is not proof that memory is within budget.
+- A failed resource read is not proof that memory is within budget: a memory-budget read error reverts, it never
+  passes.
+- The safety envelope stays in the sequence, but its reference-backend evaluation is recorded as such. The
+  qualification report must state plainly that production safety evaluation is not yet independently established.
+  Replacing or qualifying that evaluator is a separate follow-on cut, not part of M2.
 
 ### Narrow contract freeze
 
@@ -124,12 +160,15 @@ interoperability (M5), REA investigation adapter (M6, filed as a mind-map idea).
    validator, golden tests.
 2. **M1 Measurement** (worker A): stage instrumentation, sample log, compatibility filtering, cold start,
    deterministic ranking, explanation marks unavailable values via the existing `MissingDoc` reason field.
-3. **M2 Execution** (worker B): fixture crate implementing the adapter, supervisor-driven requests, independent
-   result checking, replay protection, observation storage and sealing.
-4. **M2 Admission** (worker C, the only worker that edits `src/daemon.rs`): wire `spawn_worker`, remove premature
-   durability, ledger commitment, quota integration, rewrite self-report tests.
-5. **Qualification**: CI plus one real DGX Spark run against the fixture crate with the evidence package attached
-   to the pull request.
+3. **Harden the supervisor** (worker B, first half): strict readiness, generation binding, per-connection session
+   authentication, no `active.sock` switch on Ready, memory-read failure reverts.
+4. **M2 Execution** (worker B, second half): fixture crate implementing the adapter, supervisor-driven timed
+   requests, independent result checking, replay protection, observation storage and sealing.
+5. **M2 Admission** (worker C, the only worker that edits `src/daemon.rs`): build-artifact identity chain, wire
+   `spawn_worker` and the request loop into `run_cycle`, remove premature durability, ledger commitment, quota
+   integration with verified-success checks, canary applicability policy, rewrite self-report tests.
+6. **Qualification**: adversarial CI plus one real DGX Spark run against the fixture crate, with the evidence
+   package attached to the pull request and remaining production limitations stated in the report.
 
 Workers run on Sonnet. Daemon changes land serially: A, then C.
 
@@ -141,7 +180,8 @@ time out, return a wrong digest, and attempt premature promotion. Defaults for t
 requests, 2-second deadline each, both configurable. The real run must include at least one failing request.
 
 A passing fixture run qualifies the canary execution pipeline. It does not qualify RSI's ability to improve
-itself; that is the next target, with spark-rsi as the first real adapter.
+itself, and it does not qualify the safety envelope as a production evaluator. Both are later targets, with
+spark-rsi as the first real adapter.
 
 ## Evidence package for the qualification pull request
 
