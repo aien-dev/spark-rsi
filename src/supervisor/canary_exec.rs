@@ -351,7 +351,11 @@ impl<'a> CanaryExecutor<'a> {
         let socket_path = generation_socket_path(rsi_root, &self.identity.generation_id);
         let server = IpcServer::bind(&socket_path)?;
         let args: Vec<&str> = self.args.iter().map(String::as_str).collect();
-        let mut env: Vec<(&str, &str)> = vec![("SUPERVISOR_SECRET", &self.config.shared_secret)];
+        // A fresh secret for this run only. The candidate process has to hold it to answer the
+        // handshake, so it must never be the supervisor's long-lived secret: possession proves
+        // that this process is the one launched for this run, nothing more.
+        let run_secret = format!("canary-run-{}", uuid::Uuid::new_v4().simple());
+        let mut env: Vec<(&str, &str)> = vec![("SUPERVISOR_SECRET", run_secret.as_str())];
         for (k, v) in &self.exec.worker_env {
             env.push((k.as_str(), v.as_str()));
         }
@@ -383,7 +387,7 @@ impl<'a> CanaryExecutor<'a> {
                     match authenticate_worker_connection(
                         &mut candidate,
                         &self.identity.generation_id,
-                        &self.config.shared_secret,
+                        &run_secret,
                         remaining,
                     )
                     .await
