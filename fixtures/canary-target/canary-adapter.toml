@@ -1,0 +1,6 @@
+manifest_version = 1
+protocol_version = 1
+executable = "release/canary-target"
+args = []
+workload_id = "fixture-v1"
+response_format = "utf8-exact"

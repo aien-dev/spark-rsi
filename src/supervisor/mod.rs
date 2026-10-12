@@ -1,3 +1,4 @@
+pub mod canary_exec;
 pub mod daemon;
 
 pub mod ipc;

@@ -557,7 +557,7 @@ impl SupervisorDaemon {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::canary::{LogHeader, LogRecord};
+    use crate::canary::LogHeader;
     use crate::supervisor::ipc::ConnectionAuthState as Auth;
 
     const SECRET: &str = "secret-key";
@@ -879,7 +879,6 @@ mod tests {
         let sealed = writer.seal(2).unwrap();
         assert_eq!(sealed.rejections.len(), 3);
         assert!(sealed.observations.is_empty());
-        let _ = LogRecord::Seal(sealed.seal.clone());
     }
 
     #[tokio::test]

@@ -1,0 +1,26 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [
+        {
+          "digest": "eb169f2629ca2e981722ecdee95ab3de6aeaa5f405fff84a838bf6adb5840313",
+          "last_commit": "",
+          "name": "src",
+          "purpose": "Source of the canary-target worker: handshake, HMAC, request answering and the misbehaviour mode"
+        }
+      ],
+      "children_root": "sha256:7a29bc37c2fc5e059bc9362096cf05f9cf0ef644f9e2c69ec9bf483139e3f560",
+      "compiled_at": "2026-10-12T22:18:59Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:f0b0c001bf3f86ba9abc8bb5d5604be9478dbc110fa7ffe1dbda61a7d388c89f",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 0,
+      "generated_at_commit": "c7051f67155bc852ea27648834712a133b61aa84",
+      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "name": "canary-target",
+  "purpose": "First canary target: a standalone worker speaking the canary wire protocol, with scripted misbehaviour",
+  "schema_version": "1.0.0"
+}
