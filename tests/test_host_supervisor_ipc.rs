@@ -5,7 +5,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 #[tokio::test]
-async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
+async fn test_end_to_end_self_reports_never_promote_or_switch_active_sock() {
     let tmp = tempfile::tempdir().unwrap();
     let rsi_root = tmp.path().join(".rsi");
     let socket_path = rsi_root.join("supervisor.sock");
@@ -75,8 +75,9 @@ async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
     let ping: SupervisorMessage = client.recv().await.unwrap();
     assert_eq!(ping, SupervisorMessage::Ping);
 
-    // Send successful canary transactions up to quota K = 3
-    for i in 1..=2 {
+    // Self-reports are diagnostics. Send far more clean ones than any quota: none of them
+    // promotes the canary, none earns a DrainStart, and none switches active.sock.
+    for i in 1..=10 {
         client
             .send(&WorkerMessage::CanaryReport {
                 generation_id: "gen-002".to_string(),
@@ -88,26 +89,7 @@ async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
             .await
             .unwrap();
     }
-
-    // Transaction 3 promotes canary to Durable
-    client
-        .send(&WorkerMessage::CanaryReport {
-            generation_id: "gen-002".to_string(),
-            transaction_id: 3,
-            success: true,
-            latency_us: 1100,
-            error: None,
-        })
-        .await
-        .unwrap();
-
-    let drain_msg: SupervisorMessage = client.recv().await.unwrap();
-    assert_eq!(
-        drain_msg,
-        SupervisorMessage::DrainStart { timeout_secs: 30 }
-    );
-
-    // Worker sends DrainComplete
+    // A worker declaring itself drained does not promote it either.
     client
         .send(&WorkerMessage::DrainComplete {
             generation_id: "gen-002".to_string(),
@@ -115,13 +97,35 @@ async fn test_end_to_end_supervisor_canary_probation_and_promotion() {
         .await
         .unwrap();
 
-    let ack: SupervisorMessage = client.recv().await.unwrap();
-    assert_eq!(ack, SupervisorMessage::ShutdownAck { pid: 0 });
+    // The server handled all of the above in order and answered nothing but this Ping.
+    client
+        .send(&WorkerMessage::Heartbeat {
+            generation_id: "gen-002".to_string(),
+            timestamp_secs: 101,
+            active_requests: 0,
+            memory_mb: 2048,
+        })
+        .await
+        .unwrap();
+    let next: SupervisorMessage = client.recv().await.unwrap();
+    assert_eq!(next, SupervisorMessage::Ping);
 
-    // Verify final state
+    // Verify final state: still on probation, parent still active, active.sock never switched.
+    let canary_lock = daemon.canary_generation.lock().await;
+    assert_eq!(
+        canary_lock.as_ref().unwrap().state,
+        GenerationState::CanaryActive
+    );
     let active_gen = daemon.active_generation.lock().await;
-    assert_eq!(active_gen.as_ref().unwrap().generation_id, "gen-002");
-    assert_eq!(active_gen.as_ref().unwrap().state, GenerationState::Durable);
+    assert_eq!(active_gen.as_ref().unwrap().generation_id, "gen-001");
+    assert_ne!(active_gen.as_ref().unwrap().state, GenerationState::Durable);
+    assert!(
+        std::fs::symlink_metadata(&active_link).is_err(),
+        "Ready and CanaryReport must never switch active.sock"
+    );
+    let active_content =
+        std::fs::read_to_string(daemon.supervisor.active_symlink.join("bin")).unwrap();
+    assert_eq!(active_content, "parent v1");
 
     // Stop daemon
     daemon.running.store(false, Ordering::Relaxed);
@@ -370,6 +374,81 @@ async fn test_unauthenticated_worker_rejected_closed() {
     // Should be rejected / disconnected
     let res = client.recv::<SupervisorMessage>().await;
     assert!(res.is_err());
+
+    daemon.running.store(false, Ordering::Relaxed);
+    let _ = server_handle.abort();
+}
+
+#[tokio::test]
+async fn test_message_before_ready_is_rejected_and_connection_closed_without_rollback() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rsi_root = tmp.path().join(".rsi");
+    let socket_path = rsi_root.join("supervisor.sock");
+    let active_link = rsi_root.join("active.sock");
+
+    let config = SupervisorConfig {
+        rsi_root: rsi_root.clone(),
+        socket_path: socket_path.clone(),
+        memory_limit_mb: 49152,
+        canary_target: 5,
+        max_latency_us: 1_000_000,
+        max_error_rate: 0.0,
+        shared_secret: "legitimate-secret".to_string(),
+    };
+    let daemon = std::sync::Arc::new(SupervisorDaemon::new(config));
+    let src_cand = tmp.path().join("art_cand");
+    std::fs::create_dir_all(&src_cand).unwrap();
+    daemon
+        .stage_canary("gen-002", &src_cand, "sha-cand")
+        .await
+        .unwrap();
+
+    let daemon_clone = daemon.clone();
+    let active_link_clone = active_link.clone();
+    let server_handle = tokio::spawn(async move {
+        let _ = daemon_clone.run_server(active_link_clone).await;
+    });
+
+    // A failing CanaryReport sent without any handshake must neither count nor roll back.
+    let mut client = IpcClient::connect(&socket_path, Duration::from_secs(5))
+        .await
+        .unwrap();
+    client
+        .send(&WorkerMessage::CanaryReport {
+            generation_id: "gen-002".to_string(),
+            transaction_id: 1,
+            success: false,
+            latency_us: 1,
+            error: Some("unauthenticated claim".to_string()),
+        })
+        .await
+        .unwrap();
+    assert!(
+        client.recv::<SupervisorMessage>().await.is_err(),
+        "the supervisor must close the connection without a reply"
+    );
+
+    // An older Ready without a protocol version is never ready.
+    let mut old = IpcClient::connect(&socket_path, Duration::from_secs(5))
+        .await
+        .unwrap();
+    old.send(&WorkerMessage::Ready {
+        generation_id: "gen-002".to_string(),
+        pid: std::process::id(),
+        auth_token: String::new(),
+        protocol_version: 0,
+    })
+    .await
+    .unwrap();
+    assert!(old.recv::<SupervisorMessage>().await.is_err());
+
+    let canary_lock = daemon.canary_generation.lock().await;
+    assert_eq!(
+        canary_lock.as_ref().unwrap().state,
+        GenerationState::Staged,
+        "rejections change nothing and trigger no rollback"
+    );
+    assert!(std::fs::symlink_metadata(&active_link).is_err());
 
     daemon.running.store(false, Ordering::Relaxed);
     let _ = server_handle.abort();

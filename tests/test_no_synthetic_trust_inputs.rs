@@ -223,14 +223,19 @@ fn test_end_to_end_unmocked_lifecycle_admission_and_supervisor_rollback() {
     let active_link = fs::read_link(rsi_root.join("active")).unwrap();
     assert!(active_link.to_string_lossy().contains("gen-e2e-01"));
 
-    // Canary testing: transaction success transitions toward Durable
-    let s1 = supervisor
-        .record_canary_transaction(&mut gen_info, true, 1000, 10, 1_000_000, 0.0)
-        .expect("Canary update failed");
-    assert_eq!(s1, GenerationState::CanaryActive);
+    // Worker self-reports are diagnostics: however many clean ones arrive, the generation stays
+    // on probation. Only a sealed supervisor-driven observation log can reach admission.
+    for _ in 0..25 {
+        let state = supervisor
+            .record_canary_transaction(&mut gen_info, true, 1000, 1_000_000, 0.0)
+            .expect("Canary update failed");
+        assert_eq!(state, GenerationState::CanaryActive);
+    }
+    assert_ne!(gen_info.state, GenerationState::Durable);
 
-    // Simulate regression alert triggering automated rollback
-    let _ = supervisor.record_canary_transaction(&mut gen_info, false, 1000, 10, 1_000_000, 0.0);
+    // A reported failure still triggers the early safety revert
+    let failed = supervisor.record_canary_transaction(&mut gen_info, false, 1000, 1_000_000, 0.0);
+    assert!(failed.is_err());
     assert_eq!(gen_info.state, GenerationState::Reverting);
 
     // Supervisor executes atomic rollback to parent

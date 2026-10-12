@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-12T22:19:19Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:4e9f3f1c55d10fb3c8948e92d59a642abbd0dca0fe7dc5dac4676e00db72f8eb",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "e8011341c78459642f0da20208e934a8b82c93d5",
+      "source_tree": "sha256:b9a45d5b3ca4d4c567fafd3bed0ec9be6ee417283dba09e09af343b1dbf657b9"
+    }
+  },
+  "name": "canary-target-src",
+  "purpose": "Source of the canary-target worker: handshake, HMAC, request answering and the misbehaviour modes",
+  "schema_version": "1.0.0"
+}
