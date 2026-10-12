@@ -111,6 +111,8 @@ impl HostSupervisor {
         Ok(())
     }
 
+    /// Launches the worker and returns its pid. The child handle is dropped, so the caller
+    /// cannot stop it; the canary executor uses [`Self::spawn_worker_process`] instead.
     pub fn spawn_worker(
         &self,
         gen_info: &mut GenerationInfo,
@@ -118,48 +120,38 @@ impl HostSupervisor {
         args: &[&str],
         socket_path: &Path,
     ) -> Result<u32, String> {
+        self.spawn_worker_process(gen_info, executable, args, socket_path, &[])
+            .map(|child| child.id())
+    }
+
+    /// Launches the worker with `--socket <socket_path>` appended to `args` and `env` added to
+    /// its environment, and returns the child handle so the supervisor can stop and reap it.
+    /// Readiness is not decided here: a spawned process is `Starting` until it completes the
+    /// authenticated versioned handshake (`daemon::authenticate_worker_connection`).
+    pub fn spawn_worker_process(
+        &self,
+        gen_info: &mut GenerationInfo,
+        executable: &Path,
+        args: &[&str],
+        socket_path: &Path,
+        env: &[(&str, &str)],
+    ) -> Result<std::process::Child, String> {
         let mut cmd = Command::new(executable);
         cmd.args(args).arg("--socket").arg(socket_path);
+        cmd.stdin(std::process::Stdio::null());
+        for (key, value) in env {
+            cmd.env(key, value);
+        }
 
         let child = cmd
             .spawn()
             .map_err(|e| format!("Failed to spawn worker executable {:?}: {}", executable, e))?;
 
-        let pid = child.id();
-        gen_info.pid = Some(pid);
+        gen_info.pid = Some(child.id());
         gen_info.socket_path = Some(socket_path.to_path_buf());
         gen_info.state = GenerationState::Starting;
 
-        Ok(pid)
-    }
-
-    pub fn wait_for_readiness(&self, socket_path: &Path, timeout: Duration) -> Result<(), String> {
-        let start = Instant::now();
-        let poll_interval = Duration::from_millis(50);
-
-        while start.elapsed() < timeout {
-            #[cfg(unix)]
-            if socket_path.exists() {
-                if let Ok(mut stream) = std::os::unix::net::UnixStream::connect(socket_path) {
-                    use std::io::{Read, Write};
-                    let _ = stream.write_all(b"PING\n");
-                    let mut resp = [0u8; 16];
-                    if let Ok(n) = stream.read(&mut resp) {
-                        let msg = String::from_utf8_lossy(&resp[..n]);
-                        if msg.contains("PONG") || msg.contains("READY") || n > 0 {
-                            return Ok(());
-                        }
-                    }
-                    return Ok(());
-                }
-            }
-            std::thread::sleep(poll_interval);
-        }
-
-        Err(format!(
-            "Timed out waiting for worker socket readiness at {:?}",
-            socket_path
-        ))
+        Ok(child)
     }
 
     pub fn switch_active_socket(
@@ -219,12 +211,15 @@ impl HostSupervisor {
         Ok(())
     }
 
+    /// Applies the early safety budgets to one worker self-report. The counters it keeps are
+    /// diagnostics: this function never returns `Durable`, however many reports arrive.
+    /// Whether a canary has enough evidence is decided only by the quota validator over a
+    /// sealed observation log.
     pub fn record_canary_transaction(
         &self,
         gen_info: &mut GenerationInfo,
         success: bool,
         latency_us: u64,
-        canary_target: u64,
         max_latency_us: u64,
         max_error_rate: f64,
     ) -> Result<GenerationState, String> {
@@ -260,23 +255,28 @@ impl HostSupervisor {
         }
 
         // 3. Resource budget check
+        // A failed read is not proof that memory is within budget: it reverts.
         if let Some(pid) = gen_info.pid {
-            if !self.is_memory_within_budget(pid).unwrap_or(true) {
-                gen_info.state = GenerationState::Reverting;
-                return Err(format!(
-                    "Resource budget exceeded: PID {} exceeded {} MB limit",
-                    pid, self.memory_limit_mb
-                ));
+            match self.is_memory_within_budget(pid) {
+                Ok(true) => {}
+                Ok(false) => {
+                    gen_info.state = GenerationState::Reverting;
+                    return Err(format!(
+                        "Resource budget exceeded: PID {} exceeded {} MB limit",
+                        pid, self.memory_limit_mb
+                    ));
+                }
+                Err(read_err) => {
+                    gen_info.state = GenerationState::Reverting;
+                    return Err(format!(
+                        "Resource budget unreadable for PID {}, reverting: {}",
+                        pid, read_err
+                    ));
+                }
             }
         }
 
-        // 4. Durability promotion
-        if gen_info.canary_transactions >= canary_target {
-            gen_info.state = GenerationState::Durable;
-        } else {
-            gen_info.state = GenerationState::CanaryActive;
-        }
-
+        gen_info.state = GenerationState::CanaryActive;
         Ok(gen_info.state)
     }
 
@@ -392,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn test_socket_switch_and_canary_quota() {
+    fn test_socket_switch_and_self_reports_never_promote() {
         let tmp = tempfile::tempdir().unwrap();
         let rsi_root = tmp.path().join(".rsi");
         let supervisor = HostSupervisor::new(&rsi_root, 49152);
@@ -406,7 +406,6 @@ mod tests {
             .unwrap();
         assert!(active_sock.exists());
 
-        // Test canary counting up to target K = 5
         let src = tmp.path().join("src_art");
         fs::create_dir_all(&src).unwrap();
         let mut gen = supervisor
@@ -414,24 +413,57 @@ mod tests {
             .unwrap();
         gen.state = GenerationState::Ready;
 
-        for _ in 0..4 {
+        // Any number of clean self-reports leaves the generation on probation. Counters never
+        // promote: only a sealed observation log through the quota validator can.
+        for _ in 0..50 {
             let state = supervisor
-                .record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0)
+                .record_canary_transaction(&mut gen, true, 1000, 1_000_000, 0.0)
                 .unwrap();
             assert_eq!(state, GenerationState::CanaryActive);
         }
-
-        let state_final = supervisor
-            .record_canary_transaction(&mut gen, true, 1000, 5, 1_000_000, 0.0)
-            .unwrap();
-        assert_eq!(state_final, GenerationState::Durable);
-        assert_eq!(gen.state, GenerationState::Durable);
-        assert_eq!(gen.canary_transactions, 5);
+        assert_eq!(gen.state, GenerationState::CanaryActive);
+        assert_eq!(gen.canary_transactions, 50);
 
         // Failure during canary triggers Reverting
         assert!(supervisor
-            .record_canary_transaction(&mut gen, false, 1000, 5, 1_000_000, 0.0)
+            .record_canary_transaction(&mut gen, false, 1000, 1_000_000, 0.0)
             .is_err());
+        assert_eq!(gen.state, GenerationState::Reverting);
+    }
+
+    #[test]
+    fn test_unreadable_memory_budget_reverts_instead_of_passing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let supervisor = HostSupervisor::new(&tmp.path().join(".rsi"), 49152);
+        let src = tmp.path().join("src_art");
+        fs::create_dir_all(&src).unwrap();
+        let mut gen = supervisor
+            .stage_generation("gen-canary", &src, "digest")
+            .unwrap();
+        // No process has this pid, so the resource read fails.
+        gen.pid = Some(u32::MAX - 1);
+        let err = supervisor
+            .record_canary_transaction(&mut gen, true, 1000, 1_000_000, 0.0)
+            .unwrap_err();
+        assert!(err.contains("unreadable"), "{}", err);
+        assert_eq!(gen.state, GenerationState::Reverting);
+    }
+
+    #[test]
+    fn test_memory_over_limit_reverts() {
+        let tmp = tempfile::tempdir().unwrap();
+        // A one MB limit is below any live process.
+        let supervisor = HostSupervisor::new(&tmp.path().join(".rsi"), 1);
+        let src = tmp.path().join("src_art");
+        fs::create_dir_all(&src).unwrap();
+        let mut gen = supervisor
+            .stage_generation("gen-canary", &src, "digest")
+            .unwrap();
+        gen.pid = Some(std::process::id());
+        let err = supervisor
+            .record_canary_transaction(&mut gen, true, 1000, 1_000_000, 0.0)
+            .unwrap_err();
+        assert!(err.contains("Resource budget exceeded"), "{}", err);
         assert_eq!(gen.state, GenerationState::Reverting);
     }
 }
