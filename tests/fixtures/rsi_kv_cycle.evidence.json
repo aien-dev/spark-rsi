@@ -6,8 +6,8 @@
     {
       "id": "rsi:capability:kv_allocator",
       "kind": 2,
-      "status": 0,
-      "statement": "'Unified LPDDR5x KV Allocator' (memory) has p95 latency 4200.0 us, error rate 8.00%, resident memory 32768 KiB",
+      "status": 1,
+      "statement": "'Unified LPDDR5x KV Allocator' (memory) has measured median latency 4200.0 us over 20 samples",
       "source": {
         "system": "spark-rsi",
         "artifact": "CapabilityNode",
@@ -16,31 +16,34 @@
       "parents": [],
       "measurements": [
         {
-          "name": "latency_p95_us",
+          "name": "latency_median_us",
           "value": "4200.000",
           "unit": "us"
         },
         {
-          "name": "error_rate",
+          "name": "sample_count",
+          "value": "20",
+          "unit": ""
+        },
+        {
+          "name": "error_rate_measured",
           "value": "0.080000",
           "unit": "fraction"
         },
         {
-          "name": "memory_rss_kb",
-          "value": "32768",
-          "unit": "KiB"
+          "name": "latency_p95_us_measured",
+          "value": "5100.000",
+          "unit": "us"
         }
       ],
       "missing": [],
-      "notes": [
-        "metric values for 'Unified LPDDR5x KV Allocator' were declared in the capability graph, not measured"
-      ]
+      "notes": []
     },
     {
       "id": "rsi:capability:mojo_kernel",
       "kind": 2,
-      "status": 0,
-      "statement": "'Mojo Blackwell GEMM Kernel' (compute) has p95 latency 1800.0 us, error rate 1.00%, resident memory 16384 KiB",
+      "status": 1,
+      "statement": "'Mojo Blackwell GEMM Kernel' (compute) has measured median latency 1800.0 us over 5 samples",
       "source": {
         "system": "spark-rsi",
         "artifact": "CapabilityNode",
@@ -49,31 +52,34 @@
       "parents": [],
       "measurements": [
         {
-          "name": "latency_p95_us",
+          "name": "latency_median_us",
           "value": "1800.000",
           "unit": "us"
         },
         {
-          "name": "error_rate",
-          "value": "0.010000",
-          "unit": "fraction"
+          "name": "sample_count",
+          "value": "5",
+          "unit": ""
         },
         {
-          "name": "memory_rss_kb",
-          "value": "16384",
-          "unit": "KiB"
+          "name": "error_rate_measured",
+          "value": "0.010000",
+          "unit": "fraction"
         }
       ],
-      "missing": [],
-      "notes": [
-        "metric values for 'Mojo Blackwell GEMM Kernel' were declared in the capability graph, not measured"
-      ]
+      "missing": [
+        {
+          "expected": "measured p95 latency of stage 'Mojo Blackwell GEMM Kernel'",
+          "reason": "p95 is unavailable: too few valid compatible samples"
+        }
+      ],
+      "notes": []
     },
     {
       "id": "rsi:capability:req_gateway",
       "kind": 2,
-      "status": 0,
-      "statement": "'Request Gateway' (network) has p95 latency 120.0 us, error rate 0.00%, resident memory 1024 KiB",
+      "status": 1,
+      "statement": "'Request Gateway' (network) has measured median latency 120.0 us over 5 samples",
       "source": {
         "system": "spark-rsi",
         "artifact": "CapabilityNode",
@@ -82,31 +88,34 @@
       "parents": [],
       "measurements": [
         {
-          "name": "latency_p95_us",
+          "name": "latency_median_us",
           "value": "120.000",
           "unit": "us"
         },
         {
-          "name": "error_rate",
-          "value": "0.000000",
-          "unit": "fraction"
+          "name": "sample_count",
+          "value": "5",
+          "unit": ""
         },
         {
-          "name": "memory_rss_kb",
-          "value": "1024",
-          "unit": "KiB"
+          "name": "error_rate_measured",
+          "value": "0.000000",
+          "unit": "fraction"
         }
       ],
-      "missing": [],
-      "notes": [
-        "metric values for 'Request Gateway' were declared in the capability graph, not measured"
-      ]
+      "missing": [
+        {
+          "expected": "measured p95 latency of stage 'Request Gateway'",
+          "reason": "p95 is unavailable: too few valid compatible samples"
+        }
+      ],
+      "notes": []
     },
     {
       "id": "rsi:capability:sampler",
       "kind": 2,
-      "status": 0,
-      "statement": "'Greedy Token Sampler' (inference) has p95 latency 150.0 us, error rate 0.00%, resident memory 1024 KiB",
+      "status": 1,
+      "statement": "'Greedy Token Sampler' (inference) has measured median latency 150.0 us over 5 samples",
       "source": {
         "system": "spark-rsi",
         "artifact": "CapabilityNode",
@@ -115,31 +124,34 @@
       "parents": [],
       "measurements": [
         {
-          "name": "latency_p95_us",
+          "name": "latency_median_us",
           "value": "150.000",
           "unit": "us"
         },
         {
-          "name": "error_rate",
-          "value": "0.000000",
-          "unit": "fraction"
+          "name": "sample_count",
+          "value": "5",
+          "unit": ""
         },
         {
-          "name": "memory_rss_kb",
-          "value": "1024",
-          "unit": "KiB"
+          "name": "error_rate_measured",
+          "value": "0.000000",
+          "unit": "fraction"
         }
       ],
-      "missing": [],
-      "notes": [
-        "metric values for 'Greedy Token Sampler' were declared in the capability graph, not measured"
-      ]
+      "missing": [
+        {
+          "expected": "measured p95 latency of stage 'Greedy Token Sampler'",
+          "reason": "p95 is unavailable: too few valid compatible samples"
+        }
+      ],
+      "notes": []
     },
     {
       "id": "rsi:capability:scheduler",
       "kind": 2,
-      "status": 0,
-      "statement": "'Batch Scheduler' (scheduling) has p95 latency 340.0 us, error rate 0.00%, resident memory 2048 KiB",
+      "status": 1,
+      "statement": "'Batch Scheduler' (scheduling) has measured median latency 340.0 us over 5 samples",
       "source": {
         "system": "spark-rsi",
         "artifact": "CapabilityNode",
@@ -148,31 +160,34 @@
       "parents": [],
       "measurements": [
         {
-          "name": "latency_p95_us",
+          "name": "latency_median_us",
           "value": "340.000",
           "unit": "us"
         },
         {
-          "name": "error_rate",
-          "value": "0.000000",
-          "unit": "fraction"
+          "name": "sample_count",
+          "value": "5",
+          "unit": ""
         },
         {
-          "name": "memory_rss_kb",
-          "value": "2048",
-          "unit": "KiB"
+          "name": "error_rate_measured",
+          "value": "0.000000",
+          "unit": "fraction"
         }
       ],
-      "missing": [],
-      "notes": [
-        "metric values for 'Batch Scheduler' were declared in the capability graph, not measured"
-      ]
+      "missing": [
+        {
+          "expected": "measured p95 latency of stage 'Batch Scheduler'",
+          "reason": "p95 is unavailable: too few valid compatible samples"
+        }
+      ],
+      "notes": []
     },
     {
       "id": "rsi:bottleneck:cycle-kv-0001",
       "kind": 3,
       "status": 3,
-      "statement": "The capability graph ranks 'Unified LPDDR5x KV Allocator' (memory) as bottleneck #1 of 5 (Centrality=0.333, LatencyRatio=3.18x, ErrorRate=8.0%)",
+      "statement": "The capability graph ranks 'Unified LPDDR5x KV Allocator' (memory) as bottleneck #1 of 5 (Centrality=0.333, LatencyRatio=3.18x (median), ErrorRate=8.0%)",
       "source": {
         "system": "spark-rsi",
         "artifact": "BottleneckRank",
@@ -212,14 +227,14 @@
           "unit": ""
         },
         {
-          "name": "latency_p95_us",
-          "value": "4200.000",
-          "unit": "us"
+          "name": "ranking_basis",
+          "value": "measured",
+          "unit": ""
         },
         {
-          "name": "error_rate",
-          "value": "0.080000",
-          "unit": "fraction"
+          "name": "latency_median_us",
+          "value": "4200.000",
+          "unit": "us"
         }
       ],
       "missing": [],
@@ -309,7 +324,7 @@
       "id": "rsi:hypothesis:hypo-kv-0001",
       "kind": 5,
       "status": 4,
-      "statement": "Suspected root cause: High latency on 'Unified LPDDR5x KV Allocator': Centrality=0.333, LatencyRatio=3.18x, ErrorRate=8.0%. Observed problem: System throughput limited by bottleneck node 'Unified LPDDR5x KV Allocator' (centrality=0.3333)",
+      "statement": "Suspected root cause: High latency on 'Unified LPDDR5x KV Allocator': Centrality=0.333, LatencyRatio=3.18x (median), ErrorRate=8.0%. Observed problem: System throughput limited by bottleneck node 'Unified LPDDR5x KV Allocator' (centrality=0.3333)",
       "source": {
         "system": "spark-rsi",
         "artifact": "HypothesisContract",
@@ -336,7 +351,7 @@
       "id": "rsi:hypothesis:hypo-kv-0001:prediction",
       "kind": 6,
       "status": 4,
-      "statement": "Predicts latency_us improves by 15.0% from baseline 4200.000",
+      "statement": "Predicts latency_median_us improves by 5.0% from baseline 4200.000",
       "source": {
         "system": "spark-rsi",
         "artifact": "HypothesisContract",
@@ -351,7 +366,7 @@
       "measurements": [
         {
           "name": "target_metric",
-          "value": "latency_us",
+          "value": "latency_median_us",
           "unit": ""
         },
         {
@@ -361,7 +376,7 @@
         },
         {
           "name": "predicted_delta_pct",
-          "value": "15.000",
+          "value": "5.000",
           "unit": "%"
         }
       ],
