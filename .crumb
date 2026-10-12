@@ -73,14 +73,14 @@
           "purpose": "Directory scripts. Purpose not yet described by a human."
         },
         {
-          "digest": "0fcb31797013acb03f2688fec6149e14d0e6acc40fd0e17654def799853e1db3",
-          "last_commit": "b13ea46",
+          "digest": "800c6449b6f3428753d3f1305e6ab14c49b0898dcd1ec28dc2546425d006ac63",
+          "last_commit": "91ca36e",
           "name": "src",
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
-          "digest": "82ea958b67f5eecaf95c627ddb324d5be6cbaf7275434033e4af5577bf2181bf",
-          "last_commit": "b13ea46",
+          "digest": "f0d7af9051032b6b4c3f4911762bc4c8e6d8b4278acd33ad7e044f07fe930b9a",
+          "last_commit": "91ca36e",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
         },
@@ -91,15 +91,15 @@
           "purpose": "Directory tools. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:5dad7632c0e0df8ba3d57ea2ff680da13fe6f7134101c6e8e768dafaf0714c9a",
-      "compiled_at": "2026-10-12T22:14:04Z",
+      "children_root": "sha256:f36f2424c2ba71c1d61cd766fb7e1461cae4ccd98a37414485f4bb50f813fbe0",
+      "compiled_at": "2026-10-12T22:19:12Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:1ea62ff55b2a4fe6604fbbed0b55d50eeeaaef5775d623474c55e1b6894266a0",
+      "digest": "sha256:047e60ce0570452c543dd1a52141262b04ffe86b48c9d51e47c73dd07d8f74a5",
       "evidence_files": 2,
       "evidence_root": "sha256:2af46c9e5c5f639d24acdfd75e5bbc6704616dd36c2d8d18ea4070421f048147",
-      "files": 126,
-      "generated_at_commit": "b13ea46cda2213475ab1066e1e357f96e3145e8e",
-      "source_tree": "sha256:3ec327c7c97201b363438f403978157e7db279a8a4c2130114a9f1f16c3ea099"
+      "files": 133,
+      "generated_at_commit": "6121a3ace90a6ffd862bceaf9db7fed3727d764e",
+      "source_tree": "sha256:4fc36c8a3bd35e68c079d0871dfcf0c39e85647000c3f9c885fed347abaf700d"
     },
     "owner_lane": "",
     "seed": {

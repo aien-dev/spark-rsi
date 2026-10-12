@@ -11,23 +11,28 @@ fn test_capability_graph_topology_and_bottleneck_detection() {
     // Model DGX Spark GB10 inference pipeline
     graph.add_node(
         CapabilityNode::new("req_gateway", "Request Gateway", "network")
-            .with_resource_metrics(120.0, 1024, 0.0),
+            .with_measured_latency(120.0, None, 0.0, 5)
+            .unwrap(),
     );
     graph.add_node(
         CapabilityNode::new("scheduler", "Batch Scheduler", "scheduling")
-            .with_resource_metrics(340.0, 2048, 0.0),
+            .with_measured_latency(340.0, None, 0.0, 5)
+            .unwrap(),
     );
     graph.add_node(
         CapabilityNode::new("kv_allocator", "Unified LPDDR5x KV Allocator", "memory")
-            .with_resource_metrics(4200.0, 32768, 0.08),
+            .with_measured_latency(4200.0, None, 0.08, 5)
+            .unwrap(),
     );
     graph.add_node(
         CapabilityNode::new("mojo_kernel", "Mojo Blackwell GEMM Kernel", "compute")
-            .with_resource_metrics(1800.0, 16384, 0.01),
+            .with_measured_latency(1800.0, None, 0.01, 5)
+            .unwrap(),
     );
     graph.add_node(
         CapabilityNode::new("sampler", "Greedy Token Sampler", "inference")
-            .with_resource_metrics(150.0, 1024, 0.0),
+            .with_measured_latency(150.0, None, 0.0, 5)
+            .unwrap(),
     );
 
     // Define dataflow dependencies

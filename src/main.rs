@@ -381,6 +381,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dual_price_vector_dir,
                 judge_public_key_hex: None,
                 judge_policy_file: None,
+                ..RsiConfig::default()
             };
             let result = RsiEngine::run_cycle(&config).await?;
             println!("{}", serde_json::to_string_pretty(&result)?);
@@ -414,6 +415,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 dual_price_vector_dir,
                 judge_public_key_hex: None,
                 judge_policy_file: None,
+                ..RsiConfig::default()
             };
             RsiEngine::run_daemon(config).await?;
         }

@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-12T22:19:12Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:33725439da850a222029d1090305e1692c7098af06fb7707ba8799a8c373fb84",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 6,
+      "generated_at_commit": "6121a3ace90a6ffd862bceaf9db7fed3727d764e",
+      "source_tree": "sha256:dab2f98a421a94cf2b1d243133fc71260ae7c3c470b1ac789afdc4203a9f6b7d"
+    }
+  },
+  "name": "measure",
+  "purpose": "M1 Measurement: stage samples, sample log, compatibility filtering, percentile statistics, claim policy",
+  "schema_version": "1.0.0"
+}

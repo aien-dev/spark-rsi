@@ -135,6 +135,18 @@ pub struct RsiConfig {
     /// Operator-owned evaluation policy the judge receipt must be bound to. None = fails closed.
     #[serde(default)]
     pub judge_policy_file: Option<String>,
+    /// Minimum compatible completed samples a stage needs before its latency counts as measured.
+    #[serde(default = "default_measure_min_samples")]
+    pub measure_min_samples: usize,
+    /// How many of the most recent compatible completed cycles are considered per stage.
+    #[serde(default = "default_measure_window_cycles")]
+    pub measure_window_cycles: usize,
+    /// Minimum valid compatible samples before an empirical p95 is reported.
+    #[serde(default = "default_measure_p95_min_samples")]
+    pub measure_p95_min_samples: usize,
+    /// Operator-declared latency goal, in percent below the measured median. A goal, not a forecast.
+    #[serde(default = "default_measure_target_improvement_pct")]
+    pub measure_target_improvement_pct: f64,
 }
 
 fn default_max_url() -> String {
@@ -151,6 +163,22 @@ fn default_rsi_root() -> String {
 
 fn default_canary_target() -> u64 {
     5000
+}
+
+fn default_measure_min_samples() -> usize {
+    3
+}
+
+fn default_measure_window_cycles() -> usize {
+    20
+}
+
+fn default_measure_p95_min_samples() -> usize {
+    20
+}
+
+fn default_measure_target_improvement_pct() -> f64 {
+    5.0
 }
 
 impl Default for RsiConfig {
@@ -175,6 +203,10 @@ impl Default for RsiConfig {
             dual_price_vector_dir: None,
             judge_public_key_hex: None,
             judge_policy_file: None,
+            measure_min_samples: default_measure_min_samples(),
+            measure_window_cycles: default_measure_window_cycles(),
+            measure_p95_min_samples: default_measure_p95_min_samples(),
+            measure_target_improvement_pct: default_measure_target_improvement_pct(),
         }
     }
 }

@@ -79,8 +79,8 @@
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
         },
         {
-          "digest": "cf457e03830140bb69fefc728a9560f3267693e75e58e35095885c1af2e9f50a",
-          "last_commit": "5d46b21",
+          "digest": "eb3a5f0b7203ba982b9fa0f7825a02921c2adc49c73abcd21145609b1a1a8da6",
+          "last_commit": "c464d10",
           "name": "graph",
           "purpose": "Directory src/graph. Purpose not yet described by a human."
         },
@@ -97,14 +97,20 @@
           "purpose": "Directory src/ledger. Purpose not yet described by a human."
         },
         {
+          "digest": "33725439da850a222029d1090305e1692c7098af06fb7707ba8799a8c373fb84",
+          "last_commit": "c464d10",
+          "name": "measure",
+          "purpose": "M1 Measurement: stage samples, sample log, compatibility filtering, percentile statistics, claim"
+        },
+        {
           "digest": "93f3f010310a3c1cbda620ad8c8b9f11c6b20571f6145de1c3a4e66c98c9af99",
           "last_commit": "5d46b21",
           "name": "meta",
           "purpose": "Directory src/meta. Purpose not yet described by a human."
         },
         {
-          "digest": "d736784a98d89f820c791c91044d4d78d53c070ca2061cad8550c142d16943b5",
-          "last_commit": "f74a7db",
+          "digest": "2787d4e51f830933e8b7fba886623e1d188195b69f9526afda54fe6f0ac8a8b2",
+          "last_commit": "91ca36e",
           "name": "propose",
           "purpose": "Directory src/propose. Purpose not yet described by a human."
         },
@@ -121,15 +127,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:3000c2ce1a47a8b910a89ee4a18493f0a04e378013fd0061007e543416e36fee",
-      "compiled_at": "2026-10-12T22:14:04Z",
+      "children_root": "sha256:e01a21f45791c3a6378f50ac69f7a7e4dbb5163229898e98ac5cacbfbe33ff68",
+      "compiled_at": "2026-10-12T22:19:12Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:0fcb31797013acb03f2688fec6149e14d0e6acc40fd0e17654def799853e1db3",
+      "digest": "sha256:800c6449b6f3428753d3f1305e6ab14c49b0898dcd1ec28dc2546425d006ac63",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 67,
-      "generated_at_commit": "b13ea46cda2213475ab1066e1e357f96e3145e8e",
-      "source_tree": "sha256:67d71a6636588a93655ea7ec8c9eb068750da0d30ea1c1886e02ba5e88f8c68f"
+      "files": 73,
+      "generated_at_commit": "6121a3ace90a6ffd862bceaf9db7fed3727d764e",
+      "source_tree": "sha256:8657126792e22c8b7f57f70c12d435624803455a79751075c69ed1c6e8893d65"
     },
     "owner_lane": "",
     "seed": {

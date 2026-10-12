@@ -22,29 +22,34 @@ use spark_rsi::propose::hypothesis::HypothesisContract;
 const CYCLE: &str = "cycle-kv-0001";
 const FIXTURE: &str = "tests/fixtures/rsi_kv_cycle.evidence.json";
 /// sha256 of the fixture; the aienos side asserts the same value.
-const FIXTURE_SHA256: &str = "0c04376ca36d95d677942d7e97c0a3eef3728ef72dc3cdf070494174e6a6cc31";
+const FIXTURE_SHA256: &str = "7e9f1c1e09210fb3158cd001ecb6207d4d5c3fbd30996448c35c61dc900fc07d";
 
 fn kv_graph() -> CapabilityGraph {
     let mut g = CapabilityGraph::new();
     g.add_node(
         CapabilityNode::new("req_gateway", "Request Gateway", "network")
-            .with_resource_metrics(120.0, 1024, 0.0),
+            .with_measured_latency(120.0, None, 0.0, 5)
+            .unwrap(),
     );
     g.add_node(
         CapabilityNode::new("scheduler", "Batch Scheduler", "scheduling")
-            .with_resource_metrics(340.0, 2048, 0.0),
+            .with_measured_latency(340.0, None, 0.0, 5)
+            .unwrap(),
     );
     g.add_node(
         CapabilityNode::new("kv_allocator", "Unified LPDDR5x KV Allocator", "memory")
-            .with_resource_metrics(4200.0, 32768, 0.08),
+            .with_measured_latency(4200.0, Some(5100.0), 0.08, 20)
+            .unwrap(),
     );
     g.add_node(
         CapabilityNode::new("mojo_kernel", "Mojo Blackwell GEMM Kernel", "compute")
-            .with_resource_metrics(1800.0, 16384, 0.01),
+            .with_measured_latency(1800.0, None, 0.01, 5)
+            .unwrap(),
     );
     g.add_node(
         CapabilityNode::new("sampler", "Greedy Token Sampler", "inference")
-            .with_resource_metrics(150.0, 1024, 0.0),
+            .with_measured_latency(150.0, None, 0.0, 5)
+            .unwrap(),
     );
     g.add_edge("req_gateway", "scheduler", 100.0, 1.0);
     g.add_edge("scheduler", "kv_allocator", 500.0, 1.0);
@@ -53,7 +58,7 @@ fn kv_graph() -> CapabilityGraph {
     g
 }
 
-/// Same construction as RsiEngine::run_cycle in src/daemon.rs (step 5).
+/// Same construction as RsiEngine::run_cycle in src/daemon.rs (step 5, measured branch).
 fn daemon_style_hypothesis(b: &spark_rsi::graph::BottleneckRank) -> HypothesisContract {
     HypothesisContract::new(
         "hypo-kv-0001",
@@ -66,9 +71,9 @@ fn daemon_style_hypothesis(b: &spark_rsi::graph::BottleneckRank) -> HypothesisCo
             "High latency on '{}': {}",
             b.node_name, b.causal_explanation
         ),
-        "latency_us",
-        b.latency_p95_us,
-        15.0,
+        "latency_median_us",
+        b.latency_median_us.expect("measured"),
+        5.0,
     )
     .with_protected_metric("correctness", 0.0)
     .with_falsification_test("assert!(receipt.passed_all_hard_invariants)")
@@ -152,7 +157,7 @@ fn kv_cycle_doc() -> EvidenceGraphDoc {
     evidence_graph(&RsiCycleEvidence {
         cycle_id: CYCLE,
         graph: Some(&g),
-        metrics_origin: MetricsOrigin::Declared,
+        metrics_origin: MetricsOrigin::Measured,
         bottlenecks: &ranks,
         hypothesis: Some(&h),
         diagnostic: Some(&diag),
@@ -174,17 +179,16 @@ fn rsi_cycle_emits_contract_v1_with_explicit_links_only() {
     assert_eq!(d.format, FORMAT);
     assert_eq!(d.version, VERSION);
 
-    // Observed: five capability nodes, declared (not measured) metrics.
+    // Observed: five capability nodes with measured metrics.
     let caps: Vec<_> = d
         .nodes
         .iter()
         .filter(|n| n.id.starts_with("rsi:capability:"))
         .collect();
     assert_eq!(caps.len(), 5);
-    assert!(caps.iter().all(|n| n.status == STATUS_UNCLASSIFIED));
-    assert!(caps
-        .iter()
-        .all(|n| n.notes.iter().any(|t| t.contains("not measured"))));
+    assert!(caps.iter().all(|n| n.status == 1));
+    // Only the allocator has enough samples for a p95; the rest declare it unavailable.
+    assert_eq!(caps.iter().filter(|n| n.missing.is_empty()).count(), 1);
 
     // System analysis rests on the metrics; alternatives are AlternativeTo, not support.
     let a = find(&d, &format!("rsi:bottleneck:{CYCLE}"));
@@ -210,7 +214,7 @@ fn rsi_cycle_emits_contract_v1_with_explicit_links_only() {
         .as_deref()
         .unwrap()
         .contains("not measured"));
-    // Matched by text and baseline only: a weak "references" link plus a declared gap.
+    // Matched by text and measured median only: a weak "references" link plus a declared gap.
     assert_eq!(h.parents.len(), 1);
     assert_eq!(h.parents[0].relation, REL_REFERENCES);
     assert_eq!(h.missing.len(), 1);
@@ -297,7 +301,7 @@ fn tampered_receipt_is_not_a_verified_fact() {
     let d = evidence_graph(&RsiCycleEvidence {
         cycle_id: CYCLE,
         graph: Some(&g),
-        metrics_origin: MetricsOrigin::Declared,
+        metrics_origin: MetricsOrigin::Measured,
         bottlenecks: &ranks,
         hypothesis: None,
         diagnostic: None,
@@ -344,7 +348,7 @@ fn artifacts_from_another_cycle_are_not_attached() {
     let d = evidence_graph(&RsiCycleEvidence {
         cycle_id: CYCLE,
         graph: Some(&g),
-        metrics_origin: MetricsOrigin::Declared,
+        metrics_origin: MetricsOrigin::Measured,
         bottlenecks: &ranks,
         hypothesis: Some(&h),
         diagnostic: None,

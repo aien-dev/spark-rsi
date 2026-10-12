@@ -2,9 +2,12 @@ use crate::actor::judge::BlindJudge;
 use crate::balance::BalanceKernel;
 use crate::dual::ScarcityDiagnostic;
 use crate::evaluator::EvaluationReceipt;
-use crate::graph::{CapabilityGraph, CapabilityNode};
 use crate::isolation::BuildJail;
 use crate::ledger::{BlockType, ImprovementLedger, LedgerBlock};
+use crate::measure::{
+    build_capability_graph, check_claim, measure_stages, CycleSampleRecord, MeasureContext,
+    SampleLog, Stage, StageClock, StageMeasurement, StageOutcome, SCHEMA_VERSION,
+};
 use crate::models::{RsiConfig, RsiCycleResult};
 use crate::observe::observe_codebase;
 use crate::propose::{
@@ -23,9 +26,60 @@ use uuid::Uuid;
 pub struct RsiEngine;
 
 impl RsiEngine {
+    /// Runs one cycle and records its stage samples. A cycle that returns an error is a partial
+    /// cycle: its samples go to the partial-cycle log and are never ranked. A cycle that ends
+    /// early for a normal reason (no candidate, judge refused, canary quota refused) is complete
+    /// for the stages it ran.
     pub async fn run_cycle(config: &RsiConfig) -> Result<RsiCycleResult, String> {
-        let start = Instant::now();
         let cycle_id = format!("cycle-{}", Uuid::new_v4().simple());
+        let repo_path = Path::new(&config.target_repo);
+        let rsi_root = repo_path.join(&config.rsi_root);
+        let ctx = MeasureContext::for_config(config, repo_path);
+        let mut clock = StageClock::new();
+        let result = Self::run_cycle_inner(config, &cycle_id, &ctx, &mut clock).await;
+        Self::record_stage_samples(&rsi_root, &cycle_id, &ctx, &clock, result.is_ok());
+        result
+    }
+
+    fn record_stage_samples(
+        rsi_root: &Path,
+        cycle_id: &str,
+        ctx: &MeasureContext,
+        clock: &StageClock,
+        completed: bool,
+    ) {
+        if clock.is_empty() {
+            return;
+        }
+        let record = CycleSampleRecord {
+            schema_version: SCHEMA_VERSION,
+            cycle_id: cycle_id.to_string(),
+            workload_key: ctx.workload_key.clone(),
+            execution_profile_fingerprint: ctx.fingerprint.clone(),
+            execution_profile: ctx.profile.clone(),
+            stages: clock.samples(),
+            source_commit: ctx.source_commit.clone(),
+            recorded_at: chrono::Utc::now().to_rfc3339(),
+        };
+        let log = SampleLog::new(rsi_root);
+        let written = if completed {
+            log.append_complete(&record)
+        } else {
+            log.append_partial(&record)
+        };
+        if let Err(e) = written {
+            tracing::warn!("stage samples for {} were not recorded: {}", cycle_id, e);
+        }
+    }
+
+    async fn run_cycle_inner(
+        config: &RsiConfig,
+        cycle_id: &str,
+        ctx: &MeasureContext,
+        clock: &mut StageClock,
+    ) -> Result<RsiCycleResult, String> {
+        let start = Instant::now();
+        let cycle_id = cycle_id.to_string();
         let repo_path = Path::new(&config.target_repo);
         let rsi_root = repo_path.join(&config.rsi_root);
 
@@ -61,44 +115,35 @@ impl RsiEngine {
             .map_err(|e| format!("Fatal: Invalid P-256 signing key: {}", e))?;
 
         // 4. Telemetry Ingestion & CapabilityGraph Population
-        let telemetry = observe_codebase(repo_path)?;
-        let mut graph = CapabilityGraph::new();
-        graph.add_node(
-            CapabilityNode::new("Observe", "Observe Subsystem", "observe")
-                .with_resource_metrics(50.0, 1024, 0.0),
+        let observe_started = Instant::now();
+        let observed = observe_codebase(repo_path);
+        clock.record(
+            Stage::Observe,
+            observe_started.elapsed(),
+            if observed.is_ok() {
+                StageOutcome::Ok
+            } else {
+                StageOutcome::Failed
+            },
         );
-        let is_high_drive = telemetry.soul_tension.drive_score > 0.8; // zero telemetry
-        graph.add_node(
-            CapabilityNode::new("Propose", "Propose Subsystem", "propose").with_resource_metrics(
-                400.0,
-                4096,
-                if is_high_drive { 0.25 } else { 0.0 },
-            ),
-        );
-        graph.add_node(
-            CapabilityNode::new("BuildJail", "Build Jail", "isolation")
-                .with_resource_metrics(150.0, 2048, 0.0),
-        );
-        graph.add_node(
-            CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor")
-                .with_resource_metrics(250.0, 8192, 0.0),
-        );
-        graph.add_node(
-            CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor")
-                .with_resource_metrics(100.0, 4096, 0.0),
-        );
-        graph.add_node(
-            CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify")
-                .with_resource_metrics(50.0, 1024, 0.0),
-        );
+        let telemetry = observed?;
 
-        graph.add_edge("Observe", "Propose", 400.0, 1.0);
-        graph.add_edge("Propose", "BuildJail", 150.0, 1.0);
-        graph.add_edge("BuildJail", "JudgeEvaluation", 250.0, 1.0);
-        graph.add_edge("JudgeEvaluation", "SupervisorCanary", 100.0, 1.0);
-        graph.add_edge("SupervisorCanary", "CortexCommit", 50.0, 1.0);
-
+        // Ranking reads measurements from completed prior cycles only. This cycle's own samples
+        // are appended after it ends, and its id is excluded as well.
+        let measurements = measure_stages(
+            SampleLog::new(&rsi_root).read_complete(),
+            &cycle_id,
+            ctx,
+            config,
+        );
+        let graph = build_capability_graph(&measurements)?;
         let top_bottleneck = graph.top_bottleneck();
+        let diagnosis_measured = top_bottleneck.as_ref().is_some_and(|b| {
+            Stage::ALL.iter().any(|s| {
+                s.id() == b.node_id
+                    && matches!(measurements.get(s), Some(StageMeasurement::Measured { .. }))
+            })
+        });
 
         // 4b. DUAL scarcity reading (ADR 0031 section 7.5). Diagnostic only: read
         // after ranking, never fed into rank_bottlenecks, hard invariants,
@@ -110,24 +155,18 @@ impl RsiEngine {
 
         // 5. Bottleneck Hypothesis Contract & Cortex Recall
         let hypothesis = top_bottleneck.as_ref().map(|b| {
-            HypothesisContract::new(
+            HypothesisContract::from_bottleneck(
                 &format!("hypo-{}", Uuid::new_v4().simple()),
                 &cycle_id,
-                &format!(
-                    "System throughput limited by bottleneck node '{}' (centrality={:.4})",
-                    b.node_name, b.centrality
-                ),
-                &format!(
-                    "High latency on '{}': {}",
-                    b.node_name, b.causal_explanation
-                ),
-                "latency_us",
-                b.latency_p95_us,
-                15.0,
+                b,
+                config.measure_target_improvement_pct,
             )
             .with_protected_metric("correctness", 0.0)
             .with_falsification_test("assert!(receipt.passed_all_hard_invariants)")
         });
+
+        let propose_started = Instant::now();
+        let mut propose_outcome = StageOutcome::Ok;
 
         let cortex =
             CortexExperienceClient::new(&config.cortex_url).with_space(&config.cortex_space);
@@ -172,14 +211,16 @@ impl RsiEngine {
                 diag = diag.with_hypothesis(h);
             }
 
-            if let Ok(prop) = ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await {
-                candidates.push(prop);
+            match ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await {
+                Ok(prop) => candidates.push(prop),
+                Err(_) => propose_outcome = StageOutcome::Failed,
             }
         }
 
         if let Some(prop) = ProposalGenerator::scan_and_propose_unslop(repo_path) {
             candidates.push(prop);
         }
+        clock.record(Stage::Propose, propose_started.elapsed(), propose_outcome);
 
         let mut maybe_invariants = None;
         let mut maybe_balance = None;
@@ -193,6 +234,17 @@ impl RsiEngine {
         let sandbox_base = Path::new(&config.sandbox_root);
 
         for mut candidate in candidates {
+            // Claim policy: a performance claim needs a measured diagnosis. Refused before
+            // anything is staged.
+            if let Err(e) = check_claim(
+                &candidate.kind,
+                config.require_latency_improvement,
+                diagnosis_measured,
+            ) {
+                let _ = ledger.append_block(BlockType::Evaluation, e, vec![]);
+                continue;
+            }
+
             // Declared-target gate before anything is staged: normalized path,
             // no `..`, inside the declared roots, not a root-of-trust file.
             if let Err(e) = crate::diff_gate::check_declared_target(
@@ -291,12 +343,18 @@ impl RsiEngine {
                 && (!sandbox_dir.join("spark-rsi").exists()
                     || candidate.target_file.ends_with(".rs"));
             if needs_build {
+                let build_started = Instant::now();
                 let build_jail =
                     BuildJail::new("spark-rsi-builder:latest", &sandbox_dir, &sandbox_dir);
                 let (build_success, build_stdout, build_stderr) =
                     match build_jail.execute_bwrap(&["cargo", "build", "--release", "--offline"]) {
                         Ok(res) => res,
                         Err(e) => {
+                            clock.record(
+                                Stage::BuildJail,
+                                build_started.elapsed(),
+                                StageOutcome::Failed,
+                            );
                             let _ = ledger.append_block(
                                 BlockType::Evaluation,
                                 format!("Build Jail exec error: {}", e),
@@ -306,6 +364,15 @@ impl RsiEngine {
                         }
                     };
 
+                clock.record(
+                    Stage::BuildJail,
+                    build_started.elapsed(),
+                    if build_success {
+                        StageOutcome::Ok
+                    } else {
+                        StageOutcome::Failed
+                    },
+                );
                 if !build_success {
                     let err_msg = format!(
                         "Candidate failed to compile in Build Jail:
@@ -324,6 +391,9 @@ impl RsiEngine {
                 }
             }
 
+            // The JudgeEvaluation stage covers invariant verification, the balance reading and the
+            // judge's evaluation of this candidate.
+            let eval_started = Instant::now();
             // 8. Invariant Verification in isolated sandbox
             // Non-code proposals skip compile and test gates: the sandbox cannot
             // resolve sibling path dependencies and markdown carries no build risk.
@@ -343,6 +413,11 @@ impl RsiEngine {
             let is_balanced = balance_verdict.verdict == "balanced";
 
             if !passed || !is_balanced {
+                clock.record(
+                    Stage::JudgeEvaluation,
+                    eval_started.elapsed(),
+                    StageOutcome::Refused,
+                );
                 let raw_fail = serde_json::to_string(&serde_json::json!({
                     "proposal_id": candidate.id,
                     "invariants_passed": passed,
@@ -373,6 +448,11 @@ impl RsiEngine {
             ) {
                 Ok(rcpt) => rcpt,
                 Err(e) => {
+                    clock.record(
+                        Stage::JudgeEvaluation,
+                        eval_started.elapsed(),
+                        StageOutcome::Failed,
+                    );
                     let _ = ledger.append_block(
                         BlockType::Evaluation,
                         format!("Judge evaluation error: {}", e),
@@ -388,6 +468,15 @@ impl RsiEngine {
                 .map_err(|e| format!("Fatal: Failed to append evaluation to ledger: {}", e))?;
             let ledger_hash = blk.block_hash.clone();
             let judge_admitted = receipt.admitted;
+            clock.record(
+                Stage::JudgeEvaluation,
+                eval_started.elapsed(),
+                if judge_admitted {
+                    StageOutcome::Ok
+                } else {
+                    StageOutcome::Refused
+                },
+            );
 
             if !judge_admitted {
                 let _ = Ratifier::record_cortex_lesson(
@@ -409,6 +498,7 @@ impl RsiEngine {
             break;
         }
 
+        let canary_started = Instant::now();
         if let Some(ref proposal) = winning_proposal {
             let sandbox_dir = sandbox_base.join(&proposal.id);
             // 11. Async Supervisor Daemon Probation & Canary Quota
@@ -573,6 +663,7 @@ impl RsiEngine {
                     maybe_generation = Some(gen_info);
 
                     // 12. Ratify proposal onto a review branch + patch (never the default branch), and record in Cortex memory tied to ledger hash
+                    let commit_started = Instant::now();
                     let rat = Ratifier::ratify_proposal(
                         proposal,
                         maybe_invariants.as_ref().unwrap(),
@@ -584,6 +675,15 @@ impl RsiEngine {
                         &config.cortex_space,
                     )
                     .await?;
+                    clock.record(
+                        Stage::CortexCommit,
+                        commit_started.elapsed(),
+                        if rat.cortex_recorded {
+                            StageOutcome::Ok
+                        } else {
+                            StageOutcome::Failed
+                        },
+                    );
                     maybe_ratification = Some(rat);
                 }
             }
@@ -594,6 +694,21 @@ impl RsiEngine {
                 Some(&config.mojo_kernel_path),
             )?;
             maybe_balance = Some(balance_verdict);
+        }
+        if winning_proposal.is_some() {
+            // The canary stage is the supervised block minus the CortexCommit time inside it.
+            let canary_time = canary_started
+                .elapsed()
+                .saturating_sub(clock.duration(Stage::CortexCommit));
+            clock.record(
+                Stage::SupervisorCanary,
+                canary_time,
+                if success {
+                    StageOutcome::Ok
+                } else {
+                    StageOutcome::Refused
+                },
+            );
         }
         // Checkpoint ledger Merkle root with TPM signer
         let _ = ledger.checkpoint(Some(&signing_key));
