@@ -1,11 +1,11 @@
 use crate::actor::BlindJudge;
 use crate::balance::BalanceKernel;
 use crate::evaluator::EvaluationReceipt;
-use crate::graph::{CapabilityGraph, CapabilityNode};
 use crate::isolation::BuildJail;
 use crate::ledger::{BlockType, ImprovementLedger, LedgerBlock};
+use crate::measure::{build_capability_graph, measure_stages, MeasureContext, SampleLog};
 use crate::meta::TrueRsiEvaluator;
-use crate::models::{ImprovementProposal, ProposalKind};
+use crate::models::{ImprovementProposal, ProposalKind, RsiConfig};
 use crate::observe::observe_codebase;
 use crate::propose::{
     cortex::CortexExperienceClient, max_client::MaxClient, DefectCategory, DiagnosticContext,
@@ -68,6 +68,25 @@ impl Default for SoakConfig {
 }
 
 pub struct SoakRunner;
+
+/// The measurement view of a soak configuration: the same workload key and execution-profile
+/// fingerprint fields the daemon uses, so soak cycles read the same stage-sample log.
+fn measure_config(config: &SoakConfig) -> RsiConfig {
+    RsiConfig {
+        target_repo: config.target_repo.clone(),
+        cortex_url: config.cortex_url.clone(),
+        cortex_space: config.cortex_space.clone(),
+        mojo_kernel_path: config.mojo_kernel_path.clone(),
+        sandbox_root: config.sandbox_root.clone(),
+        rsi_root: config.rsi_root.clone(),
+        holdouts_dir: config.holdouts_dir.clone(),
+        max_url: config.max_url.clone(),
+        max_model: config.max_model.clone(),
+        canary_target: config.canary_target as u64,
+        non_inferiority_margin: config.non_inferiority_margin,
+        ..RsiConfig::default()
+    }
+}
 
 impl SoakRunner {
     pub async fn run_batch(config: &SoakConfig) -> Result<SoakRunManifest, String> {
@@ -150,45 +169,18 @@ impl SoakRunner {
             let cycle_id = format!("soak-{}-c{:02}", run_id, cycle_index);
             let thermal_before = ThermalSnapshot::capture();
 
-            // Telemetry & CapabilityGraph
+            // Telemetry and the pipeline graph: measured stage samples from completed prior cycles,
+            // never constants. Without enough compatible samples the ranking is structural.
             let codebase_obs = observe_codebase(repo_path)?;
-            let mut graph = CapabilityGraph::new();
-            graph.add_node(
-                CapabilityNode::new("Observe", "Observe Subsystem", "observe")
-                    .with_resource_metrics(50.0, 1024, 0.0),
+            let measure_cfg = measure_config(config);
+            let measure_ctx = MeasureContext::for_config(&measure_cfg, repo_path);
+            let measurements = measure_stages(
+                SampleLog::new(&rsi_root).read_complete(),
+                &cycle_id,
+                &measure_ctx,
+                &measure_cfg,
             );
-            let is_high_drive = codebase_obs.soul_tension.drive_score > 0.8;
-            graph.add_node(
-                CapabilityNode::new("Propose", "Propose Subsystem", "propose")
-                    .with_resource_metrics(400.0, 4096, if is_high_drive { 0.25 } else { 0.0 }),
-            );
-            graph.add_node(
-                CapabilityNode::new("Graph", "Capability Graph Subsystem", "graph")
-                    .with_resource_metrics(120.0, 2048, 0.0),
-            );
-            graph.add_node(
-                CapabilityNode::new("BuildJail", "Build Jail", "isolation")
-                    .with_resource_metrics(150.0, 2048, 0.0),
-            );
-            graph.add_node(
-                CapabilityNode::new("JudgeEvaluation", "Judge Evaluation", "actor")
-                    .with_resource_metrics(250.0, 8192, 0.0),
-            );
-            graph.add_node(
-                CapabilityNode::new("SupervisorCanary", "Supervisor Canary", "supervisor")
-                    .with_resource_metrics(100.0, 4096, 0.0),
-            );
-            graph.add_node(
-                CapabilityNode::new("CortexCommit", "Cortex Commit", "ratify")
-                    .with_resource_metrics(50.0, 1024, 0.0),
-            );
-
-            graph.add_edge("Observe", "Propose", 400.0, 1.0);
-            graph.add_edge("Propose", "Graph", 120.0, 1.0);
-            graph.add_edge("Graph", "BuildJail", 150.0, 1.0);
-            graph.add_edge("BuildJail", "JudgeEvaluation", 250.0, 1.0);
-            graph.add_edge("JudgeEvaluation", "SupervisorCanary", 100.0, 1.0);
-            graph.add_edge("SupervisorCanary", "CortexCommit", 50.0, 1.0);
+            let graph = build_capability_graph(&measurements)?;
 
             // Find top bottleneck not quarantined
             let ranked = graph.rank_bottlenecks();
@@ -213,17 +205,13 @@ impl SoakRunner {
                 bottleneck.node_name, bottleneck.causal_explanation
             );
             let hypothesis_id = format!("hypo-{}", &Uuid::new_v4().simple().to_string()[..12]);
-            let hypothesis = HypothesisContract::new(
+            // A numeric latency target only when the stage's latency is measured; otherwise an
+            // exploratory hypothesis with no performance claim.
+            let hypothesis = HypothesisContract::from_bottleneck(
                 &hypothesis_id,
                 &cycle_id,
-                &format!(
-                    "Throughput bound by node {} (centrality={:.4})",
-                    bottleneck.node_name, bottleneck.centrality
-                ),
-                &hypothesis_problem,
-                "latency_us",
-                bottleneck.latency_p95_us,
-                15.0,
+                &bottleneck,
+                measure_cfg.measure_target_improvement_pct,
             )
             .with_protected_metric("correctness", 0.0)
             .with_falsification_test("assert!(receipt.passed_all_hard_invariants)");
@@ -244,7 +232,6 @@ impl SoakRunner {
             // Map bottleneck to target file within writable prefixes
             let target_file = match bottleneck.node_name.as_str() {
                 "Propose" => "src/propose/hypothesis.rs",
-                "Graph" => "src/graph/mod.rs",
                 _ => "src/observe.rs",
             };
 
