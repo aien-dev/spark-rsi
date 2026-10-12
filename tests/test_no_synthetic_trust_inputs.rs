@@ -1,9 +1,17 @@
 use p256::ecdsa::{SigningKey, VerifyingKey};
 use spark_rsi::actor::judge::{find_executable, run_paired_benchmarks, BlindJudge, HoldoutSuite};
+use spark_rsi::canary::{CanaryWorkloadManifest, SealedObservationLog};
+use spark_rsi::daemon::RsiEngine;
 use spark_rsi::isolation::CandidateJailRunner;
+use spark_rsi::ledger::ImprovementLedger;
+use spark_rsi::models::{ProposalKind, RsiConfig};
 use spark_rsi::supervisor::{GenerationState, HostSupervisor};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+#[allow(dead_code)]
+mod canary_fixture;
 
 #[test]
 fn test_jailed_execution_blocks_network_and_host_leaks() {
@@ -245,90 +253,336 @@ fn test_end_to_end_unmocked_lifecycle_admission_and_supervisor_rollback() {
     assert!(reverted_link.to_string_lossy().contains("gen-parent-00"));
 }
 
-#[tokio::test]
-async fn test_daemon_run_cycle_promotes_via_host_supervisor() {
-    use spark_rsi::daemon::RsiEngine;
-    use spark_rsi::models::RsiConfig;
-    use std::process::Command;
+// ---------------------------------------------------------------------------------------------
+// Daemon-level canary admission. The target repository is built from fixtures/canary-target and
+// the daemon drives the real fixture executable through the supervisor. No test here lets a
+// worker self-report success into admission.
+// ---------------------------------------------------------------------------------------------
 
+static FIXTURE_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// The build jail is the only thing that builds the candidate. Without bubblewrap there is no
+/// jail, so the daemon tests cannot run and say so. Set RSI_REQUIRE_BUILD_JAIL=1 to make a
+/// missing jail a failure instead of a skip.
+fn build_jail_available() -> bool {
+    let ok = Command::new("bwrap")
+        .args([
+            "--unshare-user",
+            "--unshare-pid",
+            "--unshare-net",
+            "--ro-bind",
+            "/usr",
+            "/usr",
+            "--ro-bind",
+            "/lib",
+            "/lib",
+            "--proc",
+            "/proc",
+            "--dev",
+            "/dev",
+            "/usr/bin/true",
+        ])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false);
+    if !ok {
+        assert!(
+            std::env::var_os("RSI_REQUIRE_BUILD_JAIL").is_none(),
+            "RSI_REQUIRE_BUILD_JAIL is set but bubblewrap cannot run here"
+        );
+        eprintln!(
+            "SKIPPED: bubblewrap cannot run in this environment, so the build jail is unavailable"
+        );
+    }
+    ok
+}
+
+fn git(dir: &Path, args: &[&str]) {
+    let out = Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .expect("git runs");
+    assert!(out.status.success(), "git {:?} failed", args);
+}
+
+/// A target repository: the fixture crate, a README with an em dash so the unslop proposal
+/// exists, the pinned workload under `.rsi/canary`, holdouts and a signing key. With
+/// `with_adapter` false the adapter manifest is left out.
+struct Target {
+    _tmp: tempfile::TempDir,
+    repo: PathBuf,
+    config: RsiConfig,
+}
+
+fn make_target(with_adapter: bool, pin: Option<&str>) -> Target {
     let tmp = tempfile::tempdir().unwrap();
-    let repo_dir = tmp.path().join("repo");
-    let sandbox_dir = tmp.path().join("sandbox");
-    fs::create_dir_all(&repo_dir).unwrap();
-
-    // Initialize git repository
-    let _ = Command::new("git")
-        .args(["init", "-b", "main"])
-        .current_dir(&repo_dir)
-        .output();
-    let _ = Command::new("git")
-        .args(["config", "user.name", "Test Operator"])
-        .current_dir(&repo_dir)
-        .output();
-    let _ = Command::new("git")
-        .args(["config", "user.email", "operator@test.local"])
-        .current_dir(&repo_dir)
-        .output();
-
-    // Write a README with an em-dash to trigger ProposalGenerator
-    let readme = repo_dir.join("README.md");
-    fs::write(&readme, "# Test Repo\n\nWe build, fix, finish, and optimize systems with love, honor, and discipline\u{2014}with an em dash.\n").unwrap();
-
+    let repo = tmp.path().join("repo");
+    let sandbox = tmp.path().join("sandbox");
+    let fx = canary_fixture::fixture_dir();
+    fs::create_dir_all(repo.join("src")).unwrap();
+    for f in ["Cargo.toml", "Cargo.lock"] {
+        fs::copy(fx.join(f), repo.join(f)).unwrap();
+    }
+    fs::copy(fx.join("src/main.rs"), repo.join("src/main.rs")).unwrap();
+    if with_adapter {
+        fs::copy(
+            fx.join("canary-adapter.toml"),
+            repo.join("canary-adapter.toml"),
+        )
+        .unwrap();
+    }
+    fs::write(
+        repo.join("README.md"),
+        "# Target\n\nWe build, fix, finish, and optimize systems with love, honor, and discipline\u{2014}with an em dash.\n",
+    )
+    .unwrap();
+    // The judge's paired benchmarks need the engine executable in the tree.
     let exe = find_executable(Path::new(".")).expect("spark-rsi executable must exist");
-    fs::copy(&exe, repo_dir.join("spark-rsi")).unwrap();
+    fs::copy(&exe, repo.join("spark-rsi")).unwrap();
+    fs::write(repo.join(".gitignore"), "target\n").unwrap();
+    git(&repo, &["init", "-b", "main"]);
+    git(&repo, &["config", "user.name", "Test Operator"]);
+    git(&repo, &["config", "user.email", "operator@test.local"]);
+    git(&repo, &["add", "."]);
+    git(&repo, &["commit", "-m", "initial commit"]);
 
-    let _ = Command::new("git")
-        .args(["add", "."])
-        .current_dir(&repo_dir)
-        .output();
-    let _ = Command::new("git")
-        .args(["commit", "-m", "initial commit"])
-        .current_dir(&repo_dir)
-        .output();
-
-    let rsi_root = repo_dir.join(".rsi");
+    let rsi_root = repo.join(".rsi");
     let holdouts = rsi_root.join("holdouts");
-    std::fs::create_dir_all(&holdouts).unwrap();
+    fs::create_dir_all(&holdouts).unwrap();
     for s in HoldoutSuite::builtin_suites() {
         s.save_to_dir(&holdouts).unwrap();
     }
-    let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
-    let signing_key_hex = hex::encode(signing_key.to_bytes());
+    let workload = rsi_root.join("canary/workload.json");
+    fs::create_dir_all(workload.parent().unwrap()).unwrap();
+    fs::copy(fx.join("workload.json"), &workload).unwrap();
+    let digest = CanaryWorkloadManifest::load(&workload).unwrap().digest;
 
+    let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
     let config = RsiConfig {
-        target_repo: repo_dir.to_str().unwrap().to_string(),
+        target_repo: repo.to_str().unwrap().to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
         cortex_space: "atlas-memory".to_string(),
         mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
-        sandbox_root: sandbox_dir.to_str().unwrap().to_string(),
+        sandbox_root: sandbox.to_str().unwrap().to_string(),
         rsi_root: ".rsi".to_string(),
         holdouts_dir: None,
-        signing_key_hex: Some(signing_key_hex),
+        signing_key_hex: Some(hex::encode(signing_key.to_bytes())),
         require_latency_improvement: false,
         non_inferiority_margin: Some(250.0),
         max_url: "http://127.0.0.1:9".to_string(),
+        canary_target: 10,
+        canary_workload_sha256: Some(pin.map(str::to_string).unwrap_or(digest)),
         ..Default::default()
     };
+    Target {
+        _tmp: tmp,
+        repo,
+        config,
+    }
+}
 
-    let result = RsiEngine::run_cycle(&config)
-        .await
-        .expect("run_cycle failed");
+fn ledger_payloads(repo: &Path) -> Vec<String> {
+    ImprovementLedger::open(&repo.join(".rsi"))
+        .unwrap()
+        .all_blocks()
+        .unwrap()
+        .into_iter()
+        .map(|b| b.payload_json)
+        .collect()
+}
 
-    assert!(
-        !result.success,
-        "Cycle must not promote on a synthetic canary quota"
+fn commitment(payloads: &[String]) -> Option<serde_json::Value> {
+    payloads.iter().find_map(|p| {
+        let v: serde_json::Value = serde_json::from_str(p).ok()?;
+        v.get("canary_commitment").cloned()
+    })
+}
+
+#[tokio::test]
+async fn daemon_cycle_with_a_correct_fixture_reaches_the_later_gates() {
+    if !build_jail_available() {
+        return;
+    }
+    let _guard = FIXTURE_ENV_LOCK.lock().await;
+    std::env::remove_var("RSI_CANARY_FIXTURE_MODE");
+    let t = make_target(true, None);
+
+    let result = RsiEngine::run_cycle(&t.config).await.expect("run_cycle");
+    assert!(result.proposal.is_some(), "the em dash makes a proposal");
+    let canary = result.canary.expect("canary summary");
+    assert!(canary.applicable && canary.eligible, "{:?}", canary);
+    let binding = canary.identity_binding_digest.clone().expect("identity");
+    assert_eq!(binding.len(), 64);
+
+    // The sealed log: ten supervisor-verified observations, all qualifying.
+    let log_path = t.repo.join(format!(
+        ".rsi/canary/observations/{}.jsonl",
+        result.proposal.as_ref().unwrap().id
+    ));
+    let sealed = SealedObservationLog::load(&log_path).expect("sealed log verifies");
+    assert_eq!(sealed.seal.observation_count, 10);
+    assert_eq!(sealed.seal.qualifying_count, 10);
+    assert_eq!(
+        canary.log_digest.as_deref(),
+        Some(sealed.seal.log_digest.as_str())
     );
+
+    // The ledger holds the commitment, bound to the identity and the sealed log.
+    let payloads = ledger_payloads(&t.repo);
+    let c = commitment(&payloads).expect("canary_commitment block in the ledger");
+    assert_eq!(c["identity_binding_digest"], binding.as_str());
+    assert_eq!(c["log_digest"], sealed.seal.log_digest.as_str());
+    assert_eq!(c["qualifying_count"], 10);
+    assert_eq!(c["observation_count"], 10);
+    assert_eq!(c["rejection_count"], 0);
+    assert_eq!(
+        c["workload_digest"],
+        canary.workload_digest.as_deref().unwrap()
+    );
+    assert!(c["adapter_manifest_digest"].as_str().unwrap().len() == 64);
+    assert!(canary.commitment_block_hash.is_some());
+
+    // Quota admission passed, the envelope ran and is recorded as a reference evaluation, and
+    // the promotion gate decided.
+    let quota = canary.quota.expect("quota decision");
+    assert!(quota.admitted, "{:?}", quota);
+    assert_eq!(quota.counted, Some(10));
+    assert_eq!(quota.target, 10);
+    assert!(canary.envelope.expect("envelope decision").passed);
+    assert!(canary
+        .envelope_note
+        .expect("envelope note")
+        .contains("DeterministicReferenceBackend"));
+    let gate = canary.promotion_gate.expect("promotion gate decision");
+    // The in-process judge signs with the daemon's own key and binds no version 2 receipt, so
+    // the gate refuses in this cut (issue #35). Nothing becomes durable.
+    assert!(!gate.passed, "{:?}", gate);
+    assert!(!result.success);
+    assert!(result.generation.is_none());
+    assert!(fs::read_link(t.repo.join(".rsi/active")).is_err());
+    assert!(payloads
+        .iter()
+        .any(|p| p.contains("DeterministicReferenceBackend")));
+}
+
+#[tokio::test]
+async fn daemon_cycle_with_a_wrong_answering_fixture_is_refused_and_rolled_back() {
+    if !build_jail_available() {
+        return;
+    }
+    let _guard = FIXTURE_ENV_LOCK.lock().await;
+    std::env::set_var("RSI_CANARY_FIXTURE_MODE", "wrong_answer");
+    let t = make_target(true, None);
+    let outcome = RsiEngine::run_cycle(&t.config).await;
+    std::env::remove_var("RSI_CANARY_FIXTURE_MODE");
+    let result = outcome.expect("run_cycle");
+
+    let canary = result.canary.expect("canary summary");
+    let quota = canary.quota.expect("quota decision");
+    assert!(!quota.admitted, "{:?}", quota);
+    assert!(quota.refusal.is_some());
+    assert!(
+        canary.envelope.is_none(),
+        "the envelope runs only after the quota"
+    );
+    assert!(canary.promotion_gate.is_none());
+    assert!(!result.success);
+    assert!(result.generation.is_none(), "nothing becomes durable");
+    assert!(fs::read_link(t.repo.join(".rsi/active")).is_err());
+    assert!(fs::read_link(t.repo.join(".rsi/active.sock")).is_err());
+
+    let payloads = ledger_payloads(&t.repo);
+    assert!(
+        commitment(&payloads).is_some(),
+        "the commitment precedes admission"
+    );
+    assert!(
+        payloads
+            .iter()
+            .any(|p| p.contains("\"reason\"") && p.contains("rolled_back_at")),
+        "a rollback block records the reason"
+    );
+}
+
+#[tokio::test]
+async fn daemon_cycle_refuses_a_target_without_an_adapter_before_any_worker_starts() {
+    let _guard = FIXTURE_ENV_LOCK.lock().await;
+    let t = make_target(false, None);
+    let result = RsiEngine::run_cycle(&t.config).await.expect("run_cycle");
+
+    let canary = result.canary.expect("canary summary");
+    assert!(canary.applicable);
+    assert!(!canary.eligible);
+    assert!(canary.refusal.unwrap().contains("not eligible for canary"));
     assert!(
         result.proposal.is_some(),
-        "Proposal should be generated for em dash unslop"
+        "the judge ran, the canary refused"
     );
+    assert!(!result.success);
+    assert!(canary.quota.is_none() && canary.log_digest.is_none());
+    assert!(result.generation.is_none());
     assert!(
-        result.generation.is_none(),
-        "Candidate must not become durable without measured observations"
+        !t.repo.join(".rsi/canary/observations").exists(),
+        "no worker started, so no observation log exists"
     );
-    assert!(
-        fs::read_link(rsi_root.join("active")).is_err(),
-        "Active symlink must not point at an unmeasured candidate"
-    );
+    assert!(!t.repo.join(".rsi/workers").exists());
+    assert!(ledger_payloads(&t.repo)
+        .iter()
+        .any(|p| p.contains("not eligible for canary")));
+}
+
+#[tokio::test]
+async fn daemon_cycle_refuses_a_mismatched_or_missing_workload_pin() {
+    let _guard = FIXTURE_ENV_LOCK.lock().await;
+    let wrong = "0".repeat(64);
+    let t = make_target(true, Some(&wrong));
+    let err = RsiEngine::run_cycle(&t.config).await.unwrap_err();
+    assert!(err.contains("canary workload refused"), "{}", err);
+    assert!(err.contains("pinned digest"), "{}", err);
+    assert!(!t.repo.join(".rsi/canary/observations").exists());
+
+    // Unpinned fails closed in production mode.
+    let mut unpinned = make_target(true, None);
+    unpinned.config.canary_workload_sha256 = None;
+    let err = RsiEngine::run_cycle(&unpinned.config).await.unwrap_err();
+    assert!(err.contains("must pin the canary workload"), "{}", err);
+}
+
+#[tokio::test]
+async fn exemption_is_explicit_configuration_and_never_covers_executable_changes() {
+    // Default policy: nothing is exempt, so a documentation-like proposal in a tree that ships
+    // an adapter is still canary-applicable.
+    let _guard = FIXTURE_ENV_LOCK.lock().await;
+    let t = make_target(false, None);
+    assert!(t.config.canary_exempt_kinds.is_empty());
+    let result = RsiEngine::run_cycle(&t.config).await.expect("run_cycle");
+    assert!(result.canary.expect("summary").applicable);
+
+    // Listing the kind exempts it only when nothing executable is involved. This tree ships no
+    // adapter and its engine executable is already present, so the change is exempt by
+    // configuration. The exemption skips the canary only: the envelope and the promotion gate
+    // still decide, and the gate still refuses.
+    let mut listed = make_target(false, None);
+    listed.config.canary_exempt_kinds = vec![ProposalKind::UnslopSanitization];
+    let result = RsiEngine::run_cycle(&listed.config)
+        .await
+        .expect("run_cycle");
+    let canary = result.canary.expect("summary");
+    assert!(!canary.applicable);
+    assert!(canary.exemption.is_some());
+    assert!(canary.quota.is_none() && canary.log_digest.is_none());
+    assert!(canary.envelope.expect("envelope still runs").passed);
+    assert!(!canary.promotion_gate.expect("gate still decides").passed);
+    assert!(!result.success && result.generation.is_none());
+    assert!(!listed.repo.join(".rsi/canary/observations").exists());
+
+    // A tree that declares an adapter is executable: listing the kind exempts nothing. The
+    // unpinned workload stops the cycle, which proves canary admission was required.
+    let mut executable = make_target(true, None);
+    executable.config.canary_exempt_kinds = vec![ProposalKind::UnslopSanitization];
+    executable.config.canary_workload_sha256 = None;
+    let err = RsiEngine::run_cycle(&executable.config).await.unwrap_err();
+    assert!(err.contains("must pin the canary workload"), "{}", err);
 }
