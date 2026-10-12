@@ -8,7 +8,7 @@
       "children": [
         {
           "digest": "4160704abcd199e68ce44caaccc197728ce09e313a9e30d6984ef14fc6e3ffb7",
-          "last_commit": "",
+          "last_commit": "e801134",
           "name": "canary_fixture",
           "purpose": "Test helper that builds the canary-target fixture once and returns its executable"
         },
@@ -20,14 +20,14 @@
         }
       ],
       "children_root": "sha256:a6c18c6294a85bde71f89f696b37a874e108047d675fd269ed94b769c9018a99",
-      "compiled_at": "2026-10-12T22:23:17Z",
+      "compiled_at": "2026-10-12T22:42:04Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:53dcd2484f9523660b68471a0e08f15d9c969038cfac935cec845680b5b6f6a4",
+      "digest": "sha256:c304fcf8ab5541ab294fbf0dcb6df0ceb3eed74226a7815127c1a3507b046921",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 27,
-      "generated_at_commit": "bf1858d98fe647284ff6fac385c07c6749a54bc2",
-      "source_tree": "sha256:10a843131a2a053313ac51d6144bb14adc80d2e352698f6acfaad1efbb0121ec"
+      "generated_at_commit": "b68453cd2371dfd9b73f3dc4fa31e5920e462742",
+      "source_tree": "sha256:83ce3d96c9391ca8d56e1219c544866a81d7f7057576c3762ccc14440ac158e5"
     },
     "owner_lane": "",
     "seed": {
