@@ -97,8 +97,8 @@
           "purpose": "Directory src/ledger. Purpose not yet described by a human."
         },
         {
-          "digest": "33725439da850a222029d1090305e1692c7098af06fb7707ba8799a8c373fb84",
-          "last_commit": "c464d10",
+          "digest": "051db6ac64d07083f5fec412b251569f4d09cc2c8012c149ab6f93adbbcdbf0e",
+          "last_commit": "22e9181",
           "name": "measure",
           "purpose": "M1 Measurement: stage samples, sample log, compatibility filtering, percentile statistics, claim"
         },
@@ -115,27 +115,27 @@
           "purpose": "Directory src/propose. Purpose not yet described by a human."
         },
         {
-          "digest": "6a6d6b7923dc11bc903518cb1ff8aab215bb6d99b724a9d91cdc465c31cd090a",
-          "last_commit": "e6d4601",
+          "digest": "92e2857b467c0740b5987d46fc90cf8eb1ce78dfc8079cf8e67aa494142322f7",
+          "last_commit": "22e9181",
           "name": "soak",
           "purpose": "Directory src/soak. Purpose not yet described by a human."
         },
         {
-          "digest": "8cbe602bab47c72f54002beef0c291976896df13b5e1c37974d8b4babdb3662b",
-          "last_commit": "79ddf67",
+          "digest": "30c384be776b3656cebacdc039abcc06eba4347b9cf59a03b583ce30679ce2c0",
+          "last_commit": "22e9181",
           "name": "supervisor",
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:b5cccb5b9acbd0faa628d6e38b8d088158281b570c4a5298c0a4aaa456d1e468",
-      "compiled_at": "2026-10-12T22:42:04Z",
+      "children_root": "sha256:089b83c4ce73dab870c07bcf9f3cfc36da1aa683eeb1b2dc272f56e469377290",
+      "compiled_at": "2026-10-12T22:51:32Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:d50f251875b38aa8a17e5dad2476eb3af99c3bd50be856856d8cfc36cb4e6f0f",
+      "digest": "sha256:7e991002f3532715eff55912c302c1b74d23393e0efaf3d8e47a0bada5fe7b89",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 74,
-      "generated_at_commit": "b68453cd2371dfd9b73f3dc4fa31e5920e462742",
-      "source_tree": "sha256:597361ac32e3fd2908589e3119c97e955e63c14baa47efe5db1fdf601ef88cd6"
+      "generated_at_commit": "0002ce08cdbfeb1770a6f1ab117203740e28e3a7",
+      "source_tree": "sha256:ab7daf776355d93094ecbda4a1b3e04549a84289e7d39f6f1e90860d6adeeffd"
     },
     "owner_lane": "",
     "seed": {
