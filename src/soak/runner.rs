@@ -169,7 +169,7 @@ impl SoakRunner {
             let cycle_id = format!("soak-{}-c{:02}", run_id, cycle_index);
             let thermal_before = ThermalSnapshot::capture();
 
-            // Telemetry and the pipeline graph: measured stage samples from completed prior cycles,
+            // Observation and the pipeline graph: measured stage samples from completed prior cycles,
             // never constants. Without enough compatible samples the ranking is structural.
             let codebase_obs = observe_codebase(repo_path)?;
             let measure_cfg = measure_config(config);

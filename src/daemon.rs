@@ -124,18 +124,9 @@ impl RsiEngine {
             .map_err(|e| format!("Fatal: Invalid P-256 signing key: {}", e))?;
 
         // 4. Telemetry Ingestion & CapabilityGraph Population
-        let observe_started = Instant::now();
-        let observed = observe_codebase(repo_path);
-        clock.record(
-            Stage::Observe,
-            observe_started.elapsed(),
-            if observed.is_ok() {
-                StageOutcome::Ok
-            } else {
-                StageOutcome::Failed
-            },
-        );
-        let telemetry = observed?;
+        let observe_guard = clock.guard(Stage::Observe);
+        let telemetry = observe_codebase(repo_path)?;
+        observe_guard.complete(StageOutcome::Ok);
 
         // Ranking reads measurements from completed prior cycles only. This cycle's own samples
         // are appended after it ends, and its id is excluded as well.

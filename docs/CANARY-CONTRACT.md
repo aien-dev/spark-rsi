@@ -80,6 +80,12 @@ JSON lines over the generation's Unix socket, the existing `IpcConnection` frami
    observation per issued request. `worker_latency_us` and every `CanaryReport` are
    diagnostics; they never become observations.
 
+Worker environment: the supervisor launches the worker with a cleared environment plus `PATH`,
+`HOME`, `LANG`, `LC_ALL`, `TMPDIR`, `RUST_BACKTRACE`, every `RSI_CANARY_*` variable of the
+daemon, and `SUPERVISOR_SECRET` set to a fresh secret minted for that run only. The daemon's
+service credentials and the operator's supervisor secret never reach the candidate. The worker
+is not jailed in this cut; that is a stated limitation, not a property.
+
 Rejections (no observation is created, the event is logged as a rejection, no rollback):
 a message on an unauthenticated connection, a message naming another generation, an
 `ExecuteResult` for a request that was not issued or was already answered. A result for the

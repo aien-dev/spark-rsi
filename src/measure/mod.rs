@@ -104,9 +104,45 @@ pub struct StageClock {
     stages: BTreeMap<Stage, (u64, StageOutcome)>,
 }
 
+/// Records a stage on drop: `Failed` unless [`StageGuard::complete`] ran first. A stage that
+/// ends with an early `?` return still leaves its sample in the partial-cycle set.
+pub struct StageGuard<'a> {
+    clock: &'a mut StageClock,
+    stage: Stage,
+    started: std::time::Instant,
+    armed: bool,
+}
+
+impl StageGuard<'_> {
+    pub fn complete(mut self, outcome: StageOutcome) {
+        self.armed = false;
+        self.clock
+            .record(self.stage, self.started.elapsed(), outcome);
+    }
+}
+
+impl Drop for StageGuard<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.clock
+                .record(self.stage, self.started.elapsed(), StageOutcome::Failed);
+        }
+    }
+}
+
 impl StageClock {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Starts timing `stage`; the guard records `Failed` if dropped before `complete`.
+    pub fn guard(&mut self, stage: Stage) -> StageGuard<'_> {
+        StageGuard {
+            clock: self,
+            stage,
+            started: std::time::Instant::now(),
+            armed: true,
+        }
     }
 
     pub fn record(&mut self, stage: Stage, elapsed: Duration, outcome: StageOutcome) {
@@ -136,5 +172,28 @@ impl StageClock {
                     .then_some(crate::canary::CANARY_PROTOCOL_VERSION),
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn guard_records_failed_on_early_return_and_the_outcome_on_complete() {
+        fn early(clock: &mut StageClock) -> Result<(), String> {
+            let _guard = clock.guard(Stage::Observe);
+            Err("boom".to_string())
+        }
+        let mut clock = StageClock::new();
+        assert!(early(&mut clock).is_err());
+        let samples = clock.samples();
+        assert_eq!(samples.len(), 1);
+        assert_eq!(samples[0].stage, Stage::Observe);
+        assert_eq!(samples[0].outcome, StageOutcome::Failed);
+
+        let mut clock = StageClock::new();
+        clock.guard(Stage::Propose).complete(StageOutcome::Ok);
+        assert_eq!(clock.samples()[0].outcome, StageOutcome::Ok);
     }
 }

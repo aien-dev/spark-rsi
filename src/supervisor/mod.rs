@@ -140,7 +140,10 @@ impl HostSupervisor {
         let mut cmd = Command::new(executable);
         cmd.args(args).arg("--socket").arg(socket_path);
         cmd.stdin(std::process::Stdio::null());
-        for (key, value) in env {
+        // The candidate never inherits the daemon's environment: no service credentials, no
+        // operator secrets. It gets the passthrough allowlist, the canary namespace and `env`.
+        cmd.env_clear();
+        for (key, value) in worker_environment(env) {
             cmd.env(key, value);
         }
 
@@ -321,6 +324,27 @@ impl HostSupervisor {
     }
 }
 
+/// Environment variables a canary worker inherits from the supervisor process: the minimum a
+/// program needs to run. Everything else stays with the daemon.
+pub const WORKER_ENV_PASSTHROUGH: &[&str] =
+    &["PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "RUST_BACKTRACE"];
+/// The variable namespace reserved for canary workers (fixture behaviour switches live here).
+pub const WORKER_ENV_PREFIX: &str = "RSI_CANARY_";
+
+/// The environment a worker is launched with: the passthrough allowlist and the canary
+/// namespace from this process, then `extra`. A later entry overrides an earlier one.
+pub fn worker_environment(extra: &[(&str, &str)]) -> Vec<(String, String)> {
+    let mut env: Vec<(String, String)> = std::env::vars()
+        .filter(|(key, _)| {
+            WORKER_ENV_PASSTHROUGH.contains(&key.as_str()) || key.starts_with(WORKER_ENV_PREFIX)
+        })
+        .collect();
+    for (key, value) in extra {
+        env.push((key.to_string(), value.to_string()));
+    }
+    env
+}
+
 fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
     if !dst.exists() {
         fs::create_dir_all(dst).map_err(|e| e.to_string())?;
@@ -430,6 +454,29 @@ mod tests {
             .record_canary_transaction(&mut gen, false, 1000, 1_000_000, 0.0)
             .is_err());
         assert_eq!(gen.state, GenerationState::Reverting);
+    }
+
+    #[test]
+    fn worker_environment_passes_only_the_allowlist_and_the_canary_namespace() {
+        std::env::set_var("RSI_CANARY_TEST_MODE", "probe");
+        std::env::set_var("RSI_SECRET_FOR_TEST", "must-not-cross");
+        let env = worker_environment(&[("SUPERVISOR_SECRET", "run-secret")]);
+        std::env::remove_var("RSI_CANARY_TEST_MODE");
+        std::env::remove_var("RSI_SECRET_FOR_TEST");
+        let get = |k: &str| {
+            env.iter()
+                .rev()
+                .find(|(key, _)| key == k)
+                .map(|(_, v)| v.clone())
+        };
+        assert_eq!(get("RSI_CANARY_TEST_MODE").as_deref(), Some("probe"));
+        assert_eq!(get("SUPERVISOR_SECRET").as_deref(), Some("run-secret"));
+        assert!(get("RSI_SECRET_FOR_TEST").is_none());
+        assert!(env.iter().all(|(k, _)| {
+            WORKER_ENV_PASSTHROUGH.contains(&k.as_str())
+                || k.starts_with(WORKER_ENV_PREFIX)
+                || k == "SUPERVISOR_SECRET"
+        }));
     }
 
     #[test]
