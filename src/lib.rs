@@ -13,6 +13,7 @@ pub mod explain;
 pub mod graph;
 pub mod isolation;
 pub mod ledger;
+pub mod measure;
 pub mod meta;
 pub mod models;
 pub mod observe;
