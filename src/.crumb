@@ -91,7 +91,7 @@
           "purpose": "Directory src/isolation. Purpose not yet described by a human."
         },
         {
-          "digest": "0e6ddf895c1a822d2f891f0f8bf304d0f2b9863e8b0823aa10615323ff9c1f85",
+          "digest": "14d238f00b55daa05e2c2438ccd11c69e5bf51a4fbc3fbbdaf1cf0c041b7e61f",
           "last_commit": "28cbca6",
           "name": "ledger",
           "purpose": "Directory src/ledger. Purpose not yet described by a human."
@@ -127,15 +127,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:089b83c4ce73dab870c07bcf9f3cfc36da1aa683eeb1b2dc272f56e469377290",
-      "compiled_at": "2026-10-13T00:30:33Z",
+      "children_root": "sha256:4dd32f2e8b6abd64e0959f33f436f19bcb0f6540610acccadda8df6f17670592",
+      "compiled_at": "2026-10-13T02:52:51Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:9006b0303b658887fee5cd99d1f7c238607a699a490256de5dad12425e3d1d91",
+      "digest": "sha256:b4d7c3fe9d622e7efc51bbf963eaca1cc89b4e5adc0514ef4d2caa050cb03d09",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 74,
-      "generated_at_commit": "27525239c3599987d1883299c88e4979c1417c9e",
-      "source_tree": "sha256:d7eb61f7e0dc4fef3a45d1e14cfa18f9e97abddd165d5a77e4981effa3c92089"
+      "generated_at_commit": "f7f08b5cc31a620420f4b8db8fbfbb35a65325b6",
+      "source_tree": "sha256:d4d8f2c68762f8669058bcda120e5e4aef2cd22f01d2fa057ace81caf6d15364"
     },
     "owner_lane": "",
     "seed": {

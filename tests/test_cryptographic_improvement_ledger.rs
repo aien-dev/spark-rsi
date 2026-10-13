@@ -359,3 +359,130 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         .expect("Chain audit failed");
     assert!(audit.chain_valid);
 }
+
+#[test]
+fn test_checkpoint_behind_the_head_is_still_verified() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rsi_root = tmp.path().join(".rsi");
+    let ledger = ImprovementLedger::open(&rsi_root).unwrap();
+
+    let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
+    let verifying_key = VerifyingKey::from(&signing_key);
+    let attacker_key = SigningKey::from_bytes(&[99u8; 32].into()).unwrap();
+
+    for i in 1..=3 {
+        ledger
+            .append_block(
+                BlockType::Evaluation,
+                format!("{{\"eval\": {}}}", i),
+                Vec::new(),
+            )
+            .unwrap();
+    }
+    ledger.checkpoint(Some(&signing_key)).unwrap();
+    for i in 4..=5 {
+        ledger
+            .append_block(
+                BlockType::Evaluation,
+                format!("{{\"eval\": {}}}", i),
+                Vec::new(),
+            )
+            .unwrap();
+    }
+
+    // 1. The checkpoint at #3 is verified even though the head is #5.
+    let report = ledger.verify_chain_integrity(Some(&verifying_key)).unwrap();
+    assert!(report.checkpoint_verified);
+    assert!(report.signature_verified);
+    assert_eq!(report.checkpoint_sequence, Some(3));
+    assert_eq!(report.blocks_after_checkpoint, 2);
+    assert_eq!(
+        report.unchecked(true),
+        vec!["2 block(s) after checkpoint #3 are not covered by any checkpoint".to_string()]
+    );
+
+    // 2. A wrong key is caught for that checkpoint too.
+    let audit_fail = ledger.verify_chain_integrity(Some(&VerifyingKey::from(&attacker_key)));
+    assert!(audit_fail
+        .err()
+        .unwrap()
+        .contains("signature verification failed"));
+
+    // 3. A tampered checkpoint root is caught.
+    let conn = Connection::open(rsi_root.join("ledger.db")).unwrap();
+    conn.execute(
+        "UPDATE checkpoints SET merkle_root = 'deadbeef' WHERE up_to_sequence = 3",
+        [],
+    )
+    .unwrap();
+    let audit_fail = ledger.verify_chain_integrity(None);
+    assert!(audit_fail.err().unwrap().contains("Merkle root mismatch"));
+}
+
+#[test]
+fn test_ledger_truncated_below_its_checkpoint_fails() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rsi_root = tmp.path().join(".rsi");
+    let ledger = ImprovementLedger::open(&rsi_root).unwrap();
+
+    for i in 1..=4 {
+        ledger
+            .append_block(
+                BlockType::Evaluation,
+                format!("{{\"eval\": {}}}", i),
+                Vec::new(),
+            )
+            .unwrap();
+    }
+    ledger.checkpoint(None).unwrap();
+
+    // Dropping the newest blocks leaves a valid hash chain, but the checkpoint remembers them.
+    let conn = Connection::open(rsi_root.join("ledger.db")).unwrap();
+    conn.execute("DELETE FROM blocks WHERE sequence >= 3", [])
+        .unwrap();
+
+    let audit_fail = ledger.verify_chain_integrity(None);
+    assert!(audit_fail
+        .err()
+        .unwrap()
+        .contains("Checkpoint covers sequence 4 but the ledger ends at 2"));
+}
+
+#[test]
+fn test_audit_report_names_what_it_did_not_check() {
+    let tmp = tempfile::tempdir().unwrap();
+    let rsi_root = tmp.path().join(".rsi");
+    let ledger = ImprovementLedger::open(&rsi_root).unwrap();
+    let signing_key = SigningKey::from_bytes(&[88u8; 32].into()).unwrap();
+    let verifying_key = VerifyingKey::from(&signing_key);
+
+    ledger
+        .append_block(
+            BlockType::Evaluation,
+            "{\"eval\": 1}".to_string(),
+            Vec::new(),
+        )
+        .unwrap();
+
+    // No checkpoint: every block is uncovered.
+    let report = ledger.verify_chain_integrity(None).unwrap();
+    assert_eq!(report.checkpoint_sequence, None);
+    assert_eq!(report.blocks_after_checkpoint, 2);
+    assert_eq!(
+        report.unchecked(false),
+        vec!["no Merkle checkpoint is stored".to_string()]
+    );
+
+    // A checkpoint at the head, but no key to check its signature.
+    ledger.checkpoint(Some(&signing_key)).unwrap();
+    let report = ledger.verify_chain_integrity(None).unwrap();
+    assert_eq!(report.blocks_after_checkpoint, 0);
+    assert_eq!(
+        report.unchecked(false),
+        vec!["the checkpoint signature was not checked (no verifying key)".to_string()]
+    );
+
+    // Everything checked.
+    let report = ledger.verify_chain_integrity(Some(&verifying_key)).unwrap();
+    assert!(report.unchecked(true).is_empty());
+}
