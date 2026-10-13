@@ -11,6 +11,8 @@ Copyright (c) 2026 Drake Stapleton <aien@aienos.com> and AIEN Contributors. Auth
 
 High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine for autonomous AI agents. Designed to be completely portable and universal: any developer or organization can download, configure their operator identity, and plug in their own models via API or local Modular MAX.
 
+**Status:** Not part of the WHOLE-SYSTEM-E2E v1 release (Drake, 2026-10-10). Evaluated independently; no unattended self-modification or automatic promotion. The daemon's promotion gate requires a version 2 receipt from a separate judge ([docs/RECEIPT-V2.md](docs/RECEIPT-V2.md)) and refuses every candidate its own in-process judge evaluated.
+
 ---
 
 ## Quick Start & Universal Operator Onboarding
@@ -32,6 +34,23 @@ spark-rsi init \
 ```
 
 Configuration is persisted locally to `~/.config/sovereign/operator.toml` and shared across the entire sovereign toolchain. All git commits and ratification records dynamically reflect your configured identity.
+
+---
+
+## Build and Verification
+
+spark-rsi is not a standalone checkout. It depends on the protocol crates by path, so [aien-protocols](https://github.com/aien-dev/aien-protocols) must be cloned next to it:
+
+```bash
+git clone https://github.com/aien-dev/aien-protocols ../aien-protocols
+cargo test --locked -- --test-threads=1
+```
+
+CI is the "Sovereign CI" workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml)); its job "Test & Invariant Verification" is the required check on `main`.
+
+### Version 2 judge receipts from the CLI
+
+`spark-rsi judge` writes a version 2 receipt whenever an evaluation policy is configured, with `--policy-file` or `RSI_JUDGE_POLICY_FILE`. A policy requires `--subject-path` (the one file the receipt binds) and normally `--executable`. A malformed policy, or a policy without a subject, is refused rather than downgraded. Without a policy the judge writes a version 1 receipt, which is history only and never promotes. `spark-rsi cycle` and `spark-rsi daemon` take the promotion gate's pins as `--judge-policy-file` / `RSI_JUDGE_POLICY_FILE` and `--judge-public-key` / `RSI_JUDGE_PUBLIC_KEY`, and refuse malformed pins at startup.
 
 ---
 
