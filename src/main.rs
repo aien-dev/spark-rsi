@@ -135,6 +135,21 @@ enum Commands {
         require_latency_improvement: bool,
         #[arg(long, default_value_t = 1.0)]
         non_inferiority_margin_pct: f64,
+        /// The one file (relative to the candidate tree) whose exact bytes a version 2 receipt
+        /// binds. Required whenever a policy is configured.
+        #[arg(long)]
+        subject_path: Option<String>,
+        /// Evaluation policy for version 2 receipts. Falls back to `RSI_JUDGE_POLICY_FILE`; with a
+        /// policy configured every receipt is version 2, and a malformed policy is refused.
+        #[arg(long)]
+        policy_file: Option<String>,
+        /// Executable to run for holdouts and benchmarks, relative to each tree (version 2 names
+        /// it, never searches for it).
+        #[arg(long)]
+        executable: Option<String>,
+        /// Build both trees into a fresh judge-owned target directory before evaluating.
+        #[arg(long, requires = "executable")]
+        build_release: bool,
     },
     /// Execute a holdout test case against internal logic
     Holdout {
@@ -156,6 +171,14 @@ enum Commands {
         /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
         #[arg(long)]
         dual_price_vector_dir: Option<String>,
+        /// SEC1 hex public key of the separate judge, pinned for the promotion gate. Falls back to
+        /// `RSI_JUDGE_PUBLIC_KEY`. A malformed key is refused at startup.
+        #[arg(long)]
+        judge_public_key: Option<String>,
+        /// Evaluation policy promotion receipts must be bound to. Falls back to
+        /// `RSI_JUDGE_POLICY_FILE`. A malformed policy is refused at startup.
+        #[arg(long)]
+        judge_policy_file: Option<String>,
     },
     /// Run the continuous recursive self-improvement daemon loop
     Daemon {
@@ -174,6 +197,14 @@ enum Commands {
         /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
         #[arg(long)]
         dual_price_vector_dir: Option<String>,
+        /// SEC1 hex public key of the separate judge, pinned for the promotion gate. Falls back to
+        /// `RSI_JUDGE_PUBLIC_KEY`. A malformed key is refused at startup.
+        #[arg(long)]
+        judge_public_key: Option<String>,
+        /// Evaluation policy promotion receipts must be bound to. Falls back to
+        /// `RSI_JUDGE_POLICY_FILE`. A malformed policy is refused at startup.
+        #[arg(long)]
+        judge_policy_file: Option<String>,
     },
     /// Manage the append-only cryptographic improvement ledger
     Ledger {
@@ -209,6 +240,36 @@ enum Commands {
     },
     /// Display the sovereign programming philosophy manifesto
     Philosophy,
+}
+
+/// Environment variable holding the operator's evaluation policy for version 2 receipts.
+const JUDGE_POLICY_ENV: &str = "RSI_JUDGE_POLICY_FILE";
+/// Environment variable holding the separate judge's SEC1 hex public key.
+const JUDGE_PUBLIC_KEY_ENV: &str = "RSI_JUDGE_PUBLIC_KEY";
+
+/// The flag when given, otherwise the non-empty environment variable.
+fn flag_or_env(flag: Option<String>, var: &str) -> Option<String> {
+    flag.or_else(|| std::env::var(var).ok().filter(|v| !v.trim().is_empty()))
+}
+
+/// Loads the judge pins `cycle` and `daemon` hand the promotion gate, so a malformed policy or
+/// key stops the command at startup instead of surfacing as a refusal cycles later.
+fn validated_judge_pins(
+    public_key: Option<String>,
+    policy_file: Option<String>,
+) -> Result<(Option<String>, Option<String>), String> {
+    let public_key = flag_or_env(public_key, JUDGE_PUBLIC_KEY_ENV);
+    let policy_file = flag_or_env(policy_file, JUDGE_POLICY_ENV);
+    if let Some(p) = &policy_file {
+        spark_rsi::actor::judge::EvaluationPolicy::load(Path::new(p))?;
+    }
+    if let Some(k) = &public_key {
+        let bytes =
+            hex::decode(k.trim()).map_err(|e| format!("judge public key is not hex: {}", e))?;
+        p256::ecdsa::VerifyingKey::from_sec1_bytes(&bytes)
+            .map_err(|e| format!("judge public key is invalid: {}", e))?;
+    }
+    Ok((public_key, policy_file))
 }
 
 #[tokio::main]
@@ -327,7 +388,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             signing_key_file,
             require_latency_improvement,
             non_inferiority_margin_pct,
+            subject_path,
+            policy_file,
+            executable,
+            build_release,
         } => {
+            let policy_file = flag_or_env(policy_file, JUDGE_POLICY_ENV);
+            match (&policy_file, &subject_path) {
+                (Some(_), None) => {
+                    return Err(
+                        "a judge policy is configured but --subject-path is missing; \
+                                refusing to fall back to a version 1 receipt"
+                            .into(),
+                    )
+                }
+                (None, Some(_)) => {
+                    return Err(format!(
+                        "--subject-path needs a policy (--policy-file or {})",
+                        JUDGE_POLICY_ENV
+                    )
+                    .into())
+                }
+                (None, None) => eprintln!(
+                    "no judge policy (--policy-file or {}): writing a version 1 receipt, \
+                     which is history only and never promotes",
+                    JUDGE_POLICY_ENV
+                ),
+                (Some(_), Some(_)) => {}
+            }
             let judge_cli = spark_rsi::actor::JudgeCli {
                 cycle_id,
                 candidate_id,
@@ -340,10 +428,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 signing_key_file,
                 require_latency_improvement,
                 non_inferiority_margin_pct,
-                subject_path: None,
-                policy_file: None,
-                executable: None,
-                build_release: false,
+                subject_path,
+                policy_file,
+                executable,
+                build_release,
                 public_key: false,
                 print_holdout_digest: false,
             };
@@ -360,7 +448,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_url,
             max_model,
             dual_price_vector_dir,
+            judge_public_key,
+            judge_policy_file,
         } => {
+            let (judge_public_key_hex, judge_policy_file) =
+                validated_judge_pins(judge_public_key, judge_policy_file)?;
             let config = RsiConfig {
                 target_repo: path,
                 cortex_url,
@@ -379,8 +471,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 non_inferiority_margin: None,
                 ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
                 dual_price_vector_dir,
-                judge_public_key_hex: None,
-                judge_policy_file: None,
+                judge_public_key_hex,
+                judge_policy_file,
                 ..RsiConfig::default()
             };
             let result = RsiEngine::run_cycle(&config).await?;
@@ -394,7 +486,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_url,
             max_model,
             dual_price_vector_dir,
+            judge_public_key,
+            judge_policy_file,
         } => {
+            let (judge_public_key_hex, judge_policy_file) =
+                validated_judge_pins(judge_public_key, judge_policy_file)?;
             let config = RsiConfig {
                 target_repo: path,
                 cortex_url,
@@ -413,8 +509,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 non_inferiority_margin: None,
                 ratify_roots: spark_rsi::diff_gate::default_ratify_roots(),
                 dual_price_vector_dir,
-                judge_public_key_hex: None,
-                judge_policy_file: None,
+                judge_public_key_hex,
+                judge_policy_file,
                 ..RsiConfig::default()
             };
             RsiEngine::run_daemon(config).await?;
