@@ -7,11 +7,32 @@ use tokio::net::{UnixListener, UnixStream};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SupervisorMessage {
-    DrainStart { timeout_secs: u64 },
-    RevertOrder { reason: String },
-    ShutdownAck { pid: u32 },
+    DrainStart {
+        timeout_secs: u64,
+    },
+    RevertOrder {
+        reason: String,
+    },
+    ShutdownAck {
+        pid: u32,
+    },
     Ping,
-    AuthChallenge { nonce: String },
+    AuthChallenge {
+        nonce: String,
+    },
+    /// Canary execute protocol, version `crate::canary::CANARY_PROTOCOL_VERSION`: one
+    /// challenge the supervisor issues on an authenticated generation connection. The
+    /// supervisor starts its own clock when it sends this frame. The worker sees only `input`;
+    /// the expected outcome stays in the operator's pinned workload.
+    ExecuteRequest {
+        protocol_version: u16,
+        generation_id: String,
+        request_id: String,
+        request_digest: String,
+        workload_digest: String,
+        input: String,
+        deadline_ms: u64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -20,6 +41,10 @@ pub enum WorkerMessage {
         generation_id: String,
         pid: u32,
         auth_token: String,
+        /// Execute protocol version the worker speaks. Absent in records from older workers,
+        /// which read as 0 and are never ready for canary execution.
+        #[serde(default)]
+        protocol_version: u16,
     },
     Heartbeat {
         generation_id: String,
@@ -41,6 +66,47 @@ pub enum WorkerMessage {
     AuthResponse {
         response: String,
     },
+    /// The worker's answer to one `ExecuteRequest`. Nothing in it is trusted: the supervisor
+    /// hashes `output` itself, compares it with the pinned expectation and measures elapsed
+    /// time on its own clock. `worker_latency_us` is a diagnostic, never an observation.
+    ExecuteResult {
+        protocol_version: u16,
+        generation_id: String,
+        request_id: String,
+        output: String,
+        #[serde(default)]
+        worker_latency_us: Option<u64>,
+    },
+}
+
+/// Authentication state the supervisor keeps per accepted connection. A connection starts
+/// `Unauthenticated` and becomes `Authenticated` only when a versioned `Ready` for the expected
+/// generation completed the HMAC challenge. Messages on an unauthenticated connection, or
+/// naming another generation, are rejected and the connection is closed. The enforcement is
+/// the supervisor's (plan step 3); the type lives here so every worker uses the same one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConnectionAuthState {
+    Unauthenticated,
+    Authenticated {
+        generation_id: String,
+        pid: u32,
+        protocol_version: u16,
+    },
+}
+
+impl ConnectionAuthState {
+    pub fn is_authenticated_for(&self, generation_id: &str) -> bool {
+        matches!(self, ConnectionAuthState::Authenticated { generation_id: g, .. } if g == generation_id)
+    }
+
+    /// Authenticated for `generation_id` and speaking the current execute protocol.
+    pub fn can_execute_for(&self, generation_id: &str) -> bool {
+        matches!(
+            self,
+            ConnectionAuthState::Authenticated { generation_id: g, protocol_version, .. }
+                if g == generation_id && *protocol_version == crate::canary::CANARY_PROTOCOL_VERSION
+        )
+    }
 }
 
 pub struct IpcConnection {
@@ -98,6 +164,7 @@ impl IpcConnection {
             generation_id: generation_id.to_string(),
             pid,
             auth_token: String::new(),
+            protocol_version: crate::canary::CANARY_PROTOCOL_VERSION,
         })
         .await?;
 
@@ -284,6 +351,7 @@ mod tests {
                         generation_id: "gen-001".to_string(),
                         pid: 12345,
                         auth_token: "auth-token-xyz".to_string(),
+                        protocol_version: crate::canary::CANARY_PROTOCOL_VERSION,
                     })
                     .await
                     .unwrap();
@@ -302,10 +370,12 @@ mod tests {
                 generation_id,
                 pid,
                 auth_token,
+                protocol_version,
             } => {
                 assert_eq!(generation_id, "gen-001");
                 assert_eq!(pid, 12345);
                 assert_eq!(auth_token, "auth-token-xyz");
+                assert_eq!(protocol_version, crate::canary::CANARY_PROTOCOL_VERSION);
             }
             _ => panic!("Expected Ready message"),
         }

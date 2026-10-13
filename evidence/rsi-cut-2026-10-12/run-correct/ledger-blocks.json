@@ -1,0 +1,54 @@
+[
+  {
+    "sequence": 0,
+    "block_type": "GENESIS",
+    "timestamp_utc": "2026-10-12T22:52:59.060978107+00:00",
+    "prev_block_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "payload_json": "{\"law\":\"Build the cage, build the measuring instruments, then give the animal a bigger brain.\",\"standard\":\"Apache-2.0 WITH LLVM-exception\",\"system\":\"spark-rsi\"}",
+    "payload_digest": "d56738f89def0673257ac9c8b5ccc22fd59aeda4465fdff0bf75cac409d4e338",
+    "blob_hashes": [],
+    "block_hash": "7935edb366fed326b4ba097e41e9944264464371b3fd29167e5bca2f680bb99c"
+  },
+  {
+    "sequence": 1,
+    "block_type": "EVALUATION",
+    "timestamp_utc": "2026-10-12T22:53:01.270758717+00:00",
+    "prev_block_hash": "7935edb366fed326b4ba097e41e9944264464371b3fd29167e5bca2f680bb99c",
+    "payload_json": "{\"cycle_id\":\"cycle-2abc6c8bd0794b1681c5c3d90228258d\",\"candidate_id\":\"prop-108fc8bf5a3c4b0ab339dd33c18f81f6\",\"parent_id\":\"parent\",\"evaluated_at\":\"2026-10-12T22:53:01.270511614+00:00\",\"evaluator_version\":\"0.1.0\",\"passed_all_hard_invariants\":true,\"passed_statistical_gates\":true,\"admitted\":true,\"layer_results\":[{\"layer_name\":\"Correctness\",\"is_hard_invariant\":true,\"passed\":true,\"score\":1.0,\"summary\":\"Correctness: compile=OK, abi=STABLE, unit=1/1, integ=0/0\",\"violations\":[]},{\"layer_name\":\"Security\",\"is_hard_invariant\":true,\"passed\":true,\"score\":1.0,\"summary\":\"Security: root_of_trust=PASS, zero_disk_secrets=PASS, network_isolation=PASS\",\"violations\":[]},{\"layer_name\":\"Style\",\"is_hard_invariant\":true,\"passed\":true,\"score\":1.0,\"summary\":\"Style: em_dashes=0, en_dashes=0, buzzwords=0, tropes=0\",\"violations\":[]},{\"layer_name\":\"Performance\",\"is_hard_invariant\":false,\"passed\":true,\"score\":1.0,\"summary\":\"Performance: delta=-1.17%, p_val=0.7892, p95_ci_upper=3.00%, p99_ci_upper=1.89%, sig=NO\",\"violations\":[]},{\"layer_name\":\"ResourceEfficiency\",\"is_hard_invariant\":false,\"passed\":true,\"score\":1.0,\"summary\":\"ResourceEfficiency: rss_growth=0.00%, limit_mb_ok=true, ctxt_delta=7\",\"violations\":[]},{\"layer_name\":\"LongitudinalReplay\",\"is_hard_invariant\":true,\"passed\":true,\"score\":1.0,\"summary\":\"LongitudinalReplay: passed=4/4, regressions=0\",\"violations\":[]}],\"metrics_summary\":{\"latency_delta_pct\":-1.1735871926242103,\"p_value\":0.7892,\"p95_ci_upper_degradation_pct\":2.9950299562868743,\"p99_ci_upper_degradation_pct\":1.886727229326354,\"rss_growth_pct\":0.0,\"candidate_resident_mb\":1358},\"receipt_digest\":\"f8fa11a639d088dec5cb28634831398d5e13489faa8a8e83d294cc5ab4aeb9be\",\"signature\":\"tpm2-p256:9690d4ecb77a916ce0f979351c82335065fbc6c2a059070ca1fa1ab74611ec290d3b7bf17e3aae0f12d6b15b3a8e1525839fe5911b0c20f69d2a47cc23ca19c2\",\"format_version\":1}",
+    "payload_digest": "4b1d004e91339d3754c5c98af6fe456d86d8e1f44874d99e17749a7a9c944a16",
+    "blob_hashes": [
+      "4b1d004e91339d3754c5c98af6fe456d86d8e1f44874d99e17749a7a9c944a16"
+    ],
+    "block_hash": "62be1e35ce27e9e9d3dd975b9c82e42b234f90a8d6e42e40ab9959d00be33c25"
+  },
+  {
+    "sequence": 2,
+    "block_type": "EVALUATION",
+    "timestamp_utc": "2026-10-12T22:53:03.416237284+00:00",
+    "prev_block_hash": "62be1e35ce27e9e9d3dd975b9c82e42b234f90a8d6e42e40ab9959d00be33c25",
+    "payload_json": "{\"canary_commitment\":{\"adapter_manifest_digest\":\"b0023eee140cff56e6455b6ebad08225aefd2d1d5b4df17944b844ab1b5abaf9\",\"executable_digest\":\"870722da2227135d0d53c1575a8f2ca5dcf41c630415d4dda389073af0f2341e\",\"generation_id\":\"prop-108fc8bf5a3c4b0ab339dd33c18f81f6\",\"identity_binding_digest\":\"37ad7245245e5d06a4084a820b314c849c96a61c8365e3a407bef726b533f76d\",\"log_digest\":\"656369180cb7b506457b03037cddd65005d66f2e73f21e7a07cb01123541306a\",\"observation_count\":10,\"patch_digest\":\"cdad6a06178fdad8e24e6801b90066d946df76ea6ae3f3c65155441e374cbe8f\",\"qualifying_count\":10,\"rejection_count\":0,\"sealed_log_path\":\"/tmp/.tmpQWuBiL/repo/.rsi/canary/observations/prop-108fc8bf5a3c4b0ab339dd33c18f81f6.jsonl\",\"tree_digest\":\"65848a9f0114b82b24b93151ee35be546cb0b4effded44d4ecd61077af3d7d37\",\"workload_digest\":\"d21ca53e23457bd1da84e0cc2115999208312eea03f30616a5c3d46e97e39bab\",\"workload_id\":\"fixture-v1\"}}",
+    "payload_digest": "a88b12a96d3c1a09f7ac70c4726e49f34522dc5d60a2e9a23de71c4b107e9040",
+    "blob_hashes": [],
+    "block_hash": "7a2bc9e5c69064930251c4b08680dbe52f70d4fc1f1bf599929fe7164133d738"
+  },
+  {
+    "sequence": 3,
+    "block_type": "ROLLBACK",
+    "timestamp_utc": "2026-10-12T22:53:03.416397716+00:00",
+    "prev_block_hash": "7a2bc9e5c69064930251c4b08680dbe52f70d4fc1f1bf599929fe7164133d738",
+    "payload_json": "{\"generation_id\":\"prop-108fc8bf5a3c4b0ab339dd33c18f81f6\",\"reason\":\"Promotion gate refused: no pinned judge public key (judge_public_key_hex); promotion fails closed\",\"rolled_back_at\":\"2026-10-12T22:53:03.416388100+00:00\"}",
+    "payload_digest": "2551bf044019aa93ebea4ac6e7b55f220ef0dd226e369f0f4243a730c5313722",
+    "blob_hashes": [],
+    "block_hash": "5d0debd3f79bacc4e1405b3664a1e2c733374b2166849a7d0f6d6a0afd5adeff"
+  },
+  {
+    "sequence": 4,
+    "block_type": "EVALUATION",
+    "timestamp_utc": "2026-10-12T22:53:03.416428900+00:00",
+    "prev_block_hash": "5d0debd3f79bacc4e1405b3664a1e2c733374b2166849a7d0f6d6a0afd5adeff",
+    "payload_json": "{\"canary_decision\":{\"commitment_block_hash\":\"7a2bc9e5c69064930251c4b08680dbe52f70d4fc1f1bf599929fe7164133d738\",\"envelope\":{\"detail\":\"signed canary evaluation receipt issued\",\"passed\":true},\"envelope_note\":\"the safety envelope evaluated through aien_probe::DeterministicReferenceBackend; this is a reference evaluation and does not establish production safety\",\"generation_id\":\"prop-108fc8bf5a3c4b0ab339dd33c18f81f6\",\"identity_binding_digest\":\"37ad7245245e5d06a4084a820b314c849c96a61c8365e3a407bef726b533f76d\",\"log_digest\":\"656369180cb7b506457b03037cddd65005d66f2e73f21e7a07cb01123541306a\",\"promotion_gate\":{\"detail\":\"no pinned judge public key (judge_public_key_hex); promotion fails closed\",\"passed\":false},\"quota\":{\"admitted\":true,\"counted\":10,\"refusal\":null,\"target\":10}}}",
+    "payload_digest": "4d489114421e62a135f5e51a62fb75146456e2c97cbce31c724a77af1710e6b9",
+    "blob_hashes": [],
+    "block_hash": "246289d50c6740505d6c75295b04de8380e523ec56e2d0a598fd83c7cf2cd8df"
+  }
+]

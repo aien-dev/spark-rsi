@@ -16,7 +16,7 @@
 //!   evidence and are never included.
 
 use crate::evaluator::EvaluationReceipt;
-use crate::graph::{BottleneckRank, CapabilityGraph};
+use crate::graph::{BottleneckRank, CapabilityGraph, Measurement, RankingBasis};
 use crate::models::RatificationRecord;
 use crate::propose::diagnose::DiagnosticContext;
 use crate::propose::hypothesis::HypothesisContract;
@@ -127,12 +127,12 @@ impl EvidenceGraphDoc {
     }
 }
 
-/// Whether capability metrics were measured or written in by hand. The daemon's
-/// current capability graph uses fixed constants, which are `Declared`.
+/// Where capability metrics come from. Every value present in the graph is measured from stage
+/// samples; a stage without enough samples is marked unavailable on its node (and in the
+/// evidence as a `MissingDoc`), never filled with a number.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MetricsOrigin {
     Measured,
-    Declared,
 }
 
 /// The artifacts of one RSI cycle, all optional except the cycle id.
@@ -214,12 +214,17 @@ pub fn conclusion_id(cycle_id: &str) -> String {
 
 /// True when the hypothesis was built from this bottleneck the way the daemon builds
 /// it: the node name appears quoted in the problem or root cause text, and the
-/// baseline is the bottleneck's p95 latency. This is a deterministic check on
+/// baseline is the bottleneck's measured median latency (an exploratory hypothesis has no
+/// baseline, so it matches only when the bottleneck has no measured latency either). This is a deterministic check on
 /// explicit fields, not a guess; when it fails the link is declared missing.
 pub fn hypothesis_derived_from(h: &HypothesisContract, b: &BottleneckRank) -> bool {
     let quoted = format!("'{}'", b.node_name);
     (h.observed_problem.contains(&quoted) || h.suspected_root_cause.contains(&quoted))
-        && h.baseline_value == b.latency_p95_us
+        && match (h.latency_claim(), b.latency_median_us) {
+            (Some((baseline, _)), Some(median)) => baseline == median,
+            (None, None) => true,
+            _ => false,
+        }
 }
 
 /// Build the evidence graph for one RSI cycle. Deterministic: node order is fixed,
@@ -251,10 +256,7 @@ pub fn evidence_graph(ev: &RsiCycleEvidence<'_>) -> EvidenceGraphDoc {
     let receipt = ev
         .receipt
         .filter(|r| same_cycle("evaluation receipt", &r.candidate_id, &r.cycle_id));
-    let metric_status = match ev.metrics_origin {
-        MetricsOrigin::Measured => STATUS_DIRECT_OBSERVATION,
-        MetricsOrigin::Declared => STATUS_UNCLASSIFIED,
-    };
+    let MetricsOrigin::Measured = ev.metrics_origin;
 
     // Observed: capability metrics.
     let mut metric_ids: Vec<String> = Vec::new();
@@ -263,30 +265,63 @@ pub fn evidence_graph(ev: &RsiCycleEvidence<'_>) -> EvidenceGraphDoc {
         caps.sort_by(|a, b| a.id.cmp(&b.id));
         for c in caps {
             let id = capability_node_id(&c.id);
+            let measured = c.measurement == Measurement::Measured && c.latency_median_us.is_some();
             let mut n = node(
                 id.clone(),
                 KIND_CAPABILITY_METRIC,
-                metric_status,
-                format!(
-                    "'{}' ({}) has p95 latency {:.1} us, error rate {:.2}%, resident memory {} KiB",
-                    c.name,
-                    c.subsystem,
-                    c.latency_p95_us,
-                    c.error_rate * 100.0,
-                    c.memory_rss_kb
-                ),
+                if measured {
+                    STATUS_DIRECT_OBSERVATION
+                } else {
+                    STATUS_UNCLASSIFIED
+                },
+                match c.latency_median_us.filter(|_| measured) {
+                    Some(median) => format!(
+                        "'{}' ({}) has measured median latency {:.1} us over {} samples",
+                        c.name, c.subsystem, median, c.sample_count
+                    ),
+                    None => format!(
+                        "'{}' ({}) has no measured latency (unavailable)",
+                        c.name, c.subsystem
+                    ),
+                },
                 src("CapabilityNode", &c.id, None),
             );
-            n.measurements = vec![
-                m("latency_p95_us", format!("{:.3}", c.latency_p95_us), "us"),
-                m("error_rate", format!("{:.6}", c.error_rate), "fraction"),
-                m("memory_rss_kb", c.memory_rss_kb.to_string(), "KiB"),
-            ];
-            if ev.metrics_origin == MetricsOrigin::Declared {
-                n.notes.push(format!(
-                    "metric values for '{}' were declared in the capability graph, not measured",
-                    c.name
-                ));
+            let why = c
+                .unavailable_reason
+                .clone()
+                .unwrap_or_else(|| "no measurement".to_string());
+            if measured {
+                n.measurements = vec![
+                    m(
+                        "latency_median_us",
+                        format!("{:.3}", c.latency_median_us.unwrap_or_default()),
+                        "us",
+                    ),
+                    m("sample_count", c.sample_count.to_string(), ""),
+                ];
+                if let Some(e) = c.error_rate_measured {
+                    n.measurements
+                        .push(m("error_rate_measured", format!("{:.6}", e), "fraction"));
+                }
+                match c.latency_p95_us_measured {
+                    Some(p) => {
+                        n.measurements
+                            .push(m("latency_p95_us_measured", format!("{:.3}", p), "us"))
+                    }
+                    None => n.missing.push(MissingDoc {
+                        expected: format!("measured p95 latency of stage '{}'", c.name),
+                        reason: why,
+                    }),
+                }
+            } else {
+                n.missing.push(MissingDoc {
+                    expected: format!("measured median latency of stage '{}'", c.name),
+                    reason: why.clone(),
+                });
+                n.missing.push(MissingDoc {
+                    expected: format!("measured error rate of stage '{}'", c.name),
+                    reason: why,
+                });
             }
             metric_ids.push(id);
             nodes.push(n);
@@ -314,9 +349,21 @@ pub fn evidence_graph(ev: &RsiCycleEvidence<'_>) -> EvidenceGraphDoc {
         n.measurements = vec![
             m("bottleneck_score", format!("{:.4}", b.bottleneck_score), ""),
             m("centrality", format!("{:.4}", b.centrality), ""),
-            m("latency_p95_us", format!("{:.3}", b.latency_p95_us), "us"),
-            m("error_rate", format!("{:.6}", b.error_rate), "fraction"),
+            m("ranking_basis", format!("{:?}", b.ranking_basis).to_lowercase(), ""),
         ];
+        match b.latency_median_us {
+            Some(v) => n.measurements.push(m("latency_median_us", format!("{:.3}", v), "us")),
+            None => n.missing.push(MissingDoc {
+                expected: format!("measured median latency of the top-ranked stage '{}'", b.node_name),
+                reason: b.unavailable_reason.clone().unwrap_or_else(|| "no measurement".to_string()),
+            }),
+        }
+        if b.ranking_basis == RankingBasis::Structural {
+            n.missing.push(MissingDoc {
+                expected: "latency and error terms of the bottleneck score".into(),
+                reason: "at least one stage is unavailable, so the ranking uses betweenness centrality only".into(),
+            });
+        }
         if metric_ids.is_empty() {
             n.missing.push(MissingDoc {
                 expected: "capability metrics the ranking was computed from".into(),
@@ -378,7 +425,7 @@ pub fn evidence_graph(ev: &RsiCycleEvidence<'_>) -> EvidenceGraphDoc {
             ),
             src("HypothesisContract", &h.id, None),
         );
-        if h.confidence_score.is_finite() {
+        if h.confidence_score.is_finite() && !h.is_exploratory() {
             n.confidence_permille =
                 Some((h.confidence_score.clamp(0.0, 1.0) * 1000.0).round() as u16);
             n.confidence_basis = Some("declared in the HypothesisContract, not measured".into());
@@ -416,22 +463,32 @@ pub fn evidence_graph(ev: &RsiCycleEvidence<'_>) -> EvidenceGraphDoc {
             pid.clone(),
             KIND_PREDICTION,
             STATUS_HYPOTHESIS,
-            format!(
-                "Predicts {} improves by {:.1}% from baseline {:.3}",
-                h.target_metric, h.predicted_delta_pct, h.baseline_value
-            ),
+            match h.latency_claim() {
+                Some((baseline, delta)) => format!(
+                    "Predicts {} improves by {:.1}% from baseline {:.3}",
+                    h.target_metric, delta, baseline
+                ),
+                None => "Exploratory hypothesis: no performance prediction is made".to_string(),
+            },
             src("HypothesisContract", &h.id, None),
         );
         p.parents = vec![edge(&hid, REL_PART_OF)];
-        p.measurements = vec![
-            m("target_metric", h.target_metric.clone(), ""),
-            m("baseline_value", format!("{:.3}", h.baseline_value), ""),
-            m(
-                "predicted_delta_pct",
-                format!("{:.3}", h.predicted_delta_pct),
-                "%",
-            ),
-        ];
+        match h.latency_claim() {
+            Some((baseline, delta)) => {
+                p.measurements = vec![
+                    m("target_metric", h.target_metric.clone(), ""),
+                    m("baseline_value", format!("{:.3}", baseline), ""),
+                    m("predicted_delta_pct", format!("{:.3}", delta), "%"),
+                ];
+            }
+            None => {
+                p.measurements = vec![m("target_metric", h.target_metric.clone(), "")];
+                p.missing.push(MissingDoc {
+                    expected: "a measured latency baseline and a predicted improvement".into(),
+                    reason: "the top-ranked stage has no measured latency, so no performance claim is made".into(),
+                });
+            }
+        }
         nodes.push(p);
 
         let fid = format!("{hid}:falsification");

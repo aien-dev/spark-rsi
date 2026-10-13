@@ -6,6 +6,10 @@ pub struct ProtectedMetric {
     pub max_allowed_degradation_pct: f64,
 }
 
+/// Target metric of an exploratory hypothesis: it makes no performance claim, so
+/// `baseline_value` and `predicted_delta_pct` carry no meaning and must be zero.
+pub const EXPLORATORY_TARGET_METRIC: &str = "structural_ranking";
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HypothesisContract {
     pub id: String,
@@ -57,6 +61,70 @@ impl HypothesisContract {
         }
     }
 
+    /// A hypothesis with no performance claim: no baseline number, no predicted percentage.
+    /// Used when the top-ranked stage has no measured latency (cold start).
+    pub fn exploratory(
+        id: &str,
+        cycle_id: &str,
+        observed_problem: &str,
+        suspected_root_cause: &str,
+    ) -> Self {
+        let mut c = Self::new(
+            id,
+            cycle_id,
+            observed_problem,
+            suspected_root_cause,
+            EXPLORATORY_TARGET_METRIC,
+            0.0,
+            0.0,
+        );
+        c.confidence_score = 0.0;
+        c
+    }
+
+    /// Builds the hypothesis for the top-ranked stage. It carries a numeric latency target only
+    /// when that stage's latency is measured; otherwise it is exploratory and claims nothing.
+    pub fn from_bottleneck(
+        id: &str,
+        cycle_id: &str,
+        b: &crate::graph::BottleneckRank,
+        target_improvement_pct: f64,
+    ) -> Self {
+        match b.latency_median_us {
+            Some(median) => Self::new(
+                id,
+                cycle_id,
+                &format!(
+                    "Stage '{}' has measured median latency {:.1} us (centrality={:.4})",
+                    b.node_name, median, b.centrality
+                ),
+                &format!("Latency on '{}': {}", b.node_name, b.causal_explanation),
+                "latency_median_us",
+                median,
+                target_improvement_pct,
+            ),
+            None => Self::exploratory(
+                id,
+                cycle_id,
+                &format!(
+                    "Stage '{}' ranks first by structural position (centrality={:.4}); no latency is measured",
+                    b.node_name, b.centrality
+                ),
+                &format!("Structural ranking: {}", b.causal_explanation),
+            ),
+        }
+    }
+
+    pub fn is_exploratory(&self) -> bool {
+        self.target_metric == EXPLORATORY_TARGET_METRIC
+    }
+
+    /// The numeric latency claim `(baseline_us, predicted_improvement_pct)`, or None when the
+    /// hypothesis is exploratory.
+    pub fn latency_claim(&self) -> Option<(f64, f64)> {
+        (!self.is_exploratory()).then_some((self.baseline_value, self.predicted_delta_pct))
+    }
+
     pub fn with_falsification_test(mut self, test_code: &str) -> Self {
         self.falsification_test = test_code.to_string();
         self
@@ -82,6 +150,20 @@ impl HypothesisContract {
         if self.target_metric.trim().is_empty() {
             return Err("HypothesisContract must specify a target_metric".to_string());
         }
+        if self.is_exploratory() {
+            if self.baseline_value != 0.0 || self.predicted_delta_pct != 0.0 {
+                return Err(
+                    "an exploratory HypothesisContract must carry no baseline and no predicted delta"
+                        .to_string(),
+                );
+            }
+            return Ok(());
+        }
+        if !self.baseline_value.is_finite() || !self.predicted_delta_pct.is_finite() {
+            return Err(
+                "HypothesisContract baseline and predicted delta must be finite".to_string(),
+            );
+        }
         if self.predicted_delta_pct.abs() < 1e-6 {
             return Err("HypothesisContract predicted_delta_pct cannot be zero".to_string());
         }
@@ -92,18 +174,23 @@ impl HypothesisContract {
     }
 
     pub fn format_prompt_directive(&self) -> String {
+        let target = match self.latency_claim() {
+            Some((baseline, delta)) => format!(
+                "{} (Baseline: {:.2}, Expected Improvement: {:.1}%)",
+                self.target_metric, baseline, delta
+            ),
+            None => format!(
+                "{} (exploratory, no performance claim: no latency was measured)",
+                self.target_metric
+            ),
+        };
         let mut text = format!(
             "FALSIFIABLE HYPOTHESIS CONTRACT (ID: {}):\n\
 - Observed Problem: {}\n\
 - Suspected Root Cause: {}\n\
-- Target Metric: {} (Baseline: {:.2}, Expected Improvement: {:.1}%)\n\
+- Target Metric: {}\n\
 - Protected Non-Target Metrics:\n",
-            self.id,
-            self.observed_problem,
-            self.suspected_root_cause,
-            self.target_metric,
-            self.baseline_value,
-            self.predicted_delta_pct
+            self.id, self.observed_problem, self.suspected_root_cause, target
         );
 
         for pm in &self.protected_metrics {
@@ -147,6 +234,20 @@ mod tests {
         assert!(directive.contains("FALSIFIABLE HYPOTHESIS CONTRACT"));
         assert!(directive.contains("Unsynchronized lock contention"));
         assert!(directive.contains("assert_eq!(allocator.contention_count(), 0)"));
+    }
+
+    #[test]
+    fn exploratory_hypothesis_is_valid_without_a_delta_and_claims_nothing() {
+        let c = HypothesisContract::exploratory("hypo-x", "cycle-01", "Stage ranks first", "Cause");
+        assert!(c.is_exploratory());
+        assert!(c.validate().is_ok());
+        assert_eq!(c.latency_claim(), None);
+        let d = c.format_prompt_directive();
+        assert!(d.contains("no performance claim"));
+        assert!(!d.contains("Baseline"));
+        let mut forged = c.clone();
+        forged.predicted_delta_pct = 15.0;
+        assert!(forged.validate().is_err());
     }
 
     #[test]

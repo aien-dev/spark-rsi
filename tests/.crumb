@@ -7,21 +7,27 @@
     "generated": {
       "children": [
         {
-          "digest": "d1b0499983ee2182cd3f5232819266bb74afcf35908c4a6fb64a9dd073d228fa",
-          "last_commit": "e5aab9a",
+          "digest": "4160704abcd199e68ce44caaccc197728ce09e313a9e30d6984ef14fc6e3ffb7",
+          "last_commit": "e801134",
+          "name": "canary_fixture",
+          "purpose": "Test helper that builds the canary-target fixture once and returns its executable"
+        },
+        {
+          "digest": "1a1262b733871d9195ec255776878ebb22543278fb1be1d51c57d419999abea1",
+          "last_commit": "91ca36e",
           "name": "fixtures",
           "purpose": "Test fixtures: recorded evidence files and golden vectors used by integration tests."
         }
       ],
-      "children_root": "sha256:a1e62174b0d03ef0af66ee47476fe3a62ac7075f4c92ad9341ef87beefa3a8f8",
-      "compiled_at": "2026-10-11T16:52:31Z",
+      "children_root": "sha256:a6c18c6294a85bde71f89f696b37a874e108047d675fd269ed94b769c9018a99",
+      "compiled_at": "2026-10-12T22:42:04Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:7741e691cc295d6dc1a838afb3e73928688143066c0436f89e9cad72bc132110",
+      "digest": "sha256:c304fcf8ab5541ab294fbf0dcb6df0ceb3eed74226a7815127c1a3507b046921",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 23,
-      "generated_at_commit": "64062d8129318208664a96738a9de63dd66e1db6",
-      "source_tree": "sha256:89e86f0594c6cb2ae8d7813bb196eeba52e109d2da97222d69d9e1abf482f06d"
+      "files": 27,
+      "generated_at_commit": "b68453cd2371dfd9b73f3dc4fa31e5920e462742",
+      "source_tree": "sha256:83ce3d96c9391ca8d56e1219c544866a81d7f7057576c3762ccc14440ac158e5"
     },
     "owner_lane": "",
     "seed": {

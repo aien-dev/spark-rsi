@@ -1,0 +1,33 @@
+{
+  "target_repo": "/tmp/.tmpQWuBiL/repo",
+  "cortex_url": "http://127.0.0.1:9",
+  "cortex_space": "qualification",
+  "mojo_kernel_path": "mojo/balance_bin",
+  "loop_interval_secs": 60,
+  "sandbox_root": "/tmp/.tmpQWuBiL/sandbox",
+  "rsi_root": ".rsi",
+  "holdouts_dir": null,
+  "signing_key_hex": "5151515151515151515151515151515151515151515151515151515151515151",
+  "require_latency_improvement": false,
+  "max_url": "http://127.0.0.1:9",
+  "max_model": "atlas-lightning-omni",
+  "canary_target": 10,
+  "operator_key_hex": null,
+  "non_inferiority_margin": 250.0,
+  "ratify_roots": [
+    "README.md",
+    "CONTRIBUTING.md",
+    "docs",
+    "src"
+  ],
+  "dual_price_vector_dir": null,
+  "judge_public_key_hex": null,
+  "judge_policy_file": null,
+  "measure_min_samples": 3,
+  "measure_window_cycles": 20,
+  "measure_p95_min_samples": 20,
+  "measure_target_improvement_pct": 5.0,
+  "canary_workload_path": null,
+  "canary_workload_sha256": "d21ca53e23457bd1da84e0cc2115999208312eea03f30616a5c3d46e97e39bab",
+  "canary_exempt_kinds": []
+}

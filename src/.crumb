@@ -61,6 +61,12 @@
           "purpose": "Directory src/bin. Purpose not yet described by a human."
         },
         {
+          "digest": "47138fa1c3d2b38c846faa4998d99169ff913e1fca5d5ecc1d44b26e3bf795a9",
+          "last_commit": "b13ea46",
+          "name": "canary",
+          "purpose": "Supervisor-driven canary contract (plan 2026-10-12 step 1): adapter manifest, pinned workload, v"
+        },
+        {
           "digest": "4c66e2e1f75405fa6c3a2ec1f3638a19bbe2a103ddacdeeb5edfdd399666c37f",
           "last_commit": "e5aab9a",
           "name": "dual",
@@ -73,8 +79,8 @@
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
         },
         {
-          "digest": "cf457e03830140bb69fefc728a9560f3267693e75e58e35095885c1af2e9f50a",
-          "last_commit": "5d46b21",
+          "digest": "eb3a5f0b7203ba982b9fa0f7825a02921c2adc49c73abcd21145609b1a1a8da6",
+          "last_commit": "c464d10",
           "name": "graph",
           "purpose": "Directory src/graph. Purpose not yet described by a human."
         },
@@ -91,39 +97,45 @@
           "purpose": "Directory src/ledger. Purpose not yet described by a human."
         },
         {
+          "digest": "051db6ac64d07083f5fec412b251569f4d09cc2c8012c149ab6f93adbbcdbf0e",
+          "last_commit": "22e9181",
+          "name": "measure",
+          "purpose": "M1 Measurement: stage samples, sample log, compatibility filtering, percentile statistics, claim"
+        },
+        {
           "digest": "93f3f010310a3c1cbda620ad8c8b9f11c6b20571f6145de1c3a4e66c98c9af99",
           "last_commit": "5d46b21",
           "name": "meta",
           "purpose": "Directory src/meta. Purpose not yet described by a human."
         },
         {
-          "digest": "d736784a98d89f820c791c91044d4d78d53c070ca2061cad8550c142d16943b5",
-          "last_commit": "d553b4f",
+          "digest": "2787d4e51f830933e8b7fba886623e1d188195b69f9526afda54fe6f0ac8a8b2",
+          "last_commit": "91ca36e",
           "name": "propose",
           "purpose": "Directory src/propose. Purpose not yet described by a human."
         },
         {
-          "digest": "4af5c0905f9cd05b6bb6cbcefc05d861513770f816ef2a6f962d05a60b516c98",
-          "last_commit": "5d46b21",
+          "digest": "92e2857b467c0740b5987d46fc90cf8eb1ce78dfc8079cf8e67aa494142322f7",
+          "last_commit": "22e9181",
           "name": "soak",
           "purpose": "Directory src/soak. Purpose not yet described by a human."
         },
         {
-          "digest": "629019ef3fbde203b0682072f05dc8ec87f72025f39d3f4c084870bf02ba225c",
-          "last_commit": "5d46b21",
+          "digest": "30c384be776b3656cebacdc039abcc06eba4347b9cf59a03b583ce30679ce2c0",
+          "last_commit": "22e9181",
           "name": "supervisor",
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:035dda31bbd03cd874d12048a374ff3ff1002d4dce7b1993cd57c472f7dcb738",
-      "compiled_at": "2026-10-11T19:38:25Z",
+      "children_root": "sha256:089b83c4ce73dab870c07bcf9f3cfc36da1aa683eeb1b2dc272f56e469377290",
+      "compiled_at": "2026-10-12T22:51:32Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:82b6beb1b425327c8a36676aa8691d9771f6c68f80e6362e01da204de559e3b2",
+      "digest": "sha256:7e991002f3532715eff55912c302c1b74d23393e0efaf3d8e47a0bada5fe7b89",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 60,
-      "generated_at_commit": "d553b4ff8a407409e49eeb53facb6335278bf740",
-      "source_tree": "sha256:fa1b2578d99393df42b3171764ed4e6b2f1c1f6b2059ed54a9177ba2ca49ba8b"
+      "files": 74,
+      "generated_at_commit": "0002ce08cdbfeb1770a6f1ab117203740e28e3a7",
+      "source_tree": "sha256:ab7daf776355d93094ecbda4a1b3e04549a84289e7d39f6f1e90860d6adeeffd"
     },
     "owner_lane": "",
     "seed": {

@@ -1,0 +1,32 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [
+        {
+          "digest": "257adda2bb2859df41647e6c2d2030638a27471432b240f287364236a43f139d",
+          "last_commit": "721d512",
+          "name": "run-correct",
+          "purpose": "Correct fixture run: 10 of 10 supervisor-verified observations, quota admitted, envelope passed,"
+        },
+        {
+          "digest": "897dc1aa235604168374ac032c365267b2f1aaf4aa95ad843e6297d520bf7f8f",
+          "last_commit": "721d512",
+          "name": "run-wrong-answer",
+          "purpose": "Wrong-answer fixture run: WrongResult on request 3, early revert, quota refused, nothing durable"
+        }
+      ],
+      "children_root": "sha256:f96fa62641650301e317814f1751be859a10a7c03cb7a83a691b50c2f3efbb94",
+      "compiled_at": "2026-10-12T22:54:52Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:028b22920f684769fd4b152caaa961dba5fa9c8553281a268a2d77c67365eee1",
+      "evidence_files": 25,
+      "evidence_root": "sha256:1f6c69e4d2fb213547e59609e7d726695fd68c1d8d8ce446b80419883223ebee",
+      "files": 25,
+      "generated_at_commit": "721d512366f91dc9fdf8f719c36930f9e4e548ef",
+      "source_tree": "sha256:18f393dcbf61398526b7cf0df97cae9596aff8befd608bba53d229dc420caef2"
+    }
+  },
+  "name": "rsi-cut-2026-10-12",
+  "purpose": "Qualification evidence for the M1+M2 evidence-driven RSI cut: two real cycles against the fixture target on the DGX Spark, with the report.",
+  "schema_version": "1.0.0"
+}

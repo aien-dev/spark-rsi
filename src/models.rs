@@ -135,6 +135,34 @@ pub struct RsiConfig {
     /// Operator-owned evaluation policy the judge receipt must be bound to. None = fails closed.
     #[serde(default)]
     pub judge_policy_file: Option<String>,
+    /// Minimum compatible completed samples a stage needs before its latency counts as measured.
+    #[serde(default = "default_measure_min_samples")]
+    pub measure_min_samples: usize,
+    /// How many of the most recent compatible completed cycles are considered per stage.
+    #[serde(default = "default_measure_window_cycles")]
+    pub measure_window_cycles: usize,
+    /// Minimum valid compatible samples before an empirical p95 is reported.
+    #[serde(default = "default_measure_p95_min_samples")]
+    pub measure_p95_min_samples: usize,
+    /// Operator-declared latency goal, in percent below the measured median. A goal, not a forecast.
+    #[serde(default = "default_measure_target_improvement_pct")]
+    pub measure_target_improvement_pct: f64,
+    /// Where the operator's canary workload lives. None = `<rsi_root>/canary/workload.json`.
+    /// The candidate never writes it: it is read from the operator's state directory, not from
+    /// the evaluated tree.
+    #[serde(default)]
+    pub canary_workload_path: Option<String>,
+    /// SHA-256 pin of the canary workload (the digest `CanaryWorkloadManifest::digest` reports).
+    /// None = canary admission fails closed: the operator must pin the workload.
+    #[serde(default)]
+    pub canary_workload_sha256: Option<String>,
+    /// Canary applicability policy. A change that is executable (a target file ending in `.rs`,
+    /// `.toml` or `Cargo.lock`, or a tree that builds an executable or declares a canary
+    /// adapter) always goes through canary admission, whatever its kind. Only kinds listed here
+    /// are exempt, and only when the change is not executable. The default is empty: nothing is
+    /// exempt. An exempt change still goes through the safety envelope and the promotion gate.
+    #[serde(default)]
+    pub canary_exempt_kinds: Vec<ProposalKind>,
 }
 
 fn default_max_url() -> String {
@@ -151,6 +179,22 @@ fn default_rsi_root() -> String {
 
 fn default_canary_target() -> u64 {
     5000
+}
+
+fn default_measure_min_samples() -> usize {
+    3
+}
+
+fn default_measure_window_cycles() -> usize {
+    20
+}
+
+fn default_measure_p95_min_samples() -> usize {
+    20
+}
+
+fn default_measure_target_improvement_pct() -> f64 {
+    5.0
 }
 
 impl Default for RsiConfig {
@@ -175,8 +219,75 @@ impl Default for RsiConfig {
             dual_price_vector_dir: None,
             judge_public_key_hex: None,
             judge_policy_file: None,
+            measure_min_samples: default_measure_min_samples(),
+            measure_window_cycles: default_measure_window_cycles(),
+            measure_p95_min_samples: default_measure_p95_min_samples(),
+            measure_target_improvement_pct: default_measure_target_improvement_pct(),
+            canary_workload_path: None,
+            canary_workload_sha256: None,
+            canary_exempt_kinds: Vec::new(),
         }
     }
+}
+
+/// What the supervisor-driven run did, copied from the executor's summary.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CanaryExecutionRecord {
+    pub requests_planned: usize,
+    pub issued: usize,
+    pub verified_success: usize,
+    pub wrong_result: usize,
+    pub timeout: usize,
+    pub invalid_response: usize,
+    pub connection_closed: usize,
+    pub rejections: usize,
+    pub ready: bool,
+    pub reverted: bool,
+    pub first_failure: Option<String>,
+}
+
+/// The quota validator's decision: counted against target, or the refusal reason.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct QuotaDecisionRecord {
+    pub admitted: bool,
+    pub counted: Option<u64>,
+    pub target: u64,
+    pub refusal: Option<String>,
+}
+
+/// A pass or refusal of one gate, with the detail the gate gave.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GateDecisionRecord {
+    pub passed: bool,
+    pub detail: String,
+}
+
+/// The reference-backend caveat recorded with every safety envelope decision.
+pub const ENVELOPE_REFERENCE_NOTE: &str = "the safety envelope evaluated through aien_probe::DeterministicReferenceBackend; this is a reference evaluation and does not establish production safety";
+
+/// Canary admission as one cycle saw it. Every digest is lowercase hex SHA-256.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CanarySummary {
+    /// Canary admission applied to the change (false only for a configured exemption).
+    pub applicable: bool,
+    /// Why the change was exempt, when it was.
+    pub exemption: Option<String>,
+    /// The target ships a valid adapter manifest and the operator's workload is pinned.
+    pub eligible: bool,
+    /// Why the candidate was refused before or during execution, when it was.
+    pub refusal: Option<String>,
+    pub identity_binding_digest: Option<String>,
+    pub executable_digest: Option<String>,
+    pub workload_digest: Option<String>,
+    pub log_digest: Option<String>,
+    /// Hash of the ledger block that committed the sealed log before admission.
+    pub commitment_block_hash: Option<String>,
+    pub execution: Option<CanaryExecutionRecord>,
+    pub quota: Option<QuotaDecisionRecord>,
+    pub envelope: Option<GateDecisionRecord>,
+    /// Present whenever the envelope ran: it is a reference evaluation, not production safety.
+    pub envelope_note: Option<String>,
+    pub promotion_gate: Option<GateDecisionRecord>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,4 +308,7 @@ pub struct RsiCycleResult {
     /// promotion. Defaults to `Unavailable { Missing }` when not configured.
     #[serde(default)]
     pub scarcity: crate::dual::ScarcityDiagnostic,
+    /// Canary admission summary. None when no candidate reached the canary stage.
+    #[serde(default)]
+    pub canary: Option<CanarySummary>,
 }

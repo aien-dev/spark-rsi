@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-12T22:54:52Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:257adda2bb2859df41647e6c2d2030638a27471432b240f287364236a43f139d",
+      "evidence_files": 12,
+      "evidence_root": "sha256:dea3946edb7296773dc6984ab5288f760059ba2c1b1085004b7a7133f4c0d22f",
+      "files": 12,
+      "generated_at_commit": "721d512366f91dc9fdf8f719c36930f9e4e548ef",
+      "source_tree": "sha256:19fdea40f1fe59592d641afc4a5b75f8356e28a8a63e82775ebfb40413273bb5"
+    }
+  },
+  "name": "run-correct",
+  "purpose": "Correct fixture run: 10 of 10 supervisor-verified observations, quota admitted, envelope passed, promotion gate refused (no judge key).",
+  "schema_version": "1.0.0"
+}

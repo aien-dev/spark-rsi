@@ -1,0 +1,21 @@
+{
+  "sealed_log": {
+    "header": {
+      "candidate_executable_digest": "870722da2227135d0d53c1575a8f2ca5dcf41c630415d4dda389073af0f2341e",
+      "generation_id": "prop-dc0bf12ad61f4a94b1e6aca4e46e87fb",
+      "log_version": 1,
+      "opened_at_ms": 1791845587855,
+      "workload_digest": "d21ca53e23457bd1da84e0cc2115999208312eea03f30616a5c3d46e97e39bab"
+    },
+    "observations": 3,
+    "qualifying": 2,
+    "rejections": 0,
+    "seal": {
+      "log_digest": "63cf4282a17e0b6ce3997a7fd0d7e306fce064be42c2995c9df0e575d1c3f05d",
+      "observation_count": 3,
+      "qualifying_count": 2,
+      "sealed_at_ms": 1791845587887
+    },
+    "verified": true
+  }
+}

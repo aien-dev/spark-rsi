@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-10-12T22:19:19Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:4160704abcd199e68ce44caaccc197728ce09e313a9e30d6984ef14fc6e3ffb7",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 1,
+      "generated_at_commit": "e8011341c78459642f0da20208e934a8b82c93d5",
+      "source_tree": "sha256:5652a2fad5b8e4515457c5fa86963f397fc8c8087bfc8822e187995ea4ca1f8b"
+    }
+  },
+  "name": "canary-fixture",
+  "purpose": "Test helper that builds the canary-target fixture once and returns its executable",
+  "schema_version": "1.0.0"
+}
