@@ -9,7 +9,7 @@ Copyright (c) 2026 Drake Stapleton <aien@aienos.com> and AIEN Contributors. Auth
 [![Rust](https://img.shields.io/badge/Rust-1.85+-orange.svg)](https://www.rust-lang.org)
 [![Mojo](https://img.shields.io/badge/Mojo-1.0.0-purple.svg)](https://modular.com)
 
-High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine for autonomous AI agents. Designed to be completely portable and universal: any developer or organization can download, configure their operator identity, and plug in their own models via API or local Modular MAX.
+Native Rust Recursive Self-Improvement (RSI) engine for autonomous AI agents, with an optional Mojo balance kernel. The operator identity is configurable, and the model is any OpenAI-style chat completions endpoint (such as a local Modular MAX server) given with `--max-url` and `--max-model`. Some defaults are specific to the Spark: the model endpoint `http://127.0.0.1:18006/v1`, the model name `atlas-lightning-omni` and the Cortex memory service `http://127.0.0.1:18080`.
 
 **Status:** Not part of the WHOLE-SYSTEM-E2E v1 release (Drake, 2026-10-10). Evaluated independently; no unattended self-modification or automatic promotion. The daemon's promotion gate requires a version 2 receipt from a separate judge ([docs/RECEIPT-V2.md](docs/RECEIPT-V2.md)) and refuses every candidate its own in-process judge evaluated.
 
@@ -17,23 +17,25 @@ High-performance native Rust and Mojo Recursive Self-Improvement (RSI) engine fo
 
 ## Quick Start & Universal Operator Onboarding
 
-Initialize your local sovereign operator profile and model configuration:
+Initialize your local sovereign operator profile:
 
 ```bash
 spark-rsi init
 ```
 
-Or configure directly via CLI flags:
+Or configure directly via CLI flags (`--name`, `--email`, `--mode` as `max` or `api`, `--api-url`, `--model-id`):
 
 ```bash
 spark-rsi init \
   --name "Your Name" \
   --email "you@domain.org" \
-  --mode "max" # or "api" \
+  --mode "max" \
   --model-id "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16"
 ```
 
-Configuration is persisted locally to `~/.config/sovereign/operator.toml` and shared across the entire sovereign toolchain. All git commits and ratification records dynamically reflect your configured identity.
+Configuration is persisted locally to `~/.config/sovereign/operator.toml` (set `SOVEREIGN_CONFIG_PATH` to use another file). The commit on the review branch and the ratification record use the name and email you configure here.
+
+The saved engine settings (`mode`, `api_base_url`, `model_id`) are shown by `spark-rsi profile` but are not read by `cycle`, `daemon` or `soak`. Those commands take the model endpoint from `--max-url` and `--max-model`, and send no API key.
 
 ---
 
@@ -46,6 +48,8 @@ git clone https://github.com/aien-dev/aien-protocols ../aien-protocols
 cargo test --locked -- --test-threads=1
 ```
 
+The build jail runs `bwrap` (bubblewrap), which CI installs. The Mojo balance kernel is optional: `mojo/balance_bin` is not in the repository (`mojo/*_bin` is gitignored) and no script builds it. Build it with `mojo build mojo/balance.mojo -o mojo/balance_bin`. Without that binary, and without the `mojo` command, the balance step uses the native Rust implementation in `src/balance.rs`, which is what CI runs.
+
 CI is the "Sovereign CI" workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml)); its job "Test & Invariant Verification" is the required check on `main`.
 
 ### Version 2 judge receipts from the CLI
@@ -56,10 +60,10 @@ CI is the "Sovereign CI" workflow ([.github/workflows/ci.yml](.github/workflows/
 
 ## The 5-Phase RSI Architecture
 
-1. **Observe**: Telemetry collection across git status, unslop violations, crumb breadcrumbs, and drive/humanity equilibrium.
-2. **Propose**: Autonomous generation of atomic improvement proposals in isolated sandbox worktrees (`/tmp/spark-rsi-sandbox/`).
+1. **Observe**: Telemetry collection across the git branch and uncommitted files, the number of `.crumb` and `.crumb.local` files, whether `cargo check` passes, and a drive/humanity term count (soul tension) read from `soul.md`, `docs/PHILOSOPHY.md` and `README.md`.
+2. **Propose**: Autonomous generation of atomic improvement proposals, applied in isolated sandbox copies of the target tree (`/tmp/spark-rsi-sandbox/` for `cycle` and `daemon`).
 3. **Verify**: Strict validation enforcing the unslop standard, zero plaintext disk secrets, compilation (`cargo check`), and test suites (`cargo test`).
-4. **Balance**: Mojo-compiled SIMD tensor kernel evaluating Drive vs. Humanity balance vectors on Grace Blackwell GB10 hardware.
+4. **Balance**: Evaluates Drive vs. Humanity balance vectors. The Mojo kernel (`mojo/balance.mojo`, a 4-lane SIMD vector on the CPU, no GPU code) is used when it is available; otherwise a native Rust fallback returns the same verdict fields.
 5. **Ratify**: Never commits to the target's default branch. Builds the candidate commit off to the side, runs the protected-file checks on the real git diff (path normalization; `..`, symlinks, submodules, deletions and anything outside the declared `ratify_roots` refused), then creates a review branch `rsi/<proposal id>` and a PR-ready patch under `<rsi_root>/patches/`. A human opens and merges the pull request.
 
 ---
