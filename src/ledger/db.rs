@@ -21,6 +21,38 @@ pub struct LedgerAuditReport {
     pub signature_verified: bool,
     pub chain_valid: bool,
     pub audit_timestamp_utc: String,
+    /// Last sequence covered by the latest Merkle checkpoint; `None` when no checkpoint exists.
+    #[serde(default)]
+    pub checkpoint_sequence: Option<u64>,
+    /// Blocks after the latest checkpoint, or every block when there is none. Their hash links
+    /// are checked, but no checkpoint or signature covers them yet.
+    #[serde(default)]
+    pub blocks_after_checkpoint: u64,
+}
+
+impl LedgerAuditReport {
+    /// What this audit did not establish. Empty means the chain, the latest checkpoint over the
+    /// whole ledger and, when a key was given, its signature all verified.
+    pub fn unchecked(&self, key_given: bool) -> Vec<String> {
+        let mut gaps = Vec::new();
+        match self.checkpoint_sequence {
+            None => gaps.push("no Merkle checkpoint is stored".to_string()),
+            Some(seq) => {
+                if self.blocks_after_checkpoint > 0 {
+                    gaps.push(format!(
+                        "{} block(s) after checkpoint #{} are not covered by any checkpoint",
+                        self.blocks_after_checkpoint, seq
+                    ));
+                }
+                if !key_given {
+                    gaps.push(
+                        "the checkpoint signature was not checked (no verifying key)".to_string(),
+                    );
+                }
+            }
+        }
+        gaps
+    }
 }
 
 #[derive(Clone)]
@@ -466,31 +498,49 @@ impl ImprovementLedger {
             leaf_hashes.push(block.block_hash.clone());
         }
 
-        // 3. Compute and verify Merkle root
+        // 3. Compute the Merkle root, then verify the latest checkpoint against the blocks it
+        // covers, wherever it sits. Sequences equal indexes, checked above.
         let computed_merkle_root = compute_merkle_root(&leaf_hashes);
+        let latest_sequence = blocks.last().unwrap().sequence;
         let mut checkpoint_verified = false;
         let mut signature_verified = false;
+        let mut checkpoint_sequence = None;
+        let mut blocks_after_checkpoint = blocks.len() as u64;
 
         if let Some(checkpoint) = self.latest_checkpoint()? {
-            if checkpoint.up_to_sequence == blocks.last().unwrap().sequence {
-                if checkpoint.merkle_root == computed_merkle_root {
-                    checkpoint_verified = true;
-                } else {
-                    return Err(format!(
-                        "Audit failed: Checkpoint Merkle root mismatch: stored={}, computed={}",
-                        checkpoint.merkle_root, computed_merkle_root
-                    ));
-                }
+            if checkpoint.up_to_sequence > latest_sequence {
+                return Err(format!(
+                    "Audit failed: Checkpoint covers sequence {} but the ledger ends at {}",
+                    checkpoint.up_to_sequence, latest_sequence
+                ));
+            }
+            let covered = &leaf_hashes[..=checkpoint.up_to_sequence as usize];
+            if checkpoint.block_count != covered.len() as u64 {
+                return Err(format!(
+                    "Audit failed: Checkpoint block count mismatch: stored={}, covered={}",
+                    checkpoint.block_count,
+                    covered.len()
+                ));
+            }
+            let covered_root = compute_merkle_root(covered);
+            if checkpoint.merkle_root != covered_root {
+                return Err(format!(
+                    "Audit failed: Checkpoint Merkle root mismatch: stored={}, computed={}",
+                    checkpoint.merkle_root, covered_root
+                ));
+            }
+            checkpoint_verified = true;
+            checkpoint_sequence = Some(checkpoint.up_to_sequence);
+            blocks_after_checkpoint = latest_sequence - checkpoint.up_to_sequence;
 
-                if let Some(vk) = verifying_key {
-                    if checkpoint.verify_signature(vk) {
-                        signature_verified = true;
-                    } else {
-                        return Err(
-                            "Audit failed: Checkpoint Merkle root signature verification failed"
-                                .to_string(),
-                        );
-                    }
+            if let Some(vk) = verifying_key {
+                if checkpoint.verify_signature(vk) {
+                    signature_verified = true;
+                } else {
+                    return Err(
+                        "Audit failed: Checkpoint Merkle root signature verification failed"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -506,6 +556,8 @@ impl ImprovementLedger {
             signature_verified,
             chain_valid: true,
             audit_timestamp_utc: chrono::Utc::now().to_rfc3339(),
+            checkpoint_sequence,
+            blocks_after_checkpoint,
         })
     }
 }

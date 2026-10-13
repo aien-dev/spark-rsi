@@ -41,8 +41,13 @@ enum LedgerCommands {
     Checkpoint {
         #[arg(default_value = ".rsi")]
         rsi_root: String,
+        /// Signing key as hex. Other processes can read command-line arguments; prefer
+        /// `--signing-key-file` or `RSI_LEDGER_SIGNING_KEY`.
         #[arg(long)]
         signing_key_hex: Option<String>,
+        /// File holding the signing key as hex. Falls back to `RSI_LEDGER_SIGNING_KEY`.
+        #[arg(long)]
+        signing_key_file: Option<String>,
     },
     /// Record append-only PromotionEvidence block proving downstream compounding
     Evidence {
@@ -229,8 +234,13 @@ enum Commands {
         max_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
         max_model: String,
+        /// Signing key as hex. Other processes can read command-line arguments; prefer
+        /// `--signing-key-file` or `RSI_SOAK_SIGNING_KEY`.
         #[arg(long)]
         signing_key_hex: Option<String>,
+        /// File holding the signing key as hex. Falls back to `RSI_SOAK_SIGNING_KEY`.
+        #[arg(long)]
+        signing_key_file: Option<String>,
         #[arg(long)]
         operator_key_hex: Option<String>,
         #[arg(long)]
@@ -247,9 +257,36 @@ const JUDGE_POLICY_ENV: &str = "RSI_JUDGE_POLICY_FILE";
 /// Environment variable holding the separate judge's SEC1 hex public key.
 const JUDGE_PUBLIC_KEY_ENV: &str = "RSI_JUDGE_PUBLIC_KEY";
 
+/// Environment variable holding the `ledger checkpoint` signing key as hex.
+const LEDGER_SIGNING_KEY_ENV: &str = "RSI_LEDGER_SIGNING_KEY";
+/// Environment variable holding the `soak` signing key as hex.
+const SOAK_SIGNING_KEY_ENV: &str = "RSI_SOAK_SIGNING_KEY";
+
 /// The flag when given, otherwise the non-empty environment variable.
 fn flag_or_env(flag: Option<String>, var: &str) -> Option<String> {
     flag.or_else(|| std::env::var(var).ok().filter(|v| !v.trim().is_empty()))
+}
+
+/// Key hex from the hex flag, else the key file, else the environment variable: the order the
+/// judge uses. An unreadable or empty key file is an error, never a fallback.
+fn key_hex(
+    hex_flag: Option<String>,
+    key_file: Option<String>,
+    var: &str,
+) -> Result<Option<String>, String> {
+    if let Some(hex_str) = hex_flag {
+        return Ok(Some(hex_str.trim().to_string()));
+    }
+    if let Some(path) = key_file {
+        let text = std::fs::read_to_string(&path)
+            .map_err(|e| format!("cannot read key file {}: {}", path, e))?;
+        let text = text.trim();
+        if text.is_empty() {
+            return Err(format!("key file {} is empty", path));
+        }
+        return Ok(Some(text.to_string()));
+    }
+    Ok(flag_or_env(None, var).map(|v| v.trim().to_string()))
 }
 
 /// Loads the judge pins `cycle` and `daemon` hand the promotion gate, so a malformed policy or
@@ -548,7 +585,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 match ledger.verify_chain_integrity(vk.as_ref()) {
                     Ok(report) => {
-                        println!("⚡ Ledger Verification: PASS");
+                        let gaps = report.unchecked(vk.is_some());
+                        if gaps.is_empty() {
+                            println!("⚡ Ledger Verification: PASS");
+                        } else {
+                            println!(
+                                "⚠️ Ledger Verification: PARTIAL. Hash chain and blobs verified; not checked: {}",
+                                gaps.join("; ")
+                            );
+                        }
                         println!("{}", serde_json::to_string_pretty(&report)?);
                     }
                     Err(e) => {
@@ -560,7 +605,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             LedgerCommands::Checkpoint {
                 rsi_root,
                 signing_key_hex,
+                signing_key_file,
             } => {
+                let signing_key_hex =
+                    key_hex(signing_key_hex, signing_key_file, LEDGER_SIGNING_KEY_ENV)?;
                 let ledger = spark_rsi::ledger::ImprovementLedger::open(Path::new(&rsi_root))?;
                 let mut sk = None;
                 if let Some(ref hex_str) = signing_key_hex {
@@ -602,10 +650,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             max_url,
             max_model,
             signing_key_hex,
+            signing_key_file,
             operator_key_hex,
             holdouts_dir,
             margin,
         } => {
+            let signing_key_hex = key_hex(signing_key_hex, signing_key_file, SOAK_SIGNING_KEY_ENV)?;
             let config = spark_rsi::soak::SoakConfig {
                 target_repo: path,
                 rsi_root,
