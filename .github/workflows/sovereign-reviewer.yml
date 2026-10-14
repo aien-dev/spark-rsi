@@ -24,13 +24,13 @@ jobs:
       - name: Checkout Sovereign Inquisitor Core
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-sovereign-core
+          repository: aien-spark/aien-sovereign-core
           path: sovereign-core
 
       - name: Checkout Sibling Protocols Dependency
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-protocols
+          repository: aien-spark/aien-protocols
           path: aien-protocols
 
       - name: Install System Dependencies
@@ -102,12 +102,12 @@ jobs:
       - name: Checkout Sovereign Inquisitor Core
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-sovereign-core
+          repository: aien-spark/aien-sovereign-core
 
       - name: Checkout Sibling Protocols Dependency
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-protocols
+          repository: aien-spark/aien-protocols
           path: aien-protocols
 
       - name: Setup Sibling Dependencies
@@ -164,12 +164,12 @@ jobs:
       - name: Checkout Sovereign Inquisitor Core
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-sovereign-core
+          repository: aien-spark/aien-sovereign-core
 
       - name: Checkout Sibling Protocols Dependency
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-protocols
+          repository: aien-spark/aien-protocols
           path: aien-protocols
 
       - name: Setup Sibling Dependencies

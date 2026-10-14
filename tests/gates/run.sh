@@ -6,7 +6,7 @@
 # "AIEN-OBS <name> <json>".
 #
 # Sibling checkout: Cargo.toml depends on ../aien-protocols/crates/* by path. The hosted job
-# checks out aien-dev/aien-protocols (main) and copies it to ../aien-protocols; the local
+# checks out aien-spark/aien-protocols (main) and copies it to ../aien-protocols; the local
 # worker must provide the same sibling.
 #
 # Hosted runner configuration NOT mirrored here (needs root on the runner): apt-get install

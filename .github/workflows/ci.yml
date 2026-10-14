@@ -21,7 +21,7 @@ jobs:
       - name: Checkout AIEN Protocols Dependency
         uses: actions/checkout@v4
         with:
-          repository: aien-dev/aien-protocols
+          repository: aien-spark/aien-protocols
           path: aien-protocols
 
       - name: Setup Sibling Dependencies

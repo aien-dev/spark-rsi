@@ -41,10 +41,10 @@ The saved engine settings (`mode`, `api_base_url`, `model_id`) are shown by `spa
 
 ## Build and Verification
 
-spark-rsi is not a standalone checkout. It depends on the protocol crates by path, so [aien-protocols](https://github.com/aien-dev/aien-protocols) must be cloned next to it:
+spark-rsi is not a standalone checkout. It depends on the protocol crates by path, so [aien-protocols](https://github.com/aien-spark/aien-protocols) must be cloned next to it:
 
 ```bash
-git clone https://github.com/aien-dev/aien-protocols ../aien-protocols
+git clone https://github.com/aien-spark/aien-protocols ../aien-protocols
 cargo test --locked -- --test-threads=1
 ```
 
