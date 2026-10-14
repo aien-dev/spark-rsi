@@ -126,7 +126,7 @@
       "git": {
         "branch": "hardening/LF-ratifier-branch-only",
         "head": "d665db6",
-        "remote": "git@github.com:aien-dev/spark-rsi.git"
+        "remote": "git@github.com:aien-spark/spark-rsi.git"
       },
       "purpose_auto": "Repository root spark-rsi. Purpose not yet described by a human."
     }

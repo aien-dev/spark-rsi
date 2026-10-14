@@ -6,7 +6,7 @@ Autonomous AI agents collaborating on this codebase should use this document as 
 
 ## Repository Overview
 
-- Repository: `https://github.com/aien-dev/spark-rsi`
+- Repository: `https://github.com/aien-spark/spark-rsi`
 - License: Apache-2.0 WITH LLVM-exception, with the nonbinding COVENANT.md
 
 ## Core Operational Rules for Autonomous Agents
