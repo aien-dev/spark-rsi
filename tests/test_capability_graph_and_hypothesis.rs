@@ -1,7 +1,7 @@
 use spark_rsi::graph::{CapabilityGraph, CapabilityNode};
 use spark_rsi::propose::diagnose::{DefectCategory, DiagnosticContext};
 use spark_rsi::propose::hypothesis::HypothesisContract;
-use spark_rsi::propose::max_client::MaxClient;
+use spark_rsi::propose::model_seat::ModelSeatClient;
 use spark_rsi::propose::ProposalGenerator;
 
 #[test]
@@ -25,7 +25,7 @@ fn test_capability_graph_topology_and_bottleneck_detection() {
             .unwrap(),
     );
     graph.add_node(
-        CapabilityNode::new("mojo_kernel", "Mojo Blackwell GEMM Kernel", "compute")
+        CapabilityNode::new("gemm_kernel", "Blackwell GEMM Kernel", "compute")
             .with_measured_latency(1800.0, None, 0.01, 5)
             .unwrap(),
     );
@@ -38,8 +38,8 @@ fn test_capability_graph_topology_and_bottleneck_detection() {
     // Define dataflow dependencies
     graph.add_edge("req_gateway", "scheduler", 100.0, 1.0);
     graph.add_edge("scheduler", "kv_allocator", 500.0, 1.0);
-    graph.add_edge("kv_allocator", "mojo_kernel", 1200.0, 1.0);
-    graph.add_edge("mojo_kernel", "sampler", 200.0, 1.0);
+    graph.add_edge("kv_allocator", "gemm_kernel", 1200.0, 1.0);
+    graph.add_edge("gemm_kernel", "sampler", 200.0, 1.0);
 
     let centrality = graph.calculate_betweenness_centrality();
     assert!(centrality.contains_key("kv_allocator"));
@@ -149,10 +149,10 @@ async fn test_diagnosis_prompt_includes_hypothesis_directive() {
 }
 
 #[tokio::test]
-async fn test_live_max_generates_patch_satisfying_hypothesis() {
-    let max = MaxClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
-    if !max.is_available().await {
-        eprintln!("Skipping live MAX hypothesis test: endpoint not reachable");
+async fn test_live_model_seat_generates_patch_satisfying_hypothesis() {
+    let seat = ModelSeatClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
+    if !seat.is_available().await {
+        eprintln!("Skipping live model seat hypothesis test: endpoint not reachable");
         return;
     }
 
@@ -177,9 +177,9 @@ async fn test_live_max_generates_patch_satisfying_hypothesis() {
     )
     .with_hypothesis(contract);
 
-    let proposal = ProposalGenerator::propose_from_diagnosis(&max, &diag)
+    let proposal = ProposalGenerator::propose_from_diagnosis(&seat, &diag)
         .await
-        .expect("MAX should successfully generate patch satisfying hypothesis");
+        .expect("The model seat should successfully generate patch satisfying hypothesis");
 
     assert_eq!(proposal.target_file, "src/buffer.rs");
     assert!(

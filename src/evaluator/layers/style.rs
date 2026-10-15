@@ -116,7 +116,7 @@ mod tests {
 
     #[test]
     fn test_style_clean_text() {
-        let text = "Pure native compiled Rust and Mojo architecture on DGX Spark.";
+        let text = "Pure native compiled Rust architecture on DGX Spark.";
         let eval = StyleLayer::evaluate_text(text);
         assert!(eval.passed);
         assert_eq!(eval.violations.len(), 0);

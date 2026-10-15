@@ -8,7 +8,7 @@ use crate::meta::TrueRsiEvaluator;
 use crate::models::{ImprovementProposal, ProposalKind, RsiConfig};
 use crate::observe::observe_codebase;
 use crate::propose::{
-    cortex::CortexExperienceClient, max_client::MaxClient, DefectCategory, DiagnosticContext,
+    cortex::CortexExperienceClient, model_seat::ModelSeatClient, DefectCategory, DiagnosticContext,
     HypothesisContract, ProposalGenerator,
 };
 use crate::ratify::Ratifier;
@@ -30,9 +30,8 @@ pub struct SoakConfig {
     pub operator_key_hex: Option<String>,
     pub cortex_url: String,
     pub cortex_space: String,
-    pub max_url: String,
-    pub max_model: String,
-    pub mojo_kernel_path: String,
+    pub model_url: String,
+    pub model_id: String,
     pub total_cycles: usize,
     pub candidates_per_cycle: usize,
     pub canary_target: usize,
@@ -51,9 +50,8 @@ impl Default for SoakConfig {
             operator_key_hex: None,
             cortex_url: "http://127.0.0.1:18080".to_string(),
             cortex_space: "atlas-memory".to_string(),
-            max_url: "http://127.0.0.1:18006/v1".to_string(),
-            max_model: "atlas-lightning-omni".to_string(),
-            mojo_kernel_path: "mojo/balance_bin".to_string(),
+            model_url: "http://127.0.0.1:18006/v1".to_string(),
+            model_id: "atlas-lightning-omni".to_string(),
             total_cycles: 5,
             candidates_per_cycle: 3,
             canary_target: 5000,
@@ -76,12 +74,11 @@ fn measure_config(config: &SoakConfig) -> RsiConfig {
         target_repo: config.target_repo.clone(),
         cortex_url: config.cortex_url.clone(),
         cortex_space: config.cortex_space.clone(),
-        mojo_kernel_path: config.mojo_kernel_path.clone(),
         sandbox_root: config.sandbox_root.clone(),
         rsi_root: config.rsi_root.clone(),
         holdouts_dir: config.holdouts_dir.clone(),
-        max_url: config.max_url.clone(),
-        max_model: config.max_model.clone(),
+        model_url: config.model_url.clone(),
+        model_id: config.model_id.clone(),
         canary_target: config.canary_target as u64,
         non_inferiority_margin: config.non_inferiority_margin,
         ..RsiConfig::default()
@@ -99,7 +96,7 @@ impl SoakRunner {
         // Step 1: Capture Engine N Snapshot
         let engine_n_snapshot = Self::capture_engine_n(
             repo_path,
-            &config.max_model,
+            &config.model_id,
             config.operator_key_hex.as_deref(),
         );
 
@@ -158,7 +155,7 @@ impl SoakRunner {
         let mut admitted_candidates = Vec::new();
         let mut total_candidates_evaluated = 0;
         let mut total_candidates_admitted = 0;
-        let max_client = MaxClient::new(&config.max_url, &config.max_model);
+        let model_seat = ModelSeatClient::new(&config.model_url, &config.model_id);
 
         // Step 5: Execute Autonomous Bounded Cycles
         for cycle_index in 1..=config.total_cycles {
@@ -255,7 +252,7 @@ impl SoakRunner {
 
                 let mut maybe_prop = None;
 
-                if max_client.is_available().await {
+                if model_seat.is_available().await {
                     let variation_directive = match cand_idx {
                         1 => "Candidate variation 1 of 3: Focus on algorithmic simplification and data locality.",
                         2 => "Candidate variation 2 of 3: Focus on loop unrolling and branch prediction efficiency.",
@@ -276,7 +273,7 @@ impl SoakRunner {
                     .with_hypothesis(hypothesis.clone());
 
                     if let Ok(prop) =
-                        ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await
+                        ProposalGenerator::propose_from_diagnosis(&model_seat, &diag).await
                     {
                         maybe_prop = Some(prop);
                     }
@@ -431,8 +428,7 @@ impl SoakRunner {
                 let balance_verdict = BalanceKernel::evaluate(
                     codebase_obs.soul_tension.drive_score,
                     codebase_obs.soul_tension.humanity_score,
-                    Some(&config.mojo_kernel_path),
-                )?;
+                );
                 let is_balanced = balance_verdict.verdict == "balanced";
 
                 if !inv_report.passed || !is_balanced {
@@ -710,11 +706,7 @@ impl SoakRunner {
         Ok(manifest)
     }
 
-    fn capture_engine_n(
-        repo_path: &Path,
-        max_model: &str,
-        op_key: Option<&str>,
-    ) -> EngineNSnapshot {
+    fn capture_engine_n(repo_path: &Path, model_id: &str, op_key: Option<&str>) -> EngineNSnapshot {
         let commit_sha = Command::new("git")
             .current_dir(repo_path)
             .args(["rev-parse", "HEAD"])
@@ -729,7 +721,7 @@ impl SoakRunner {
             evaluator_version: spark_rsi::version().to_string(),
             holdout_bundle_digest: "sha256:holdouts-bundle-authoritative".to_string(),
             builder_digest: "sha256:spark-rsi-builder-pinned".to_string(),
-            max_model: max_model.to_string(),
+            model_id: model_id.to_string(),
             cortex_snapshot_ref: Utc::now().to_rfc3339(),
             operator_verifying_key: op_key.map(|s| s.to_string()),
         }

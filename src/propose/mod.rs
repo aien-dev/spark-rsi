@@ -2,13 +2,13 @@ pub mod cortex;
 pub mod diagnose;
 pub mod hypothesis;
 pub mod kernel_autotune;
-pub mod max_client;
+pub mod model_seat;
 
 pub use cortex::CortexExperienceClient;
 pub use diagnose::{DefectCategory, DiagnosticContext};
 pub use hypothesis::{HypothesisContract, ProtectedMetric};
 pub use kernel_autotune::{KernelAutotuneManager, PagedAttentionConfig};
-pub use max_client::{ChatMessage, MaxClient};
+pub use model_seat::{ChatMessage, ModelSeatClient};
 
 use crate::models::{ImprovementProposal, ProposalKind};
 use std::fs;
@@ -118,9 +118,9 @@ impl ProposalGenerator {
         trimmed.to_string()
     }
 
-    /// Generates a proposal by prompting MAX with a diagnostic context
+    /// Generates a proposal by prompting the local model seat with a diagnostic context
     pub async fn propose_from_diagnosis(
-        max_client: &MaxClient,
+        model_seat: &ModelSeatClient,
         diag: &DiagnosticContext,
     ) -> Result<ImprovementProposal, String> {
         let (sys, user) = diag.build_prompts();
@@ -135,14 +135,14 @@ impl ProposalGenerator {
             },
         ];
 
-        let raw_completion = max_client
+        let raw_completion = model_seat
             .complete(&messages, 1536, 0.2)
             .await
-            .map_err(|e| format!("MAX diagnosis proposal generation failed: {}", e))?;
+            .map_err(|e| format!("Model seat diagnosis proposal generation failed: {}", e))?;
 
         let cleaned_patch = Self::extract_code_block(&raw_completion);
         if cleaned_patch.is_empty() {
-            return Err("MAX generated an empty patch".to_string());
+            return Err("Model seat generated an empty patch".to_string());
         }
 
         // Validate unslop invariant on generated patch
@@ -153,7 +153,7 @@ impl ProposalGenerator {
             return Ok(Self::create_proposal(
                 &format!("resolve {:?} in {}", diag.primary_defect, diag.target_file),
                 &format!(
-                    "Automated MAX repair with unslop sanitization for cycle {}",
+                    "Automated model seat repair with unslop sanitization for cycle {}",
                     diag.cycle_id
                 ),
                 &diag.target_file,
@@ -164,7 +164,7 @@ impl ProposalGenerator {
 
         Ok(Self::create_proposal(
             &format!("resolve {:?} in {}", diag.primary_defect, diag.target_file),
-            &format!("Automated MAX repair for cycle {}", diag.cycle_id),
+            &format!("Automated model seat repair for cycle {}", diag.cycle_id),
             &diag.target_file,
             &cleaned_patch,
             ProposalKind::InvariantFix,

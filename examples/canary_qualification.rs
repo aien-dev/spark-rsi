@@ -132,7 +132,6 @@ async fn main() -> Result<(), String> {
         target_repo: repo.to_string_lossy().to_string(),
         cortex_url: "http://127.0.0.1:9".to_string(),
         cortex_space: "qualification".to_string(),
-        mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
         sandbox_root: sandbox.to_string_lossy().to_string(),
         rsi_root: ".rsi".to_string(),
@@ -140,7 +139,7 @@ async fn main() -> Result<(), String> {
         signing_key_hex: Some(hex::encode(signing_key.to_bytes())),
         require_latency_improvement: false,
         non_inferiority_margin: Some(250.0),
-        max_url: "http://127.0.0.1:9".to_string(),
+        model_url: "http://127.0.0.1:9".to_string(),
         canary_target: 10,
         canary_workload_sha256: Some(workload.digest.clone()),
         ..Default::default()

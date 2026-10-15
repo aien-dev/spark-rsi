@@ -1,3 +1,6 @@
+//! Client for the local model seat: any OpenAI-compatible chat completions endpoint
+//! (by AIEN convention, 127.0.0.1:18006/v1 on the Spark).
+
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -43,13 +46,13 @@ pub struct ChatCompletionResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct MaxClient {
+pub struct ModelSeatClient {
     pub base_url: String,
     pub model_id: String,
     client: reqwest::Client,
 }
 
-impl MaxClient {
+impl ModelSeatClient {
     pub fn new(base_url: &str, model_id: &str) -> Self {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(360))
@@ -98,23 +101,23 @@ impl MaxClient {
             .json(&req)
             .send()
             .await
-            .map_err(|e| format!("MAX completion request failed: {}", e))?;
+            .map_err(|e| format!("Model seat completion request failed: {}", e))?;
 
         if !resp.status().is_success() {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!("MAX endpoint returned HTTP {}: {}", status, body));
+            return Err(format!("Model seat returned HTTP {}: {}", status, body));
         }
 
         let body: ChatCompletionResponse = resp
             .json()
             .await
-            .map_err(|e| format!("Failed to parse MAX response: {}", e))?;
+            .map_err(|e| format!("Failed to parse model seat response: {}", e))?;
 
         let choice = body
             .choices
             .first()
-            .ok_or_else(|| "MAX response returned empty choices array".to_string())?;
+            .ok_or_else(|| "Model seat response returned an empty choices array".to_string())?;
 
         let content = choice.message.content.as_deref().unwrap_or_default().trim();
 
@@ -136,7 +139,7 @@ impl MaxClient {
                 }
             }
             return Err(
-                "MAX assistant message did not emit code output (exhausted in reasoning)"
+                "Model seat assistant message did not emit code output (exhausted in reasoning)"
                     .to_string(),
             );
         }

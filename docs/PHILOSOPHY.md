@@ -12,8 +12,7 @@ We enforce zero tolerance for unnecessary runtime interpreters across core agent
 
 Our entire operational substrate is compiled bare metal:
 - Rust provides fearless memory safety, zero-cost abstractions, linear predictability, and strict type-level correctness for daemons, CLI tools, network protocols, and storage engines.
-- Mojo provides hardware-level SIMD vectorization, unified CPU and GPU acceleration, and bare metal execution speed for tensor transformations, distillation, and balance kernels.
-- Python is restricted strictly to neural graph definitions required by Modular MAX or ML model weights where C-ABI wrappers do not yet exist.
+- Python is restricted strictly to neural graph definitions required by ML model weight loaders where C-ABI wrappers do not yet exist.
 
 We build tools that boot instantly, run indefinitely without memory leaks, and consume exact hardware resources. If a service cannot be compiled to a static binary, it does not belong in our core systems.
 
@@ -48,7 +47,7 @@ Software does not remain static; it either evolutive adapts or degrades into tec
 1. Observe: Continuously inspect repository topography, git branch status, test suite health, breadcrumb scent, and soul tension.
 2. Propose: Generate atomic, isolated improvement candidates. Every candidate is staged in an isolated sandbox worktree without touching the production working tree.
 3. Verify Invariants: Run automated gates against the proposed modification. The change must pass the unslop linguistic check, verify zero disk secrets, compile cleanly, and pass the complete regression test suite.
-4. Balance (Mojo SIMD Kernel): Evaluate soul tension between Drive (ambition, curiosity, problem-solving velocity) and Humanity (discipline, resonance, ethics, restraint). The Mojo SIMD balance kernel computes multidimensional tension. If drive dominates without humanity, the system creates ungrounded instability. If humanity suppresses drive, development halts. Ratification requires equilibrium.
+4. Balance (native Rust kernel): Evaluate soul tension between Drive (ambition, curiosity, problem-solving velocity) and Humanity (discipline, resonance, ethics, restraint). The balance kernel computes multidimensional tension. If drive dominates without humanity, the system creates ungrounded instability. If humanity suppresses drive, development halts. Ratification requires equilibrium.
 5. Ratify: Apply the verified patch, commit to git under canonical author AIEN <aien@aienos.com>, and persist the lesson or discovery permanently in Spark Cortex memory (atlas-memory).
 
 ## 7. Preservation, Learning, and Durable Memory

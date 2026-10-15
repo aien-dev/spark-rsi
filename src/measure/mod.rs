@@ -23,7 +23,10 @@ pub use profile::{ExecutionConfig, ExecutionProfile, MeasureContext};
 pub use select::{build_capability_graph, measure_stages, StageMeasurement};
 pub use stats::{median, p95_if_sufficient, percentile_nearest_rank, validate_samples};
 
-pub const SCHEMA_VERSION: u32 = 1;
+/// Version 2 (2026-10-15): the execution config names the endpoint `model_url` and no longer
+/// carries a balance kernel path (the balance kernel is native Rust only). Version 1 logs are
+/// refused by the strict reader rather than mixed with version 2 samples.
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// The six RSI pipeline stages, in pipeline order. These are the capability graph nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

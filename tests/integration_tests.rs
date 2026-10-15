@@ -7,21 +7,19 @@ use std::fs;
 use std::path::Path;
 
 #[test]
-fn test_mojo_balance_kernel_scalar() {
-    let kernel_path = "mojo/balance_bin";
-    let verdict =
-        BalanceKernel::evaluate(12.0, 10.0, Some(kernel_path)).expect("Evaluation should succeed");
+fn test_balance_kernel_scalar() {
+    let verdict = BalanceKernel::evaluate(12.0, 10.0);
+    assert_eq!(verdict.kernel, "rust");
     assert_eq!(verdict.verdict, "balanced");
     assert!(verdict.score > 0.7);
 }
 
 #[test]
-fn test_mojo_balance_kernel_simd() {
-    let kernel_path = "mojo/balance_bin";
+fn test_balance_kernel_simd() {
     let drive_vec = [10.0, 8.0, 7.0, 9.0];
     let human_vec = [9.0, 8.0, 8.0, 8.0];
-    let verdict = BalanceKernel::evaluate_simd(drive_vec, human_vec, Some(kernel_path))
-        .expect("SIMD evaluation should succeed");
+    let verdict = BalanceKernel::evaluate_simd(drive_vec, human_vec);
+    assert_eq!(verdict.mode, "vector");
     assert_eq!(verdict.verdict, "balanced");
     assert_eq!(verdict.drive, 34.0);
     assert_eq!(verdict.humanity, 33.0);
@@ -133,7 +131,6 @@ async fn test_rsi_cycle_execution() {
         target_repo: ".".to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
         cortex_space: "atlas-memory".to_string(),
-        mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
         sandbox_root: tmp.path().join("sandbox").display().to_string(),
         rsi_root: rsi_root.display().to_string(),
@@ -141,7 +138,7 @@ async fn test_rsi_cycle_execution() {
         signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
         canary_target: 3,
-        max_url: "http://127.0.0.1:9999/v1".to_string(),
+        model_url: "http://127.0.0.1:9999/v1".to_string(),
         non_inferiority_margin: Some(150.0),
         ..Default::default()
     };
@@ -233,7 +230,7 @@ async fn test_production_loop_end_to_end_with_candidate() {
     let test_repo = tmp.path().join("test_repo");
     std::fs::create_dir_all(&test_repo).unwrap();
 
-    // Copy complete source tree to test_repo including Cargo.lock, README.md, docs, mojo
+    // Copy complete source tree to test_repo including Cargo.lock, README.md, docs
     std::process::Command::new("cp")
         .args(&[
             "-r",
@@ -241,7 +238,6 @@ async fn test_production_loop_end_to_end_with_candidate() {
             "Cargo.lock",
             "README.md",
             "src",
-            "mojo",
             "docs",
             test_repo.to_str().unwrap(),
         ])
@@ -289,7 +285,6 @@ async fn test_production_loop_end_to_end_with_candidate() {
         target_repo: test_repo.display().to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
         cortex_space: "atlas-memory".to_string(),
-        mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
         sandbox_root: tmp.path().join("sandbox").display().to_string(),
         rsi_root: rsi_root.display().to_string(),
@@ -297,7 +292,7 @@ async fn test_production_loop_end_to_end_with_candidate() {
         signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
         canary_target: 5,
-        max_url: "http://127.0.0.1:9999/v1".to_string(),
+        model_url: "http://127.0.0.1:9999/v1".to_string(),
         non_inferiority_margin: Some(150.0),
         ..Default::default()
     };

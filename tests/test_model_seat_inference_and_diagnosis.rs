@@ -3,15 +3,17 @@ use spark_rsi::evaluator::EvaluationReceipt;
 use spark_rsi::models::ProposalKind;
 use spark_rsi::propose::cortex::CortexExperienceClient;
 use spark_rsi::propose::diagnose::{DefectCategory, DiagnosticContext};
-use spark_rsi::propose::max_client::{ChatMessage, MaxClient};
+use spark_rsi::propose::model_seat::{ChatMessage, ModelSeatClient};
 use spark_rsi::propose::ProposalGenerator;
 
 #[tokio::test]
-async fn test_max_client_availability_and_completion() {
-    let client = MaxClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
+async fn test_model_seat_availability_and_completion() {
+    let client = ModelSeatClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
     let is_avail = client.is_available().await;
     if !is_avail {
-        eprintln!("Skipping live MAX availability test: service not reachable on port 18006");
+        eprintln!(
+            "Skipping live model seat availability test: service not reachable on port 18006"
+        );
         return;
     }
 
@@ -29,7 +31,7 @@ async fn test_max_client_availability_and_completion() {
     let resp = client
         .complete(&messages, 256, 0.0)
         .await
-        .expect("MAX completion failed");
+        .expect("Model seat completion failed");
     assert!(
         resp.contains("PONG"),
         "Expected PONG in completion, got: {}",
@@ -114,10 +116,10 @@ async fn test_cortex_experience_client_query() {
 }
 
 #[tokio::test]
-async fn test_propose_from_diagnosis_live_max() {
-    let max = MaxClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
-    if !max.is_available().await {
-        eprintln!("Skipping live MAX test: service not running");
+async fn test_propose_from_diagnosis_live_model_seat() {
+    let seat = ModelSeatClient::new("http://127.0.0.1:18006/v1", "atlas-lightning-omni");
+    if !seat.is_available().await {
+        eprintln!("Skipping live model seat test: service not running");
         return;
     }
 
@@ -130,7 +132,7 @@ async fn test_propose_from_diagnosis_live_max() {
         vec!["Verify operator signs in arithmetic functions".to_string()],
     );
 
-    let proposal = ProposalGenerator::propose_from_diagnosis(&max, &diag)
+    let proposal = ProposalGenerator::propose_from_diagnosis(&seat, &diag)
         .await
         .expect("Failed to generate proposal from diagnosis");
 

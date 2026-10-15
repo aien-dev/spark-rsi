@@ -96,14 +96,9 @@ enum Commands {
         #[arg(default_value = ".")]
         path: String,
     },
-    /// Evaluate drive versus humanity tension via the Mojo balance kernel
-    Balance {
-        drive: f64,
-        humanity: f64,
-        #[arg(long, default_value = "mojo/balance_bin")]
-        kernel: String,
-    },
-    /// Evaluate 4-lane SIMD drive and humanity vectors via the Mojo balance kernel
+    /// Evaluate drive versus humanity tension via the native balance kernel
+    Balance { drive: f64, humanity: f64 },
+    /// Evaluate 4-lane drive and humanity vectors (each side summed) via the native balance kernel
     BalanceSimd {
         d0: f32,
         d1: f32,
@@ -113,8 +108,6 @@ enum Commands {
         h1: f32,
         h2: f32,
         h3: f32,
-        #[arg(long, default_value = "mojo/balance_bin")]
-        kernel: String,
     },
     /// Execute unprivileged Blind Judge evaluation over candidate generation
     Judge {
@@ -165,14 +158,12 @@ enum Commands {
     Cycle {
         #[arg(default_value = ".")]
         path: String,
-        #[arg(long, default_value = "mojo/balance_bin")]
-        kernel: String,
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
         #[arg(long, default_value = "http://127.0.0.1:18006/v1")]
-        max_url: String,
+        model_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
-        max_model: String,
+        model_id: String,
         /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
         #[arg(long)]
         dual_price_vector_dir: Option<String>,
@@ -191,14 +182,12 @@ enum Commands {
         path: String,
         #[arg(short, long, default_value = "60")]
         interval: u64,
-        #[arg(long, default_value = "mojo/balance_bin")]
-        kernel: String,
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
         #[arg(long, default_value = "http://127.0.0.1:18006/v1")]
-        max_url: String,
+        model_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
-        max_model: String,
+        model_id: String,
         /// Directory with a DUAL price vector, read as a diagnostic signal only (ADR 0031 s7.5)
         #[arg(long)]
         dual_price_vector_dir: Option<String>,
@@ -226,14 +215,12 @@ enum Commands {
         cycles: usize,
         #[arg(long, default_value = "3")]
         candidates: usize,
-        #[arg(long, default_value = "mojo/balance_bin")]
-        kernel: String,
         #[arg(long, default_value = "http://127.0.0.1:18080")]
         cortex_url: String,
         #[arg(long, default_value = "http://127.0.0.1:18006/v1")]
-        max_url: String,
+        model_url: String,
         #[arg(long, default_value = "atlas-lightning-omni")]
-        max_model: String,
+        model_id: String,
         /// Signing key as hex. Other processes can read command-line arguments; prefer
         /// `--signing-key-file` or `RSI_SOAK_SIGNING_KEY`.
         #[arg(long)]
@@ -355,12 +342,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Author signature: {}", cfg.author_string());
             println!(
                 "Engine mode: {} ({})",
-                cfg.engine.mode,
-                if cfg.engine.mode == "max" {
-                    "Deploy over Modular MAX (Rust/Mojo)"
-                } else {
-                    &cfg.engine.api_base_url
-                }
+                cfg.engine.mode, cfg.engine.api_base_url
             );
         }
         Commands::Profile => {
@@ -390,12 +372,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 std::process::exit(1);
             }
         }
-        Commands::Balance {
-            drive,
-            humanity,
-            kernel,
-        } => {
-            let verdict = BalanceKernel::evaluate(drive, humanity, Some(&kernel))?;
+        Commands::Balance { drive, humanity } => {
+            let verdict = BalanceKernel::evaluate(drive, humanity);
             println!("{}", serde_json::to_string_pretty(&verdict)?);
         }
         Commands::BalanceSimd {
@@ -407,10 +385,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             h1,
             h2,
             h3,
-            kernel,
         } => {
-            let verdict =
-                BalanceKernel::evaluate_simd([d0, d1, d2, d3], [h0, h1, h2, h3], Some(&kernel))?;
+            let verdict = BalanceKernel::evaluate_simd([d0, d1, d2, d3], [h0, h1, h2, h3]);
             println!("{}", serde_json::to_string_pretty(&verdict)?);
         }
         Commands::Judge {
@@ -480,10 +456,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Cycle {
             path,
-            kernel,
             cortex_url,
-            max_url,
-            max_model,
+            model_url,
+            model_id,
             dual_price_vector_dir,
             judge_public_key,
             judge_policy_file,
@@ -494,15 +469,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target_repo: path,
                 cortex_url,
                 cortex_space: "atlas-memory".to_string(),
-                mojo_kernel_path: kernel,
                 loop_interval_secs: 60,
                 sandbox_root: "/tmp/spark-rsi-sandbox".to_string(),
                 rsi_root: ".rsi".to_string(),
                 holdouts_dir: None,
                 signing_key_hex: None,
                 require_latency_improvement: false,
-                max_url,
-                max_model,
+                model_url,
+                model_id,
                 canary_target: 5000,
                 operator_key_hex: None,
                 non_inferiority_margin: None,
@@ -518,10 +492,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Daemon {
             path,
             interval,
-            kernel,
             cortex_url,
-            max_url,
-            max_model,
+            model_url,
+            model_id,
             dual_price_vector_dir,
             judge_public_key,
             judge_policy_file,
@@ -532,15 +505,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target_repo: path,
                 cortex_url,
                 cortex_space: "atlas-memory".to_string(),
-                mojo_kernel_path: kernel,
                 loop_interval_secs: interval,
                 sandbox_root: "/tmp/spark-rsi-sandbox".to_string(),
                 rsi_root: ".rsi".to_string(),
                 holdouts_dir: None,
                 signing_key_hex: None,
                 require_latency_improvement: false,
-                max_url,
-                max_model,
+                model_url,
+                model_id,
                 canary_target: 5000,
                 operator_key_hex: None,
                 non_inferiority_margin: None,
@@ -645,10 +617,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             rsi_root,
             cycles,
             candidates,
-            kernel,
             cortex_url,
-            max_url,
-            max_model,
+            model_url,
+            model_id,
             signing_key_hex,
             signing_key_file,
             operator_key_hex,
@@ -665,9 +636,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 operator_key_hex,
                 cortex_url,
                 cortex_space: "atlas-memory".to_string(),
-                max_url,
-                max_model,
-                mojo_kernel_path: kernel,
+                model_url,
+                model_id,
                 total_cycles: cycles,
                 candidates_per_cycle: candidates,
                 canary_target: 5000,

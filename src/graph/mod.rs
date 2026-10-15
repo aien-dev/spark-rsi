@@ -451,7 +451,7 @@ mod tests {
                 .unwrap(),
         );
         graph.add_node(
-            CapabilityNode::new("kernel", "Mojo Balance Kernel", "compute")
+            CapabilityNode::new("kernel", "Balance Kernel", "compute")
                 .with_measured_latency(100.0, None, 0.0, 5)
                 .unwrap(),
         );

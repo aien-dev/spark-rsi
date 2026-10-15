@@ -42,15 +42,13 @@ fn default_sign_commits() -> bool {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EngineConfig {
     #[serde(default = "default_engine_mode")]
-    pub mode: String, // "api" or "max"
+    pub mode: String, // "local" (the local model seat at api_base_url) or "api"
     #[serde(default = "default_api_base_url")]
     pub api_base_url: String,
     #[serde(default)]
     pub api_key: String,
     #[serde(default = "default_model_id")]
     pub model_id: String,
-    #[serde(default = "default_max_port")]
-    pub max_port: u16,
     #[serde(default = "default_context_window")]
     pub context_window: usize,
     #[serde(default = "default_temperature")]
@@ -64,7 +62,6 @@ impl Default for EngineConfig {
             api_base_url: default_api_base_url(),
             api_key: String::new(),
             model_id: default_model_id(),
-            max_port: default_max_port(),
             context_window: default_context_window(),
             temperature: default_temperature(),
         }
@@ -72,16 +69,13 @@ impl Default for EngineConfig {
 }
 
 fn default_engine_mode() -> String {
-    "max".to_string()
+    "local".to_string()
 }
 fn default_api_base_url() -> String {
     "http://127.0.0.1:18006/v1".to_string()
 }
 fn default_model_id() -> String {
     "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16".to_string()
-}
-fn default_max_port() -> u16 {
-    18006
 }
 fn default_context_window() -> usize {
     32768
@@ -184,7 +178,7 @@ mod tests {
         cfg.operator.name = "Alice".to_string();
         cfg.operator.email = "alice@domain.org".to_string();
         assert_eq!(cfg.author_string(), "Alice <alice@domain.org>");
-        assert_eq!(cfg.engine.mode, "max");
+        assert_eq!(cfg.engine.mode, "local");
     }
 
     #[test]

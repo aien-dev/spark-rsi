@@ -2,8 +2,7 @@
 //!
 //! Effective execution configuration: the `RsiConfig` fields that change what the stages do or
 //! which services they call, so two cycles with different values are not comparable:
-//! - `max_url` (the inference endpoint Propose calls)
-//! - `mojo_kernel_path` (the balance kernel the evaluation runs)
+//! - `model_url` (the inference endpoint Propose calls)
 //! - the effective holdouts directory (the judge's workload)
 //! - `canary_target` (how many canary observations the canary stage needs)
 //! - `cortex_url` and `cortex_space` (what CortexCommit writes to)
@@ -25,8 +24,7 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ExecutionConfig {
-    pub max_url: String,
-    pub mojo_kernel_path: String,
+    pub model_url: String,
     pub holdouts_dir: String,
     pub canary_target: u64,
     pub cortex_url: String,
@@ -40,8 +38,7 @@ impl ExecutionConfig {
         ratify_roots.sort();
         ratify_roots.dedup();
         Self {
-            max_url: config.max_url.clone(),
-            mojo_kernel_path: config.mojo_kernel_path.clone(),
+            model_url: config.model_url.clone(),
             holdouts_dir: config
                 .holdouts_dir
                 .clone()
@@ -55,9 +52,8 @@ impl ExecutionConfig {
 
     fn canonical(&self) -> String {
         format!(
-            "max_url={}\nmojo_kernel_path={}\nholdouts_dir={}\ncanary_target={}\ncortex_url={}\ncortex_space={}\nratify_roots={}\n",
-            self.max_url,
-            self.mojo_kernel_path,
+            "model_url={}\nholdouts_dir={}\ncanary_target={}\ncortex_url={}\ncortex_space={}\nratify_roots={}\n",
+            self.model_url,
             self.holdouts_dir,
             self.canary_target,
             self.cortex_url,
@@ -111,7 +107,7 @@ impl ExecutionProfile {
 
     pub fn detect(config: &RsiConfig) -> Self {
         Self {
-            model: config.max_model.clone(),
+            model: config.model_id.clone(),
             execution_config: ExecutionConfig::from_config(config),
             cpu_count: std::thread::available_parallelism().ok().map(|n| n.get()),
             memory_total_kib: read_mem_total_kib("/proc/meminfo"),

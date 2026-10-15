@@ -93,9 +93,8 @@ fn test_six_layer_evaluator_end_to_end() {
     );
     assert!(security.passed);
 
-    let style = StyleLayer::evaluate_text(
-        "Direct systems programming in Rust and Mojo. Zero unslop violations.",
-    );
+    let style =
+        StyleLayer::evaluate_text("Direct systems programming in Rust. Zero unslop violations.");
     assert!(style.passed);
 
     let parent_lat: Vec<f64> = (0..30).map(|i| 100.0 + (i as f64) * 0.5).collect();

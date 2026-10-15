@@ -99,7 +99,6 @@ pub struct RsiConfig {
     pub target_repo: String,
     pub cortex_url: String,
     pub cortex_space: String,
-    pub mojo_kernel_path: String,
     pub loop_interval_secs: u64,
     pub sandbox_root: String,
     #[serde(default = "default_rsi_root")]
@@ -110,10 +109,13 @@ pub struct RsiConfig {
     pub signing_key_hex: Option<String>,
     #[serde(default)]
     pub require_latency_improvement: bool,
-    #[serde(default = "default_max_url")]
-    pub max_url: String,
-    #[serde(default = "default_max_model")]
-    pub max_model: String,
+    /// OpenAI-compatible chat completions endpoint of the local model seat.
+    /// Configs written before 2026-10-15 named this `max_url`; that key is still read.
+    #[serde(default = "default_model_url", alias = "max_url")]
+    pub model_url: String,
+    /// Model id sent to the local model seat. Older configs named this `max_model`.
+    #[serde(default = "default_model_id", alias = "max_model")]
+    pub model_id: String,
     #[serde(default = "default_canary_target")]
     pub canary_target: u64,
     #[serde(default)]
@@ -165,11 +167,11 @@ pub struct RsiConfig {
     pub canary_exempt_kinds: Vec<ProposalKind>,
 }
 
-fn default_max_url() -> String {
+fn default_model_url() -> String {
     "http://127.0.0.1:18006/v1".to_string()
 }
 
-fn default_max_model() -> String {
+fn default_model_id() -> String {
     "atlas-lightning-omni".to_string()
 }
 
@@ -203,15 +205,14 @@ impl Default for RsiConfig {
             target_repo: ".".to_string(),
             cortex_url: "http://127.0.0.1:18080".to_string(),
             cortex_space: "atlas-memory".to_string(),
-            mojo_kernel_path: "mojo/balance_bin".to_string(),
             loop_interval_secs: 60,
             sandbox_root: "/tmp/spark-rsi-sandbox".to_string(),
             rsi_root: ".rsi".to_string(),
             holdouts_dir: None,
             signing_key_hex: None,
             require_latency_improvement: false,
-            max_url: default_max_url(),
-            max_model: default_max_model(),
+            model_url: default_model_url(),
+            model_id: default_model_id(),
             canary_target: 5000,
             operator_key_hex: None,
             non_inferiority_margin: None,
@@ -311,4 +312,25 @@ pub struct RsiCycleResult {
     /// Canary admission summary. None when no candidate reached the canary stage.
     #[serde(default)]
     pub canary: Option<CanarySummary>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn config_written_with_the_old_endpoint_keys_still_loads() {
+        let old = serde_json::json!({
+            "target_repo": ".", "cortex_url": "http://127.0.0.1:18080", "cortex_space": "s",
+            "mojo_kernel_path": "mojo/balance_bin", "loop_interval_secs": 60,
+            "sandbox_root": "/tmp/spark-rsi-sandbox",
+            "max_url": "http://127.0.0.1:9/v1", "max_model": "old-model"
+        });
+        let cfg: RsiConfig = serde_json::from_value(old).unwrap();
+        assert_eq!(cfg.model_url, "http://127.0.0.1:9/v1");
+        assert_eq!(cfg.model_id, "old-model");
+        let new = serde_json::to_value(&cfg).unwrap();
+        assert!(new.get("model_url").is_some() && new.get("max_url").is_none());
+        assert!(new.get("mojo_kernel_path").is_none());
+    }
 }

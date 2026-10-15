@@ -456,7 +456,7 @@ impl BlindJudge {
         let security = SecurityLayer::evaluate_candidate(&modified_files, &patch_diff, 0);
 
         let style = StyleLayer::evaluate_text(if style_text.is_empty() {
-            "Native compiled Rust and Mojo execution running on DGX Spark GB10."
+            "Native compiled Rust execution running on DGX Spark GB10."
         } else {
             &style_text
         });
