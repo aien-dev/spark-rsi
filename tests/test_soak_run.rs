@@ -51,13 +51,13 @@ fn test_thermal_snapshot_and_engine_snapshot() {
         evaluator_version: "0.1.0".to_string(),
         holdout_bundle_digest: "sha256:holdouts-bundle-v1".to_string(),
         builder_digest: "sha256:spark-rsi-builder-pinned".to_string(),
-        max_model: "atlas-lightning-omni".to_string(),
+        model_id: "atlas-lightning-omni".to_string(),
         cortex_snapshot_ref: "2026-09-19T00:00:00Z".to_string(),
         operator_verifying_key: Some("04aabbcc...".to_string()),
     };
 
     assert_eq!(engine_n.commit_sha, "abc123def456");
-    assert_eq!(engine_n.max_model, "atlas-lightning-omni");
+    assert_eq!(engine_n.model_id, "atlas-lightning-omni");
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn test_soak_manifest_serialization_and_roundtrip() {
         evaluator_version: "0.1.0".to_string(),
         holdout_bundle_digest: "digest-1".to_string(),
         builder_digest: "digest-2".to_string(),
-        max_model: "atlas-lightning-omni".to_string(),
+        model_id: "atlas-lightning-omni".to_string(),
         cortex_snapshot_ref: "now".to_string(),
         operator_verifying_key: None,
     };

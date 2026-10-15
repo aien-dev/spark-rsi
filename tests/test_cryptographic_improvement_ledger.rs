@@ -323,7 +323,6 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         target_repo: repo_dir.to_str().unwrap().to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
         cortex_space: "atlas-memory".to_string(),
-        mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
         sandbox_root: sandbox_dir.to_str().unwrap().to_string(),
         rsi_root: ".rsi".to_string(),
@@ -331,7 +330,7 @@ async fn test_daemon_run_cycle_records_provenance_to_ledger() {
         signing_key_hex: Some(signing_key_hex),
         require_latency_improvement: false,
         non_inferiority_margin: Some(250.0),
-        max_url: "http://127.0.0.1:9".to_string(),
+        model_url: "http://127.0.0.1:9".to_string(),
         ..Default::default()
     };
 

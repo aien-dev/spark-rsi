@@ -64,7 +64,7 @@ Reliable software protects human agency and community trust. We hold our codebas
 
 ### Section 1. Pure Native Systems Priority
 1. Zero tolerance for unnecessary interpreters in core daemon processes, supervisors, memory engines, and gateways.
-2. Core runtime engines must be compiled native Rust and high-speed Mojo. Interpreted environments are restricted strictly to neural graph definitions required by weight loaders.
+2. Core runtime engines must be compiled native Rust, with Omega kernels on the GPU. Interpreted environments are restricted strictly to neural graph definitions required by weight loaders.
 3. Every microservice must run lean, deterministic, and fast, maximizing hardware efficiency on local silicon.
 
 ### Section 2. Clarity and Technical Precision

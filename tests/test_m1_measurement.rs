@@ -16,7 +16,7 @@ use std::time::Duration;
 
 fn profile(config: &RsiConfig) -> ExecutionProfile {
     ExecutionProfile {
-        model: config.max_model.clone(),
+        model: config.model_id.clone(),
         execution_config: ExecutionConfig::from_config(config),
         cpu_count: Some(20),
         memory_total_kib: Some(128 * 1024 * 1024),
@@ -457,9 +457,9 @@ fn log_is_strict_but_skips_a_torn_trailing_line_and_drops_it_on_append() {
     )));
 
     // Unknown fields and other schema versions are refused too.
-    let mut v2 = record(&c, "cycle-v2", [1; 6]);
-    v2.schema_version = 2;
-    assert!(log.append_complete(&v2).is_err());
+    let mut other = record(&c, "cycle-other", [1; 6]);
+    other.schema_version = SCHEMA_VERSION + 1;
+    assert!(log.append_complete(&other).is_err());
     std::fs::write(&path, b"{\"schema_version\":1,\"extra\":true}\n").unwrap();
     assert!(log.read_complete().is_err());
 }
@@ -480,7 +480,7 @@ fn workload_key_and_fingerprint_follow_the_documented_fields() {
 
     // Model and execution configuration change both.
     let mut model = base.clone();
-    model.max_model = "another-model".into();
+    model.model_id = "another-model".into();
     assert_ne!(ctx(&model).workload_key, c.workload_key);
     assert_ne!(ctx(&model).fingerprint, c.fingerprint);
     let mut exec = base.clone();
@@ -571,7 +571,7 @@ async fn a_completed_cycle_appends_one_record_to_the_sample_log() {
         rsi_root: rsi_root.display().to_string(),
         holdouts_dir: Some(holdouts.display().to_string()),
         signing_key_hex: Some(hex::encode(key.to_bytes())),
-        max_url: "http://127.0.0.1:9999/v1".to_string(),
+        model_url: "http://127.0.0.1:9999/v1".to_string(),
         non_inferiority_margin: Some(150.0),
         ..Default::default()
     };

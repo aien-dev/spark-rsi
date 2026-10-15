@@ -49,8 +49,8 @@
     "generated": {
       "children": [
         {
-          "digest": "5e2119d5d6a2624a6f770803fe288355a5aa949677e9a60170cdde61b274e9d6",
-          "last_commit": "4becebb",
+          "digest": "55e07a60a3b23bec1eb421a3cb8e85ddc988951815c08925eaaf5efcb68e744b",
+          "last_commit": "3887fe4",
           "name": "actor",
           "purpose": "Directory src/actor. Purpose not yet described by a human."
         },
@@ -73,14 +73,14 @@
           "purpose": "DUAL constraint-price reader for RSI (ADR 0031 s7.5): decoder, digest check and ScarcityDiagnost"
         },
         {
-          "digest": "964e17bf7cb59452d73df91bd8be378691da59bb4c0ac6e37fceee393b63e7f8",
-          "last_commit": "4becebb",
+          "digest": "7a9223e7c980630e2411fad98e21a277a18839755af171b524c06c33447d1d38",
+          "last_commit": "3887fe4",
           "name": "evaluator",
           "purpose": "Directory src/evaluator. Purpose not yet described by a human."
         },
         {
-          "digest": "eb3a5f0b7203ba982b9fa0f7825a02921c2adc49c73abcd21145609b1a1a8da6",
-          "last_commit": "c464d10",
+          "digest": "ffec74e6a355e3a2712544be7a604225ff768bb9e5407c0ad92ef29b98bdd59d",
+          "last_commit": "3887fe4",
           "name": "graph",
           "purpose": "Directory src/graph. Purpose not yet described by a human."
         },
@@ -92,13 +92,13 @@
         },
         {
           "digest": "14d238f00b55daa05e2c2438ccd11c69e5bf51a4fbc3fbbdaf1cf0c041b7e61f",
-          "last_commit": "28cbca6",
+          "last_commit": "8fa9b64",
           "name": "ledger",
           "purpose": "Directory src/ledger. Purpose not yet described by a human."
         },
         {
-          "digest": "051db6ac64d07083f5fec412b251569f4d09cc2c8012c149ab6f93adbbcdbf0e",
-          "last_commit": "22e9181",
+          "digest": "3987281b8d1386c32444fda48896d3f5cc52a798be51d2f9ca95c808646bc826",
+          "last_commit": "3887fe4",
           "name": "measure",
           "purpose": "M1 Measurement: stage samples, sample log, compatibility filtering, percentile statistics, claim"
         },
@@ -109,14 +109,14 @@
           "purpose": "Directory src/meta. Purpose not yet described by a human."
         },
         {
-          "digest": "2787d4e51f830933e8b7fba886623e1d188195b69f9526afda54fe6f0ac8a8b2",
-          "last_commit": "91ca36e",
+          "digest": "9c8d3e6d776c9b3e906c92247ba63bf4b577518899198bd0376f341b7d382868",
+          "last_commit": "3887fe4",
           "name": "propose",
           "purpose": "Directory src/propose. Purpose not yet described by a human."
         },
         {
-          "digest": "92e2857b467c0740b5987d46fc90cf8eb1ce78dfc8079cf8e67aa494142322f7",
-          "last_commit": "22e9181",
+          "digest": "233ca920c4a0952157d5fe254657bbb5c8efde53639e6c5d4e3181d90fd1a99d",
+          "last_commit": "3887fe4",
           "name": "soak",
           "purpose": "Directory src/soak. Purpose not yet described by a human."
         },
@@ -127,15 +127,15 @@
           "purpose": "Directory src/supervisor. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:4dd32f2e8b6abd64e0959f33f436f19bcb0f6540610acccadda8df6f17670592",
-      "compiled_at": "2026-10-13T02:52:51Z",
+      "children_root": "sha256:6ba24276c321d1bf2d767f98fadfbbfdfb42a521738ec9099ff7cb1eaab32ac1",
+      "compiled_at": "2026-10-15T11:19:53Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:b4d7c3fe9d622e7efc51bbf963eaca1cc89b4e5adc0514ef4d2caa050cb03d09",
+      "digest": "sha256:445aabc26f5f5d60e9d44c3c7d103f44abb9ab74fec129024863ba7d2ddab315",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 74,
-      "generated_at_commit": "f7f08b5cc31a620420f4b8db8fbfbb35a65325b6",
-      "source_tree": "sha256:d4d8f2c68762f8669058bcda120e5e4aef2cd22f01d2fa057ace81caf6d15364"
+      "generated_at_commit": "3887fe48faf5231278e409070312d7093bd9db8e",
+      "source_tree": "sha256:f6602098989ab6e42694dc3c8662e388851961ba3238873a77cec31af09bda21"
     },
     "owner_lane": "",
     "seed": {

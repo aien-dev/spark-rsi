@@ -53,7 +53,9 @@ pub struct EngineNSnapshot {
     pub evaluator_version: String,
     pub holdout_bundle_digest: String,
     pub builder_digest: String,
-    pub max_model: String,
+    /// Records written before 2026-10-15 named this `max_model`; that key is still read.
+    #[serde(alias = "max_model")]
+    pub model_id: String,
     pub cortex_snapshot_ref: String,
     pub operator_verifying_key: Option<String>,
 }

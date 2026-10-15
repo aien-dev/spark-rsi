@@ -363,7 +363,6 @@ fn make_target(with_adapter: bool, pin: Option<&str>) -> Target {
         target_repo: repo.to_str().unwrap().to_string(),
         cortex_url: "http://127.0.0.1:18080".to_string(),
         cortex_space: "atlas-memory".to_string(),
-        mojo_kernel_path: "mojo/balance_bin".to_string(),
         loop_interval_secs: 60,
         sandbox_root: sandbox.to_str().unwrap().to_string(),
         rsi_root: ".rsi".to_string(),
@@ -371,7 +370,7 @@ fn make_target(with_adapter: bool, pin: Option<&str>) -> Target {
         signing_key_hex: Some(hex::encode(signing_key.to_bytes())),
         require_latency_improvement: false,
         non_inferiority_margin: Some(250.0),
-        max_url: "http://127.0.0.1:9".to_string(),
+        model_url: "http://127.0.0.1:9".to_string(),
         canary_target: 10,
         canary_workload_sha256: Some(pin.map(str::to_string).unwrap_or(digest)),
         ..Default::default()

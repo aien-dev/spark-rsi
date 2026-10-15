@@ -19,7 +19,7 @@ use crate::models::{
 };
 use crate::observe::observe_codebase;
 use crate::propose::{
-    CortexExperienceClient, DefectCategory, DiagnosticContext, HypothesisContract, MaxClient,
+    CortexExperienceClient, DefectCategory, DiagnosticContext, HypothesisContract, ModelSeatClient,
     ProposalGenerator,
 };
 use crate::ratify::Ratifier;
@@ -177,11 +177,11 @@ impl RsiEngine {
         };
         let past_lessons = cortex.recall_lessons(&cortex_query, 3).await;
 
-        // 6. Proposer: Modular MAX Proposer & Constrained Candidates
+        // 6. Proposer: local model seat proposer and constrained candidates
         let mut candidates = Vec::new();
-        let max_client = MaxClient::new(&config.max_url, &config.max_model);
+        let model_seat = ModelSeatClient::new(&config.model_url, &config.model_id);
 
-        if max_client.is_available().await {
+        if model_seat.is_available().await {
             let target_file = "src/lib.rs";
             let full_path = repo_path.join(target_file);
             let content = std::fs::read_to_string(&full_path).unwrap_or_default();
@@ -211,7 +211,7 @@ impl RsiEngine {
                 diag = diag.with_hypothesis(h);
             }
 
-            match ProposalGenerator::propose_from_diagnosis(&max_client, &diag).await {
+            match ProposalGenerator::propose_from_diagnosis(&model_seat, &diag).await {
                 Ok(prop) => candidates.push(prop),
                 Err(_) => propose_outcome = StageOutcome::Failed,
             }
@@ -507,12 +507,11 @@ impl RsiEngine {
                 InvariantVerifier::run_full_verification_scoped(&sandbox_dir, is_code_change);
             let passed = inv_report.passed;
 
-            // 9. Balance: evaluate soul tension via Mojo kernel
+            // 9. Balance: evaluate soul tension via the native balance kernel
             let balance_verdict = BalanceKernel::evaluate(
                 telemetry.soul_tension.drive_score,
                 telemetry.soul_tension.humanity_score,
-                Some(&config.mojo_kernel_path),
-            )?;
+            );
             let is_balanced = balance_verdict.verdict == "balanced";
 
             if !passed || !is_balanced {
@@ -829,8 +828,7 @@ impl RsiEngine {
             let balance_verdict = BalanceKernel::evaluate(
                 telemetry.soul_tension.drive_score,
                 telemetry.soul_tension.humanity_score,
-                Some(&config.mojo_kernel_path),
-            )?;
+            );
             maybe_balance = Some(balance_verdict);
         }
         if winning_proposal.is_some() {

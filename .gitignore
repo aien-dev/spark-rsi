@@ -1,6 +1,5 @@
 /target
 **/*.rs.bk
 *.log
-mojo/*_bin
 .rsi/
 .crumb.local

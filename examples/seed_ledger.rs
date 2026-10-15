@@ -32,10 +32,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let signing_key = SigningKey::from_bytes(&[42u8; 32].into())?;
 
-    // Cycle 1: cand-mojo-opt-01 (Admitted)
+    // Cycle 1: cand-kernel-opt-01 (Admitted)
     let receipt1 = EvaluationReceipt {
         cycle_id: "cycle-001".to_string(),
-        candidate_id: "cand-mojo-opt-01".to_string(),
+        candidate_id: "cand-kernel-opt-01".to_string(),
         parent_id: "parent-genesis-00".to_string(),
         evaluated_at: "2026-09-19T10:00:00Z".to_string(),
         evaluator_version: "1.0.0".to_string(),
@@ -74,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ledger.append_evaluation(&receipt1, Some(&raw1))?;
     ledger.append_block(
         BlockType::Promotion,
-        "{\"candidate_id\": \"cand-mojo-opt-01\", \"state\": \"DURABLE\", \"canary_quota\": 5000}"
+        "{\"candidate_id\": \"cand-kernel-opt-01\", \"state\": \"DURABLE\", \"canary_quota\": 5000}"
             .to_string(),
         vec![],
     )?;
@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let receipt2 = EvaluationReceipt {
         cycle_id: "cycle-002".to_string(),
         candidate_id: "cand-bottleneck-sch-02".to_string(),
-        parent_id: "cand-mojo-opt-01".to_string(),
+        parent_id: "cand-kernel-opt-01".to_string(),
         evaluated_at: "2026-09-19T11:00:00Z".to_string(),
         evaluator_version: "1.0.0".to_string(),
         passed_all_hard_invariants: true,

@@ -13,10 +13,6 @@
       "role": ""
     },
     {
-      "name": "mojo",
-      "role": ""
-    },
-    {
       "name": "scripts",
       "role": ""
     },
@@ -43,8 +39,8 @@
           "purpose": "Directory analysis. Purpose not yet described by a human."
         },
         {
-          "digest": "9a4de4758a3ac1a01bfebeab56e91d17b95c0ef1c9506cb0ec5766b7d148c318",
-          "last_commit": "721d512",
+          "digest": "0d177ba21d5887d0e4b78c12805e6102ffbb5714a19b947a38bd73ad67209725",
+          "last_commit": "3887fe4",
           "name": "docs",
           "purpose": "Directory docs. Purpose not yet described by a human."
         },
@@ -55,8 +51,8 @@
           "purpose": "Evidence receipts for verified changes (commands, results, SHAs, verdicts)."
         },
         {
-          "digest": "06da2ee20ebf52cf4882e4a2fdad1b8b470c7d1e9ad2411a01a28e2c2320aeaf",
-          "last_commit": "0002ce0",
+          "digest": "6a240842484537542c1e411fa947ef7100cb565c86855b04fff38250a792c553",
+          "last_commit": "3887fe4",
           "name": "examples",
           "purpose": "Directory examples. Purpose not yet described by a human."
         },
@@ -67,26 +63,20 @@
           "purpose": "Fixture crates that qualify the canary execution pipeline"
         },
         {
-          "digest": "c65c4a841446f76af9dca31e0631e577d146bcb1cf72122356e43cdee8545143",
-          "last_commit": "6ac8ae9",
-          "name": "mojo",
-          "purpose": "Directory mojo. Purpose not yet described by a human."
-        },
-        {
           "digest": "4b7fe492f3c01a231679c20cee405cf5a41d15bc6229aba5f6e3503987197655",
           "last_commit": "657a3e6",
           "name": "scripts",
           "purpose": "Directory scripts. Purpose not yet described by a human."
         },
         {
-          "digest": "b4d7c3fe9d622e7efc51bbf963eaca1cc89b4e5adc0514ef4d2caa050cb03d09",
-          "last_commit": "8fa9b64",
+          "digest": "445aabc26f5f5d60e9d44c3c7d103f44abb9ab74fec129024863ba7d2ddab315",
+          "last_commit": "3887fe4",
           "name": "src",
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
-          "digest": "79e6d50ce3e598dcb6cb3ec760d1f0e7abefb2a6058caaf3ce67512905942a34",
-          "last_commit": "a051483",
+          "digest": "30c845c034c5cf6b169571ef17f873588d261edcf3480e0f25290b935a94f798",
+          "last_commit": "3887fe4",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
         },
@@ -97,15 +87,15 @@
           "purpose": "Directory tools. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:8eaa439b23e861d5d714d4003b7ec046b140ef94a2f40aadaac33a3ca1a1e903",
-      "compiled_at": "2026-10-14T01:16:51Z",
+      "children_root": "sha256:89e5adedb66adfe1c898d6660fb1653ed27967eb9100a04903747c452abee880",
+      "compiled_at": "2026-10-15T11:19:53Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:f26866c14b6f091c119ee47475a1989cea3d62bd7fd2926c3fd0c6e9930ca174",
+      "digest": "sha256:6d7343eb4f60633415b552c672889cadcd02fa75b8f573004359fafcdcef59dd",
       "evidence_files": 27,
       "evidence_root": "sha256:5552ba32dc3c69f7c3700b23a1a62a89d259ce203bc957986946d37e7a8b6ffd",
-      "files": 171,
-      "generated_at_commit": "a051483636e8b1e7f76415398fbdb91999efb4c1",
-      "source_tree": "sha256:e7b623de64cde676452a183f47959595b4d4fe0b9915f58ae2414cb5503bd315"
+      "files": 170,
+      "generated_at_commit": "3887fe48faf5231278e409070312d7093bd9db8e",
+      "source_tree": "sha256:0308911f6dd071d9d4c5636623ad4584cd82c9abccced4749194fe089e1c6291"
     },
     "owner_lane": "",
     "seed": {
