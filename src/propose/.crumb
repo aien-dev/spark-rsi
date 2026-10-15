@@ -7,14 +7,14 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-10-12T22:16:40Z",
+      "compiled_at": "2026-10-15T11:19:53Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:2787d4e51f830933e8b7fba886623e1d188195b69f9526afda54fe6f0ac8a8b2",
+      "digest": "sha256:9c8d3e6d776c9b3e906c92247ba63bf4b577518899198bd0376f341b7d382868",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 6,
-      "generated_at_commit": "b13ea46cda2213475ab1066e1e357f96e3145e8e",
-      "source_tree": "sha256:af36e2329808bcfc240625fc89aad1328a3618d51f08904c29763b0f42475464"
+      "generated_at_commit": "3887fe48faf5231278e409070312d7093bd9db8e",
+      "source_tree": "sha256:c6b4c01c582d20eec21bb27ea223ad77d1ff901d2f3e47c64f1323dbe8a7a93c"
     },
     "owner_lane": "",
     "seed": {
@@ -23,7 +23,7 @@
         "diagnose.rs",
         "hypothesis.rs",
         "kernel_autotune.rs",
-        "max_client.rs",
+        "model_seat.rs",
         "mod.rs"
       ],
       "purpose_auto": "Directory src/propose. Purpose not yet described by a human."
