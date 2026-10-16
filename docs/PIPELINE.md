@@ -45,3 +45,8 @@ records the operator run and the checks pass.
 - Spark state: `aien-local-ci status`, journal `~/.local/state/aien-local-ci/journal.jsonl`,
   pipeline journal `~/.local/state/aien-local-ci/pipeline.jsonl`.
 - Published bundles: <https://github.com/aien-dev/aien-receipts/tree/main/spark-rsi>.
+
+## Required checks on main
+
+Since 2026-10-16 branch protection on `main` requires `AIEN Verification` only. The hosted
+jobs that used to be required run only on `workflow_dispatch`.
