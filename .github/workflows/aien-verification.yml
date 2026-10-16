@@ -1,9 +1,10 @@
 # AIEN Verification: the GitHub thin gate (ADR 0033 Decision 11, inventory contract C5).
 #
-# PHASE 2 DRAFT (2026-10-11, lane REPOS). This workflow is NOT a required check yet. It runs
-# beside the existing hosted workflows so that, for N >= 3 commits, the hosted verdict and the
-# locally signed bundle verdict can be compared (advisor amendment A7). Nothing here changes
-# the repository's required contexts; that switch is phase 3 and needs Drake's agreement.
+# PHASE 3 (2026-10-16, Drake's agreement 2026-10-15: "the Spark becomes the only test judge").
+# This is a required check. The Spark worker (aien-test worker) runs the tests and signs a
+# bundle; tools/aien-local-ci/pipeline.sh in aien-sovereign-core publishes it to aien-receipts
+# and reruns this workflow once it is there. A missing bundle fails this check (NOT_RUN) until
+# the rerun. Pull requests labeled ready-to-merge are merged by the pipeline (docs/PIPELINE.md).
 #
 # What it does: checkout; read the trust anchors from the BASE ref (origin/main), never from
 # the head under test (amendment A1); crumb verify; fetch <repo>/<sha>/bundle.json from
@@ -14,9 +15,9 @@
 # checker, and aien-test once the repository is enrolled). It never builds or tests this
 # repository's own code; the portable smoke set is text scans and format checks only.
 #
-# PHASE 3 FLIPS (marked "PHASE3" below): a missing bundle becomes NOT_RUN (status pending with
-# a retry window) instead of a neutral note, and a trust-surface change becomes a failure
-# unless the operator ran it by hand (BLOCKED_OPERATOR).
+# PHASE 3 rules (marked "PHASE3" below): a missing bundle is NOT_RUN (this check fails; the
+# pipeline reruns it after publication), and a trust-surface change fails unless the verified
+# bundle's signed plan shows the operator ran it by hand (plan.blocked == null).
 name: AIEN Verification
 
 on:
@@ -68,14 +69,16 @@ jobs:
             echo "verify.pub (base): $(cat "$RUNNER_TEMP/anchors/verify.pub")"
           else
             echo "enrolled=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::.aien/verify.pub is not on the base ref yet: this repository is not enrolled. Phase 2: neutral."
+            # PHASE3: an enrolled repository whose base ref lost its key cannot verify anything.
+            echo "::error::.aien/verify.pub is not on the base ref: no trusted key, nothing can be verified."
+            exit 1
           fi
           # Trust-surface changes are run by the operator by hand (A1): BLOCKED_OPERATOR.
           changed=$(git diff --name-only "$base...${{ steps.ids.outputs.sha }}" -- .aien tests/gates .github/workflows .forgejo tools/aien-test || true)
           if [ -n "$changed" ]; then
             echo "blocked=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::BLOCKED_OPERATOR: this head changes the trust surface:"; echo "$changed"
-            # PHASE3: fail here unless an operator attestation for this sha is present.
+            echo "::notice::BLOCKED_OPERATOR: this head changes the trust surface (the bundle must show an operator run):"; echo "$changed"
+            # PHASE3: enforced in the verify step: the verified bundle's signed plan must say blocked == null.
           else
             echo "blocked=false" >> "$GITHUB_OUTPUT"
           fi
@@ -139,8 +142,9 @@ jobs:
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::bundle not published yet for ${{ steps.ids.outputs.sha }} (phase 2: neutral)."
-            # PHASE3: exit 2 here (NOT_RUN, status pending with a retry window) instead of a neutral note.
+            # PHASE3: NOT_RUN. The Spark pipeline reruns this workflow after it publishes the bundle.
+            echo "::error::NOT_RUN: no signed Spark bundle for ${{ steps.ids.outputs.sha }} yet. The Spark pipeline reruns this check once the bundle is published."
+            exit 2
           fi
 
       - name: Verify the bundle with the base-ref public key
@@ -157,6 +161,15 @@ jobs:
           set -e
           echo "verify-bundle exit $rc (0 PASS, 1 FAIL, 2 NOT_RUN, 3 REJECTED)"
           [ "$rc" = 0 ] || exit "$rc"
+          # PHASE3: a trust-surface head passes only on an operator run: the plan member is inside
+          # the signed bytes just verified, and only an operator run of such a head has blocked == null.
+          if [ "${{ steps.anchors.outputs.blocked }}" = true ]; then
+            if jq -e '.plan.blocked == null' "$RUNNER_TEMP/bundle.json" >/dev/null; then
+              echo "trust-surface change: the signed bundle shows an operator run (plan.blocked == null)"
+            else
+              echo "::error::BLOCKED_OPERATOR: this head changes the trust surface and the bundle is not from an operator run"; exit 1
+            fi
+          fi
 
       - name: Portable smoke set (gates whose requires is only portable, named at the base ref)
         if: steps.anchors.outputs.enrolled == 'true' && steps.anchors.outputs.blocked == 'false'
@@ -180,7 +193,7 @@ jobs:
           done
           exit $fail
 
-      - name: "Not enrolled or blocked: nothing to verify in this phase"
-        if: steps.anchors.outputs.enrolled != 'true' || steps.anchors.outputs.blocked == 'true'
+      - name: "Trust-surface change: the portable smoke set is skipped (the operator ran this head on the Spark)"
+        if: steps.anchors.outputs.blocked == 'true'
         run: |
-          echo "AIEN Verification: neutral (enrolled=${{ steps.anchors.outputs.enrolled }}, blocked=${{ steps.anchors.outputs.blocked }}). PHASE3 turns this into a failure."
+          echo "AIEN Verification: trust-surface head, accepted on the verified operator-run bundle above."
