@@ -18,6 +18,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: No Python guard (fails if any Python file is tracked)
+        run: sh scripts/check-no-python.sh
+
       - name: Checkout AIEN Protocols Dependency
         uses: actions/checkout@v4
         with:
