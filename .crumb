@@ -1,10 +1,6 @@
 {
   "below": [
     {
-      "name": "analysis",
-      "role": ""
-    },
-    {
       "name": "docs",
       "role": ""
     },
@@ -23,24 +19,14 @@
     {
       "name": "tests",
       "role": ""
-    },
-    {
-      "name": "tools",
-      "role": ""
     }
   ],
   "extensions": {
     "generated": {
       "children": [
         {
-          "digest": "038cefb2985a39a5f018fc8788761476e54d557433a0c0be32cbd38c2926c55b",
-          "last_commit": "ca283ea",
-          "name": "analysis",
-          "purpose": "Directory analysis. Purpose not yet described by a human."
-        },
-        {
-          "digest": "0d177ba21d5887d0e4b78c12805e6102ffbb5714a19b947a38bd73ad67209725",
-          "last_commit": "3887fe4",
+          "digest": "a104cb5b60f7c0a28175a4f98bc3ce26167a4e6201814d3a61cfafc15bdae33c",
+          "last_commit": "2550835",
           "name": "docs",
           "purpose": "Directory docs. Purpose not yet described by a human."
         },
@@ -52,7 +38,7 @@
         },
         {
           "digest": "6a240842484537542c1e411fa947ef7100cb565c86855b04fff38250a792c553",
-          "last_commit": "3887fe4",
+          "last_commit": "2550835",
           "name": "examples",
           "purpose": "Directory examples. Purpose not yet described by a human."
         },
@@ -63,39 +49,33 @@
           "purpose": "Fixture crates that qualify the canary execution pipeline"
         },
         {
-          "digest": "4b7fe492f3c01a231679c20cee405cf5a41d15bc6229aba5f6e3503987197655",
-          "last_commit": "657a3e6",
+          "digest": "20e7544ba85866277ac7e8751d9d1f0244a59542074d294e23ca80a7a85722d2",
+          "last_commit": "111dd5f",
           "name": "scripts",
-          "purpose": "Directory scripts. Purpose not yet described by a human."
+          "purpose": "Repository scripts. check-no-python.sh is the CI guard that fails the build if any Python file i"
         },
         {
           "digest": "445aabc26f5f5d60e9d44c3c7d103f44abb9ab74fec129024863ba7d2ddab315",
-          "last_commit": "3887fe4",
+          "last_commit": "2550835",
           "name": "src",
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
-          "digest": "30c845c034c5cf6b169571ef17f873588d261edcf3480e0f25290b935a94f798",
-          "last_commit": "3887fe4",
+          "digest": "b42e98c2a4f1683a87fbc8adceee0d327e694c011af8e0df7b35c07dac15191a",
+          "last_commit": "2550835",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
-        },
-        {
-          "digest": "f335f7e80072429f7bce42292bec8b2eb6a79d95e35f84e4cdf5eef833065952",
-          "last_commit": "ca283ea",
-          "name": "tools",
-          "purpose": "Directory tools. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:89e5adedb66adfe1c898d6660fb1653ed27967eb9100a04903747c452abee880",
-      "compiled_at": "2026-10-15T11:19:53Z",
+      "children_root": "sha256:8891e2d154d0d0e07749e9fffdb2cb3d3e20546a59d76ab505b1bd28b998ca49",
+      "compiled_at": "2026-10-16T00:46:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:6d7343eb4f60633415b552c672889cadcd02fa75b8f573004359fafcdcef59dd",
+      "digest": "sha256:b23579d619686207effb4665c9d9b7fa87101b5e895ece92e20c063762150847",
       "evidence_files": 27,
       "evidence_root": "sha256:5552ba32dc3c69f7c3700b23a1a62a89d259ce203bc957986946d37e7a8b6ffd",
-      "files": 170,
-      "generated_at_commit": "3887fe48faf5231278e409070312d7093bd9db8e",
-      "source_tree": "sha256:0308911f6dd071d9d4c5636623ad4584cd82c9abccced4749194fe089e1c6291"
+      "files": 166,
+      "generated_at_commit": "111dd5fa9f38fb0bcd65bb735617dda987891df0",
+      "source_tree": "sha256:75e0637d756831079cc5afeb40525fa6ccd3f16da40b46ed76099afc0ccdad14"
     },
     "owner_lane": "",
     "seed": {
