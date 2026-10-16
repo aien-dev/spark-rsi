@@ -12,7 +12,6 @@ inputs:
   - src/
   - tests/
   - examples/
-  - tools/
   - tests/gates/
 run:
   exec: tests/gates/run.sh

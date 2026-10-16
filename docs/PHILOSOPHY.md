@@ -12,7 +12,7 @@ We enforce zero tolerance for unnecessary runtime interpreters across core agent
 
 Our entire operational substrate is compiled bare metal:
 - Rust provides fearless memory safety, zero-cost abstractions, linear predictability, and strict type-level correctness for daemons, CLI tools, network protocols, and storage engines.
-- Python is restricted strictly to neural graph definitions required by ML model weight loaders where C-ABI wrappers do not yet exist.
+- There is no Python anywhere: every tool, script and model loader is compiled code or POSIX shell.
 
 We build tools that boot instantly, run indefinitely without memory leaks, and consume exact hardware resources. If a service cannot be compiled to a static binary, it does not belong in our core systems.
 

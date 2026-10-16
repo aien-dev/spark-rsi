@@ -25,7 +25,7 @@
     "generated": {
       "children": [
         {
-          "digest": "0d177ba21d5887d0e4b78c12805e6102ffbb5714a19b947a38bd73ad67209725",
+          "digest": "a104cb5b60f7c0a28175a4f98bc3ce26167a4e6201814d3a61cfafc15bdae33c",
           "last_commit": "2550835",
           "name": "docs",
           "purpose": "Directory docs. Purpose not yet described by a human."
@@ -49,8 +49,8 @@
           "purpose": "Fixture crates that qualify the canary execution pipeline"
         },
         {
-          "digest": "6f63f1a00764dfefe183b6d4c1663fa0dfd46660a0b660a65a7a8fc512340173",
-          "last_commit": "657a3e6",
+          "digest": "20e7544ba85866277ac7e8751d9d1f0244a59542074d294e23ca80a7a85722d2",
+          "last_commit": "111dd5f",
           "name": "scripts",
           "purpose": "Repository scripts. check-no-python.sh is the CI guard that fails the build if any Python file i"
         },
@@ -61,21 +61,21 @@
           "purpose": "Directory src. Purpose not yet described by a human."
         },
         {
-          "digest": "30c845c034c5cf6b169571ef17f873588d261edcf3480e0f25290b935a94f798",
+          "digest": "b42e98c2a4f1683a87fbc8adceee0d327e694c011af8e0df7b35c07dac15191a",
           "last_commit": "2550835",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:2882b80d77aab379d3d38edcd5d94f1b86c2fc276b0a3ae6fe38f277dc920dba",
-      "compiled_at": "2026-10-16T00:18:19Z",
+      "children_root": "sha256:8891e2d154d0d0e07749e9fffdb2cb3d3e20546a59d76ab505b1bd28b998ca49",
+      "compiled_at": "2026-10-16T00:46:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:bdb6818f2b8530b119fb4b20d2785285faf70320b8f9f95ca62df00822881de0",
+      "digest": "sha256:b23579d619686207effb4665c9d9b7fa87101b5e895ece92e20c063762150847",
       "evidence_files": 27,
       "evidence_root": "sha256:5552ba32dc3c69f7c3700b23a1a62a89d259ce203bc957986946d37e7a8b6ffd",
       "files": 166,
-      "generated_at_commit": "255083531b8cd339c4023586d1dd92ddb8b4d155",
-      "source_tree": "sha256:c586a0a31c16274b2d925f1f2397696d88e94e1dae1ee2c1deca9ee820192594"
+      "generated_at_commit": "111dd5fa9f38fb0bcd65bb735617dda987891df0",
+      "source_tree": "sha256:75e0637d756831079cc5afeb40525fa6ccd3f16da40b46ed76099afc0ccdad14"
     },
     "owner_lane": "",
     "seed": {
