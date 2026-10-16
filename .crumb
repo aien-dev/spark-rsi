@@ -25,8 +25,8 @@
     "generated": {
       "children": [
         {
-          "digest": "a104cb5b60f7c0a28175a4f98bc3ce26167a4e6201814d3a61cfafc15bdae33c",
-          "last_commit": "2550835",
+          "digest": "da9741bf5cd601f21066386b0f610d71164e508345cb1848a76e3dc7c5bee0f0",
+          "last_commit": "2dbdff3",
           "name": "docs",
           "purpose": "Directory docs. Purpose not yet described by a human."
         },
@@ -50,7 +50,7 @@
         },
         {
           "digest": "20e7544ba85866277ac7e8751d9d1f0244a59542074d294e23ca80a7a85722d2",
-          "last_commit": "111dd5f",
+          "last_commit": "2dbdff3",
           "name": "scripts",
           "purpose": "Repository scripts. check-no-python.sh is the CI guard that fails the build if any Python file i"
         },
@@ -62,20 +62,20 @@
         },
         {
           "digest": "b42e98c2a4f1683a87fbc8adceee0d327e694c011af8e0df7b35c07dac15191a",
-          "last_commit": "2550835",
+          "last_commit": "2dbdff3",
           "name": "tests",
           "purpose": "Directory tests. Purpose not yet described by a human."
         }
       ],
-      "children_root": "sha256:8891e2d154d0d0e07749e9fffdb2cb3d3e20546a59d76ab505b1bd28b998ca49",
-      "compiled_at": "2026-10-16T00:46:36Z",
+      "children_root": "sha256:5dba5e3f8fa2e1e4c825b6587e5c28a88a3dcc9a32ae0acb4ab1be57c03c0fb3",
+      "compiled_at": "2026-10-16T08:42:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:b23579d619686207effb4665c9d9b7fa87101b5e895ece92e20c063762150847",
+      "digest": "sha256:cbf8d9ba8576c26b1c0e8d123bb9b9e5ad8725a9ec24f30eb8d3467d5874b0c5",
       "evidence_files": 27,
       "evidence_root": "sha256:5552ba32dc3c69f7c3700b23a1a62a89d259ce203bc957986946d37e7a8b6ffd",
-      "files": 166,
-      "generated_at_commit": "111dd5fa9f38fb0bcd65bb735617dda987891df0",
-      "source_tree": "sha256:75e0637d756831079cc5afeb40525fa6ccd3f16da40b46ed76099afc0ccdad14"
+      "files": 167,
+      "generated_at_commit": "0d4a2d05a9ddbb882c370da48bc33ffed0a34362",
+      "source_tree": "sha256:e4219c3c651a3eb6ce55ff21bf16b5e37501d7bde7cc132d50dbc3793dbdf8b7"
     },
     "owner_lane": "",
     "seed": {
